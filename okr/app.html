@@ -169,7 +169,7 @@ tr.dragging{opacity:.35}
 .row-done-hide{display:none !important}
 
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-3";</script>
 </head>
 <body>
 
@@ -8953,6 +8953,7 @@ function buildAuthUI(){
   + '<div id="userMenu" style="display:none;position:fixed;top:46px;right:16px;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);z-index:2500;min-width:190px;padding:8px">'
   +   '<div id="umWho" style="font-size:12px;color:#5A7A96;padding:6px 8px;border-bottom:1px solid #EEF2F6;margin-bottom:4px"></div>'
   +   '<button id="umAdmin" onclick="openAdminPanel()" style="'+MENU_BTN+'">👥 User Management</button>'
+  +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 비밀번호 변경</button>'
   +   '<button onclick="doLogout()" style="'+MENU_BTN+'">🚪 Logout</button>'
   + '</div>'
   + '<div id="adminOverlay" onclick="if(event.target===this)closeAdmin()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2600;align-items:center;justify-content:center">'
@@ -9036,6 +9037,7 @@ function renderAdminUsers(users){
     +   '<input id="auT-'+u.id+'" value="'+(u.teams||[]).join(', ')+'" placeholder="Teams (comma)" style="width:100%;font-size:12px;padding:4px 6px;border:1px solid #E2E8F0;border-radius:6px;margin-top:3px"></div>'
     + '<select id="auR-'+u.id+'" style="font-size:12px;padding:4px;border:1px solid #E2E8F0;border-radius:6px">'+roleOpts(u.role)+'</select>'
     + '<button onclick="adminSaveUser('+u.id+')" style="font-size:12px;padding:5px 8px;background:#0D2137;color:#F5A623;border:none;border-radius:6px;cursor:pointer">Save</button>'
+    + '<button onclick="adminResetPw('+u.id+',\''+u.username+'\')" style="font-size:12px;padding:5px 8px;background:#FEF3C7;color:#92400E;border:none;border-radius:6px;cursor:pointer">비번</button>'
     + '<button onclick="adminDeleteUser('+u.id+',\''+u.username+'\')" style="font-size:12px;padding:5px 8px;background:#FEE2E2;color:#B91C1C;border:none;border-radius:6px;cursor:pointer">Delete</button>'
     + '</div>';
   }).join('');
@@ -9053,6 +9055,41 @@ async function adminDeleteUser(uid, name){
 }
 
 /* ---- 부팅: 토큰 있으면 검증 후 접속, 없으면 로그인 화면 ---- */
+/* ═══ 비밀번호 변경 / 초기화 ═══════════════════════════════════
+   서버(api.php)의 change_password · reset_password 를 부른다.
+   비밀번호를 바꾸면 다른 기기 세션이 전부 끊기므로 새 토큰을 받아 저장한다. */
+async function openPwChange(){
+  var m = document.getElementById('userMenu'); if(m) m.style.display='none';
+  var cur = prompt('현재 비밀번호'); if(cur === null) return;
+  var nw  = prompt('새 비밀번호 (6자 이상)'); if(nw === null) return;
+  if(nw.length < 6){ alert('6자 이상이어야 합니다'); return; }
+  var nw2 = prompt('새 비밀번호 확인'); if(nw2 === null) return;
+  if(nw !== nw2){ alert('새 비밀번호가 서로 다릅니다'); return; }
+  try{
+    var r = await okrApi('change_password', {current: cur, new: nw});
+    if(r && r.token){
+      AUTH.token = r.token;
+      try{ localStorage.setItem('hd_okr_token', r.token); }catch(e){}
+      try{ sessionStorage.setItem('hd_okr_token', r.token); }catch(e){}
+    }
+    alert('비밀번호를 바꿨습니다.\n다른 기기는 다시 로그인해야 합니다.');
+  }catch(e){
+    alert((e && e.data && e.data.error) ? e.data.error : '변경 실패');
+  }
+}
+
+async function adminResetPw(uid, name){
+  var nw = prompt('[' + name + '] 새 비밀번호 (6자 이상)'); if(nw === null) return;
+  if(nw.length < 6){ alert('6자 이상이어야 합니다'); return; }
+  if(!confirm(name + ' 의 비밀번호를 바꿉니다.\n이 사용자는 즉시 로그아웃되고 새 비밀번호로 다시 로그인해야 합니다.\n\n계속할까요?')) return;
+  try{
+    await okrApi('reset_password', {uid: uid, new: nw});
+    alert(name + ' 비밀번호를 바꿨습니다');
+  }catch(e){
+    alert((e && e.data && e.data.error) ? e.data.error : '초기화 실패');
+  }
+}
+
 async function bootAuth(){
   buildAuthUI();
   if(AUTH.token){
