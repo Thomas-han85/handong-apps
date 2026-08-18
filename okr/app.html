@@ -168,8 +168,97 @@ tr.dragging{opacity:.35}
 .row-done-fade td{background:inherit}
 .row-done-hide{display:none !important}
 
+
+/* ══ 부스팅 미팅 (피드백 카드 · 일정) ══ */
+.bf-wrap{padding:16px 20px 60px;max-width:1180px;margin:0 auto}
+.bf-seg{display:inline-flex;border:1px solid var(--border);border-radius:7px;overflow:hidden;background:var(--surface)}
+.bf-seg button{padding:7px 18px;border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;
+  color:var(--text2);cursor:pointer;transition:all .15s}
+.bf-seg button.on{background:var(--navy);color:var(--gold)}
+.bf-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;
+  box-shadow:0 1px 3px rgba(13,33,55,.06)}
+.bf-cardhead{background:var(--navy);color:#fff;padding:13px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bf-cardhead .t{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.bf-cardhead .p{font-size:12px;color:var(--gold);background:rgba(245,166,35,.14);
+  border:1px solid rgba(245,166,35,.4);padding:2px 9px;border-radius:20px;font-weight:600}
+.bf-cardhead .m{margin-left:auto;font-size:11px;color:#9BB8D4}
+.bf-sec{border-top:1px solid var(--border-light)}
+.bf-sec>h4{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text2);
+  padding:10px 18px 8px;display:flex;align-items:center;gap:8px}
+.bf-sec>h4 .n{background:var(--gray-bg);color:var(--text2);border-radius:10px;padding:1px 8px;font-size:10.5px;letter-spacing:0}
+.bf-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.bf-tbl th{background:var(--bg);color:var(--text2);font-weight:600;font-size:11px;text-align:left;
+  padding:6px 10px;border-top:1px solid var(--border-light);border-bottom:1px solid var(--border-light);white-space:nowrap}
+.bf-tbl td{padding:7px 10px;border-bottom:1px solid var(--border-light);vertical-align:top}
+.bf-tbl tr:last-child td{border-bottom:none}
+.bf-tbl td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bf-lv{display:inline-block;min-width:26px;text-align:center;font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:3px;background:var(--gray-bg);color:var(--text2)}
+.bf-lv.O{background:var(--navy);color:var(--gold)}
+.bf-lv.KR{background:var(--blue-bg);color:var(--blue)}
+.bf-lv.TO{background:#EDE9FE;color:#6D28D9}
+.bf-lv.TK{background:var(--amber-bg);color:var(--amber)}
+.bf-lv.IN{background:var(--green-bg);color:var(--green)}
+.bf-lv.TD{background:var(--gray-bg);color:var(--gray)}
+.bf-st{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:10px;white-space:nowrap}
+.bf-st.done{background:var(--green-bg);color:var(--green)}
+.bf-st.prog{background:var(--blue-bg);color:var(--blue)}
+.bf-st.not{background:var(--gray-bg);color:var(--gray)}
+.bf-bwrap{display:flex;align-items:center;gap:6px}
+.bf-bar{position:relative;height:7px;flex:1;min-width:30px;background:var(--gray-bg);border-radius:4px;overflow:hidden}
+.bf-bar i{position:absolute;left:0;top:0;bottom:0;background:var(--blue);border-radius:4px}
+.bf-bar i.ok{background:var(--green)} .bf-bar i.low{background:var(--red)}
+.bf-bwrap b{font-size:10.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bf-empty{padding:16px 18px;color:var(--text3);font-size:12px}
+.bf-w2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-light)}
+.bf-w2>div{background:var(--surface);padding:12px 18px 14px}
+@media(max-width:860px){.bf-w2{grid-template-columns:1fr}}
+.bf-lbl{font-size:11.5px;font-weight:700;color:var(--navy);margin-bottom:2px}
+.bf-hint{font-size:10.5px;color:var(--text3);margin-bottom:7px}
+.bf-ta{width:100%;min-height:96px;padding:9px 11px;border:1px solid var(--border);border-radius:7px;
+  font-family:inherit;font-size:12.5px;line-height:1.65;resize:vertical;background:var(--bg);color:var(--text)}
+.bf-ta:focus{outline:none;border-color:var(--blue);background:#fff}
+.bf-ta:disabled{background:var(--gray-bg);color:var(--text2);cursor:not-allowed}
+.bf-exec{background:#FFFBEB;border-top:2px solid var(--gold);padding:12px 18px 15px}
+.bf-exec .bf-ta{background:#fff;border-color:#F5D28A}
+.bf-foot{padding:12px 18px;display:flex;align-items:center;gap:9px;background:var(--bg);border-top:1px solid var(--border-light)}
+.bf-foot .sp{margin-left:auto;font-size:11px;color:var(--text3)}
+.bf-note{background:var(--blue-bg);border:1px solid #BBD9F7;border-radius:8px;padding:9px 13px;
+  font-size:11.5px;color:#1A4E8A;line-height:1.6;margin-bottom:13px}
+
+/* 일정 */
+.sc-day{margin-bottom:14px}
+.sc-dayh{font-size:12.5px;font-weight:700;color:var(--navy);padding:6px 2px;border-bottom:2px solid var(--border);margin-bottom:7px}
+.sc-slot{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;padding:10px 13px;margin-bottom:7px}
+.sc-slot.full{background:var(--gray-bg);border-style:dashed}
+.sc-slot.mine{border-color:var(--green);background:var(--green-bg)}
+.sc-time{font-size:13.5px;font-weight:700;color:var(--navy);font-variant-numeric:tabular-nums;white-space:nowrap}
+.sc-note{font-size:11.5px;color:var(--text2)}
+.sc-bk{display:inline-flex;align-items:center;gap:5px;background:var(--navy);color:#fff;font-size:11px;
+  font-weight:600;padding:2px 4px 2px 9px;border-radius:12px}
+.sc-bk x{cursor:pointer;background:rgba(255,255,255,.2);border-radius:50%;width:15px;height:15px;
+  line-height:15px;text-align:center;font-size:10px;font-style:normal}
+.sc-open{font-size:11px;color:var(--text3)}
+.sc-right{margin-left:auto;display:flex;align-items:center;gap:7px}
+.sc-form{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:12px 14px;
+  display:flex;align-items:flex-end;gap:9px;flex-wrap:wrap;margin-bottom:16px}
+.sc-f{display:flex;flex-direction:column;gap:3px}
+.sc-f label{font-size:10.5px;color:var(--text2);font-weight:600}
+.sc-f input{padding:6px 9px;border:1px solid var(--border);border-radius:5px;font-size:12px;
+  font-family:inherit;background:var(--bg);color:var(--text)}
+.sc-f input:focus{outline:none;border-color:var(--blue);background:#fff}
+
+@media print{
+  .topnav,.toolbar,.bf-foot,.bf-seg,#toast{display:none!important}
+  .bf-wrap{padding:0;max-width:none}
+  .bf-card{border:none;box-shadow:none}
+  .bf-ta{border:1px solid #ccc;background:#fff;min-height:0;height:auto}
+  body{background:#fff}
+}
+
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-4";</script>
 </head>
 <body>
 
@@ -183,6 +272,8 @@ tr.dragging{opacity:.35}
     <div class="nav-item active" onclick="setTab('list',this)">OKR List</div>
     <div class="nav-item" onclick="setTab('gantt',this)">OKR Gantt Chart</div>
     <div class="nav-item" onclick="setTab('matrix',this)">My Tasks</div>
+    <div class="nav-item" onclick="setTab('boost',this)">부스팅 피드백</div>
+    <div class="nav-item" onclick="setTab('sched',this)">미팅 일정</div>
   </div>
   <div class="nav-right">
     <span class="save-ind" id="saveInd">Saved</span>
@@ -270,6 +361,51 @@ tr.dragging{opacity:.35}
 <!-- MATRIX VIEW -->
 <div id="matrixView" style="display:none;padding:14px 20px 40px">
   <div id="matrixContent"></div>
+</div>
+
+<!-- BOOSTING TOOLBAR -->
+<div class="toolbar" id="tbBoost" style="display:none">
+  <div class="bf-seg" id="bfScopeSeg">
+    <button id="bfScopeC" class="on" onclick="bfSetScope('company')">전사 피드백</button>
+    <button id="bfScopeT" onclick="bfSetScope('team')">팀별 피드백</button>
+  </div>
+  <select class="filter-sel" id="bfTeam" onchange="bfRender()" style="width:150px;display:none"></select>
+  <div class="divider"></div>
+  <select class="filter-sel" id="bfPType" onchange="bfTypeChanged()" style="width:92px">
+    <option value="year">연별</option>
+    <option value="quarter">분기별</option>
+    <option value="month" selected>월별</option>
+  </select>
+  <select class="filter-sel" id="bfPKey" onchange="bfRender()" style="width:132px"></select>
+  <label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
+    white-space:nowrap;cursor:pointer;margin-left:4px">
+    <input type="checkbox" id="bfCum" onchange="bfRender()"> 누계로 보기
+  </label>
+  <div style="margin-left:auto;display:flex;gap:5px">
+    <button class="btn" onclick="bfReload()">↻ 새로고침</button>
+    <button class="btn" onclick="window.print()">🖨 인쇄</button>
+  </div>
+</div>
+<!-- BOOSTING VIEW -->
+<div id="boostView" style="display:none">
+  <div class="bf-wrap" id="bfBody"></div>
+</div>
+
+<!-- SCHEDULE TOOLBAR -->
+<div class="toolbar" id="tbSched" style="display:none">
+  <span style="font-size:12px;font-weight:600;color:var(--text2)">부스팅 미팅 일정</span>
+  <span style="font-size:11px;color:var(--text3)">경영자가 올린 시간 중에서 팀이 하나를 고릅니다</span>
+  <div style="margin-left:auto;display:flex;gap:5px">
+    <label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
+      white-space:nowrap;cursor:pointer">
+      <input type="checkbox" id="scPast" onchange="scRender()"> 지난 일정도 보기
+    </label>
+    <button class="btn" onclick="scReload()">↻ 새로고침</button>
+  </div>
+</div>
+<!-- SCHEDULE VIEW -->
+<div id="schedView" style="display:none">
+  <div class="bf-wrap" id="scBody"></div>
 </div>
 
 <div id="listView">
@@ -10614,13 +10750,19 @@ function setTab(tab,el){
   document.getElementById('listView').style.display   = tab==='list'   ? 'block':'none';
   document.getElementById('ganttView').style.display  = tab==='gantt'  ? 'block':'none';
   document.getElementById('matrixView').style.display = tab==='matrix' ? 'block':'none';
+  document.getElementById('boostView').style.display  = tab==='boost'  ? 'block':'none';
+  document.getElementById('schedView').style.display  = tab==='sched'  ? 'block':'none';
   document.getElementById('tbList').style.display    = tab==='list'   ? 'flex':'none';
   document.getElementById('tbGantt').style.display   = tab==='gantt'  ? 'flex':'none';
   document.getElementById('tbMatrix').style.display  = tab==='matrix' ? 'flex':'none';
+  document.getElementById('tbBoost').style.display   = tab==='boost'  ? 'flex':'none';
+  document.getElementById('tbSched').style.display   = tab==='sched'  ? 'flex':'none';
   // 탭 전환 후 toolbar 높이가 확정되면 sticky top 재계산
   requestAnimationFrame(()=>{ requestAnimationFrame(updateThTop); });
   if(tab==='gantt')  renderGantt();
   if(tab==='matrix') renderMatrix();
+  if(tab==='boost')  bfOpen();
+  if(tab==='sched')  scOpen();
 }
 
 // ══ PANEL ══
@@ -11346,6 +11488,671 @@ async function connectNas(){
     if(statusEl){ statusEl.textContent='\ud83d\udd34 NAS'; statusEl.title='NAS failed'; }
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   부스팅 미팅 — 피드백 카드 & 일정 예약
+
+   OKR 데이터에는 시계열이 없다. actual 은 "지금 값" 하나뿐이라
+   "3월 말 시점의 실적"을 나중에 되짚어 계산할 방법이 없다.
+   그래서 카드를 저장할 때 그 시점의 목표/실적을 함께 굳혀 둔다(snapshot).
+   지난 카드를 열면 저장된 숫자가 그대로 뜨고, 현재 데이터로
+   다시 보고 싶으면 [현재 데이터로 새로 불러오기] 를 누르면 된다.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var BF = {
+  scope: 'company',
+  team: '',
+  ptype: 'month',
+  pkey: '',
+  cards: null,          // key -> card   (null = 아직 안 불러옴)
+  slots: null,
+  loading: false,
+  frozen: false,        // 지금 화면이 저장된 snapshot 인가
+  rows: []              // 화면에 그린 행들 (저장 시 snapshot 으로 나감)
+};
+
+function bfEsc(s){
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+/* ── 기간 ────────────────────────────────────────────────────────── */
+
+var BF_MON = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+
+/* 데이터에서 가장 많이 쓰인 연도 — 'Mar', 'Q1' 처럼 연도가 빠진 표기의 기준 */
+function bfBaseYear(){
+  var cnt = {}, best = 0, bestN = -1;
+  (DATA || []).forEach(function(r){
+    var m = String(r.period || '').match(/(20\d{2})/);
+    if(m){ cnt[m[1]] = (cnt[m[1]] || 0) + 1; }
+  });
+  for(var y in cnt) if(cnt[y] > bestN){ bestN = cnt[y]; best = +y; }
+  return best || new Date().getFullYear();
+}
+
+/* 'YYYY/MM/DD' · 'MM/DD' · 'MM' · 'Mar' · 'Q1' 한 조각 해석 */
+function bfPart(str, defY){
+  var s = String(str || '').trim(), m;
+  if(!s) return null;
+  if((m = s.match(/^(\d{4})\s*[\/\-.]\s*(\d{1,2})\s*[\/\-.]\s*(\d{1,2})$/))) return {y:+m[1], mo:+m[2], d:+m[3]};
+  if((m = s.match(/^(\d{4})\s*[\/\-.]\s*(\d{1,2})$/)))                       return {y:+m[1], mo:+m[2], d:null};
+  if((m = s.match(/^(\d{4})$/)))                                             return {y:+m[1], mo:null, d:null};
+  if((m = s.match(/^(\d{1,2})\s*[\/\-.]\s*(\d{1,2})$/)))                     return {y:defY, mo:+m[1], d:+m[2]};
+  if((m = s.match(/^(\d{1,2})$/)))                                           return {y:defY, mo:+m[1], d:null};
+  if((m = s.match(/^q\s*([1-4])$/i)))                                        return {y:defY, q:+m[1]};
+  if((m = s.match(/^([a-z]{3})/i)) && BF_MON[m[1].toLowerCase()])            return {y:defY, mo:BF_MON[m[1].toLowerCase()], d:null};
+  return null;
+}
+function bfStartOf(p){
+  if(p.q) return new Date(p.y, (p.q - 1) * 3, 1).getTime();
+  return new Date(p.y, p.mo ? p.mo - 1 : 0, p.d || 1).getTime();
+}
+function bfEndOf(p){
+  if(p.q) return new Date(p.y, p.q * 3, 0, 23, 59, 59).getTime();
+  if(p.d)  return new Date(p.y, p.mo - 1, p.d, 23, 59, 59).getTime();
+  if(p.mo) return new Date(p.y, p.mo, 0, 23, 59, 59).getTime();
+  return new Date(p.y, 11, 31, 23, 59, 59).getTime();
+}
+
+/* 항목의 period 문자열 → {s,e}.  해석 못 하거나 '상시' 면 null(= 항상 포함) */
+function bfRange(raw){
+  var t = String(raw == null ? '' : raw).replace(/ /g, ' ').trim();
+  if(!t) return null;
+  if(/^(상시|수시|연중|미정|ongoing|tbd|n\/a|-)$/i.test(t)) return null;
+
+  var defY = bfBaseYear(), parts = t.split(/\s*~\s*|\s*-\s*(?=\d)/);
+  if(parts.length >= 2){
+    var a = bfPart(parts[0], defY);
+    if(!a) return null;
+    var b = bfPart(parts[1], a.y || defY);
+    if(!b) return {s: bfStartOf(a), e: bfEndOf(a)};
+    if(b.y === defY && a.y && a.y !== defY) b.y = a.y;     // '2026/01~12' 의 12 는 2026년
+    return {s: bfStartOf(a), e: bfEndOf(b)};
+  }
+  var p = bfPart(t, defY);
+  return p ? {s: bfStartOf(p), e: bfEndOf(p)} : null;
+}
+
+/* 선택한 기간(연/분기/월) → {s,e,label} */
+function bfSelRange(){
+  var k = BF.pkey || '', m;
+  if((m = k.match(/^(\d{4})$/)))
+    return {s:new Date(+m[1],0,1).getTime(), e:new Date(+m[1],11,31,23,59,59).getTime(), label:m[1]+'년'};
+  if((m = k.match(/^(\d{4})-Q([1-4])$/)))
+    return {s:new Date(+m[1],(+m[2]-1)*3,1).getTime(), e:new Date(+m[1],+m[2]*3,0,23,59,59).getTime(),
+            label:m[1]+'년 '+m[2]+'분기'};
+  if((m = k.match(/^(\d{4})-(\d{2})$/)))
+    return {s:new Date(+m[1],+m[2]-1,1).getTime(), e:new Date(+m[1],+m[2],0,23,59,59).getTime(),
+            label:m[1]+'년 '+(+m[2])+'월'};
+  var y = bfBaseYear();
+  return {s:new Date(y,0,1).getTime(), e:new Date(y,11,31,23,59,59).getTime(), label:y+'년'};
+}
+
+/* 기간 선택 목록 채우기 */
+function bfFillPeriods(keep){
+  var sel = document.getElementById('bfPKey'), y = bfBaseYear(), out = [], i;
+  if(BF.ptype === 'year'){
+    for(i = y + 1; i >= y - 2; i--) out.push([String(i), i + '년']);
+  } else if(BF.ptype === 'quarter'){
+    for(i = 4; i >= 1; i--) out.push([y + '-Q' + i, y + '년 ' + i + '분기']);
+    for(i = 4; i >= 1; i--) out.push([(y-1) + '-Q' + i, (y-1) + '년 ' + i + '분기']);
+  } else {
+    for(i = 12; i >= 1; i--){
+      var mm = (i < 10 ? '0' : '') + i;
+      out.push([y + '-' + mm, y + '년 ' + i + '월']);
+    }
+  }
+  sel.innerHTML = out.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
+  var want = keep && out.some(function(o){ return o[0] === keep; }) ? keep : bfDefaultKey(out);
+  sel.value = want; BF.pkey = want;
+}
+function bfDefaultKey(out){
+  var n = new Date(), y = bfBaseYear(), mm;
+  if(BF.ptype === 'year')    return String(y);
+  if(BF.ptype === 'quarter') return y + '-Q' + (Math.floor(n.getMonth() / 3) + 1);
+  mm = n.getMonth() + 1;
+  return y + '-' + (mm < 10 ? '0' : '') + mm;
+}
+
+/* ── 팀 / 권한 ───────────────────────────────────────────────────── */
+
+function bfTeamsOf(v){
+  return String(v == null ? '' : v).split(',').map(function(x){ return x.trim(); })
+         .filter(function(x){ return x !== ''; });
+}
+function bfHasTeam(rowTeam, team){
+  var a = bfTeamsOf(rowTeam), i;
+  for(i = 0; i < a.length; i++) if(a[i].toLowerCase() === String(team).toLowerCase()) return true;
+  return false;
+}
+/* 데이터에 실제로 등장하는 팀 (다중팀 표기는 낱개로 쪼갬) */
+function bfAllTeams(){
+  var set = {};
+  (DATA || []).forEach(function(r){ bfTeamsOf(r.team).forEach(function(t){ if(t !== 'team') set[t] = 1; }); });
+  return Object.keys(set).sort(function(a,b){ return a.localeCompare(b); });
+}
+function bfMyTeams(){ return (AUTH.user && AUTH.user.teams) ? bfTeamsOf(AUTH.user.teams.join ? AUTH.user.teams.join(',') : AUTH.user.teams) : []; }
+function bfCanWrite(){
+  if(AUTH.isPriv()) return true;
+  if(BF.scope === 'company') return false;
+  return bfMyTeams().some(function(t){ return t.toLowerCase() === String(BF.team).toLowerCase(); });
+}
+
+/* ── 숫자 ────────────────────────────────────────────────────────── */
+
+function bfNum(v){
+  var n = parseFloat(String(v == null ? '' : v).replace(/[, ]/g, '').replace(/[^\d.\-]/g, ''));
+  return isFinite(n) ? n : null;
+}
+function bfPct(t, a){
+  var T = bfNum(t), A = bfNum(a);
+  if(T === null || A === null || T === 0) return null;
+  return Math.round(A / T * 1000) / 10;
+}
+function bfBar(t, a){
+  var p = bfPct(t, a);
+  if(p === null) return '<span style="color:var(--text3);font-size:11px">—</span>';
+  var w = Math.max(0, Math.min(100, p)), cls = p >= 100 ? 'ok' : (p < 50 ? 'low' : '');
+  var col = p >= 100 ? 'var(--green)' : (p < 50 ? 'var(--red)' : 'var(--blue)');
+  return '<div class="bf-bwrap"><div class="bf-bar"><i class="'+cls+'" style="width:'+w+'%"></i></div>'
+       + '<b style="color:'+col+'">'+p+'%</b></div>';
+}
+function bfStat(s){
+  var t = String(s || '');
+  if(/done|완료/i.test(t))       return '<span class="bf-st done">완료</span>';
+  if(/progress|진행/i.test(t))   return '<span class="bf-st prog">진행</span>';
+  return '<span class="bf-st not">미착수</span>';
+}
+
+/* ── 화면에 그릴 행 고르기 ───────────────────────────────────────── */
+
+/* 팀 항목이 매달린 상위 Objective 를 거슬러 찾는다.
+   TO(팀 목표) 행이 없는 팀이 많아서(21개 팀만 보유) 그대로 두면
+   Objective 칸이 비어 버린다. 전사 O 를 끌어올려 "우리 팀이 무엇에
+   기여하는가" 를 카드 맨 위에 세운다. */
+function bfAncestorO(rows){
+  var byId = {}, seen = {}, out = [];
+  (DATA || []).forEach(function(r){ byId[r.id] = r; });
+  rows.forEach(function(r){
+    var cur = byId[r.pid], guard = 0;
+    while(cur && guard++ < 12){
+      if(cur.lv === 'O' && !seen[cur.id]){ seen[cur.id] = 1; out.push(cur); break; }
+      if(cur.lv === 'O') break;
+      cur = byId[cur.pid];
+    }
+  });
+  return out.sort(function(a, b){ return a.id - b.id; });
+}
+
+function bfPick(){
+  var R = bfSelRange(), cum = document.getElementById('bfCum').checked;
+  var rows = (DATA || []).filter(function(r){
+    if(BF.scope === 'company'){
+      if(['O','KR'].indexOf(r.lv) < 0) return false;
+    } else {
+      if(!bfHasTeam(r.team, BF.team)) return false;
+      if(['TO','TK','IN'].indexOf(r.lv) < 0) return false;   // TD 는 너무 잘아서 카드에는 안 올림
+    }
+    var pr = bfRange(r.period);
+    if(!pr) return true;                       // 상시·해석불가 = 항상
+    return cum ? pr.s <= R.e : (pr.s <= R.e && pr.e >= R.s);
+  });
+  if(BF.scope === 'team') rows = bfAncestorO(rows).concat(rows);
+
+  return rows.map(function(r){
+    var o = {id:r.id, pid:r.pid, lv:r.lv, kr:r.kr || '', label:r.label || '', team:r.team || '',
+             pic:r.pic || '', period:String(r.period == null ? '' : r.period),
+             target:String(r.target == null ? '' : r.target), actual:String(r.actual == null ? '' : r.actual),
+             status:r.status || '', secured:!!r.secured};
+    // 전사 KR 은 "어느 팀이 뒤쳐졌나" 를 함께 굳힌다 (회의에서 실제로 보는 값)
+    if(BF.scope === 'company' && r.lv === 'KR') o.rollup = bfTeamRoll(r.id);
+    return o;
+  });
+}
+
+/* 전사 카드에서 KR 아래 팀별 진척을 한 줄로 요약 */
+function bfTeamRoll(krId){
+  var kids = (DATA || []).filter(function(r){ return r.pid === krId && r.lv === 'TK'; });
+  if(!kids.length) return '';
+  var by = {};
+  kids.forEach(function(k){
+    bfTeamsOf(k.team).forEach(function(t){
+      if(!by[t]) by[t] = {T:0, A:0, n:0};
+      var T = bfNum(k.target), A = bfNum(k.actual);
+      if(T !== null){ by[t].T += T; by[t].A += (A || 0); }
+      by[t].n++;
+    });
+  });
+  return Object.keys(by).sort().map(function(t){
+    var o = by[t];
+    return {t: t, p: o.T ? Math.round(o.A / o.T * 100) : null};
+  });
+}
+
+/* 롤업 데이터 → 뱃지.  저장된 카드에서도 똑같이 그려진다 */
+function bfRollHtml(arr){
+  if(!arr || !arr.length) return '';
+  return arr.map(function(o){
+    return '<span style="display:inline-block;font-size:10.5px;background:var(--gray-bg);border-radius:10px;'
+         + 'padding:1px 8px;margin:1px 3px 1px 0;color:var(--text2)">' + bfEsc(o.t)
+         + (o.p === null || o.p === undefined ? ''
+            : ' <b style="color:'+(o.p>=100?'var(--green)':(o.p<50?'var(--red)':'var(--blue)'))+'">'+o.p+'%</b>')
+         + '</span>';
+  }).join('');
+}
+
+function bfTable(rows, cols){
+  if(!rows.length) return '<div class="bf-empty">해당 기간에 해당하는 항목이 없습니다.</div>';
+  var showTeam = cols.team !== false;
+  var h = '<table class="bf-tbl"><thead><tr>'
+        + '<th style="width:44px">구분</th><th>내용</th>'
+        + (showTeam ? '<th style="width:92px">팀</th>' : '')
+        + '<th style="width:82px">담당</th><th style="width:104px">기간</th>'
+        + '<th style="width:66px;text-align:right">목표</th><th style="width:66px;text-align:right">실적</th>'
+        + '<th style="width:76px">달성률</th><th style="width:62px">상태</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    h += '<tr>'
+      + '<td><span class="bf-lv '+bfEsc(r.lv)+'">'+bfEsc(r.lv)+'</span></td>'
+      + '<td>'+(r.kr ? '<span style="color:var(--text3);font-size:11px">'+bfEsc(r.kr)+'</span> ' : '')
+             + bfEsc(r.label)
+             + (r.rollup && r.rollup.length ? '<div style="margin-top:3px">'+bfRollHtml(r.rollup)+'</div>' : '')
+      + '</td>'
+      + (showTeam ? '<td style="font-size:11.5px;color:var(--text2)">'+bfEsc(r.team)+'</td>' : '')
+      + '<td style="font-size:11.5px;color:var(--text2)">'+bfEsc(r.pic)+'</td>'
+      + '<td style="font-size:11px;color:var(--text2)">'+bfEsc(r.period)+'</td>'
+      + '<td class="num">'+bfEsc(r.target)+'</td>'
+      + '<td class="num">'+bfEsc(r.actual)+'</td>'
+      + '<td>'+bfBar(r.target, r.actual)+'</td>'
+      + '<td>'+bfStat(r.status)+'</td>'
+      + '</tr>';
+  });
+  return h + '</tbody></table>';
+}
+
+/* ── 카드 그리기 ─────────────────────────────────────────────────── */
+
+function bfKey(){
+  return BF.scope === 'company' ? ('company::' + BF.pkey) : ('team::' + BF.team + '::' + BF.pkey);
+}
+
+function bfSetScope(sc){
+  BF.scope = sc;
+  document.getElementById('bfScopeC').className = sc === 'company' ? 'on' : '';
+  document.getElementById('bfScopeT').className = sc === 'team' ? 'on' : '';
+  document.getElementById('bfTeam').style.display = sc === 'team' ? '' : 'none';
+  bfRender();
+}
+function bfTypeChanged(){
+  BF.ptype = document.getElementById('bfPType').value;
+  bfFillPeriods(null);
+  bfRender();
+}
+
+function bfFillTeams(){
+  var sel = document.getElementById('bfTeam');
+  if(sel.options.length) return;
+  var all = bfAllTeams(), mine = bfMyTeams(), list;
+  // 경영진/관리자는 전체, 팀원은 본인 팀 먼저 + 나머지(보기 전용)
+  if(AUTH.isPriv() || !mine.length) list = all;
+  else list = mine.concat(all.filter(function(t){ return !mine.some(function(m){ return m.toLowerCase()===t.toLowerCase(); }); }));
+  sel.innerHTML = list.map(function(t){ return '<option value="'+bfEsc(t)+'">'+bfEsc(t)+'</option>'; }).join('');
+  BF.team = list[0] || '';
+  sel.value = BF.team;
+}
+
+async function bfEnsure(){
+  if(BF.cards) return;
+  BF.loading = true;
+  try{
+    var r = await okrApi('bf_read', {});
+    BF.cards = {};
+    (r.cards || []).forEach(function(c){ BF.cards[c.key] = c; });
+  }catch(e){
+    BF.cards = {};
+    toast('피드백을 불러오지 못했습니다' + (e && e.status === 401 ? ' (로그인 필요)' : ''), 'error');
+  }
+  BF.loading = false;
+}
+
+async function bfReload(){ BF.cards = null; await bfEnsure(); bfRender(); toast('불러왔습니다'); }
+
+async function bfOpen(){
+  bfFillTeams();
+  if(!document.getElementById('bfPKey').options.length) bfFillPeriods(null);
+  await bfEnsure();
+  bfRender();
+}
+
+function bfRender(){
+  var body = document.getElementById('bfBody');
+  if(!body) return;
+  BF.team  = document.getElementById('bfTeam').value || BF.team;
+  BF.pkey  = document.getElementById('bfPKey').value || BF.pkey;
+  BF.ptype = document.getElementById('bfPType').value;
+
+  if(BF.scope === 'team' && !BF.team){
+    body.innerHTML = '<div class="bf-empty">팀을 선택하세요.</div>';
+    return;
+  }
+  if(!BF.cards){ body.innerHTML = '<div class="bf-empty">불러오는 중…</div>'; return; }
+
+  var key = bfKey(), card = BF.cards[key] || null, R = bfSelRange();
+  if(BF._lastKey !== key){ BF.insAll = false; BF._lastKey = key; }
+  var saved = !!(card && card.snapshot && card.snapshot.length);
+  BF.frozen = saved && !BF._forceLive;
+  BF.rows = BF.frozen ? card.snapshot : bfPick();
+
+  var rows = BF.rows, title, sub;
+  if(BF.scope === 'company'){ title = '전사'; sub = 'Objective · Key Result'; }
+  else { title = BF.team + ' 팀'; sub = 'Team Objective · Key Result · Initiative'; }
+
+  var objs = rows.filter(function(r){ return r.lv === 'O'  || r.lv === 'TO'; });
+  var krs  = rows.filter(function(r){ return r.lv === 'KR' || r.lv === 'TK'; });
+  var ins  = rows.filter(function(r){ return r.lv === 'IN'; });
+
+  // 회의에서 먼저 볼 순서: 실적이 찍힌 것 → 달성률 낮은(=문제) 순 → 아직 안 찍힌 것
+  ins.sort(function(a, b){
+    var pa = bfPct(a.target, a.actual), pb = bfPct(b.target, b.actual);
+    if(pa === null && pb === null) return 0;
+    if(pa === null) return 1;
+    if(pb === null) return -1;
+    return pa - pb;
+  });
+
+  var done = rows.filter(function(r){ return /done|완료/i.test(r.status); }).length;
+  var pcts = rows.map(function(r){ return bfPct(r.target, r.actual); }).filter(function(p){ return p !== null; });
+  var avg  = pcts.length ? Math.round(pcts.reduce(function(a,b){ return a+b; }, 0) / pcts.length) : null;
+
+  var canW = bfCanWrite(), priv = AUTH.isPriv();
+
+  var h = '';
+  h += '<div class="bf-note">'
+     + '<b>부스팅 미팅 피드백 카드</b> — ' + bfEsc(R.label)
+     + (document.getElementById('bfCum').checked ? ' <b>누계</b>(기간 종료일까지 전체)' : ' 해당 기간에 걸친 항목')
+     + '<br>OKR 데이터에는 시점별 기록이 없습니다. <b>저장하면 그때의 목표·실적이 카드에 함께 굳습니다</b> — '
+     + '나중에 이 카드를 다시 열면 회의 당시 숫자가 그대로 보입니다.'
+     + '</div>';
+
+  h += '<div class="bf-card">';
+  h += '<div class="bf-cardhead">'
+     + '<span class="t">' + bfEsc(title) + '</span>'
+     + '<span class="p">' + bfEsc(R.label) + '</span>'
+     + (BF.frozen ? '<span style="font-size:11px;color:#9BB8D4">🔒 저장된 시점의 값</span>' : '')
+     + '<span class="m">'
+     +   (card && card.updatedAt ? '최종 수정 ' + bfEsc(card.updatedAt) + ' · ' + bfEsc(card.updatedBy || '') : '아직 작성 전')
+     + '</span></div>';
+
+  h += '<div class="bf-sec"><h4>Objective <span class="n">' + objs.length + '</span></h4>'
+     + bfTable(objs, {team: BF.scope === 'team' ? false : true}) + '</div>';
+  h += '<div class="bf-sec"><h4>Key Results · 결과 <span class="n">' + krs.length + '</span>'
+     + (avg === null ? '' : '<span style="margin-left:auto;font-weight:600;color:var(--text2);letter-spacing:0;text-transform:none">'
+        + '평균 달성률 <b style="color:var(--navy)">' + avg + '%</b> · 완료 ' + done + '/' + rows.length + '</span>')
+     + '</h4>' + bfTable(krs, {team: BF.scope === 'team' ? false : true}) + '</div>';
+  if(BF.scope === 'team'){
+    // 40건씩 나오는 팀이 있다. 회의에서 실제로 보는 것은 위쪽 몇 줄이라 기본은 접어 둔다.
+    var CUT = 12, few = ins.length > CUT && !BF.insAll;
+    h += '<div class="bf-sec"><h4>Initiative <span class="n">' + ins.length + '</span>'
+       + (ins.length > CUT
+          ? '<span style="margin-left:auto;letter-spacing:0;text-transform:none;font-weight:600">'
+            + '<a href="javascript:bfToggleIns()" style="color:var(--blue);text-decoration:none">'
+            + (few ? '전체 ' + ins.length + '건 보기 ▾' : '접기 ▴') + '</a></span>'
+          : '')
+       + '</h4>'
+       + bfTable(few ? ins.slice(0, CUT) : ins, {team: false})
+       + (few ? '<div style="padding:7px 18px 10px;font-size:11px;color:var(--text3)">'
+                + '달성률이 낮은 순으로 ' + CUT + '건만 보이는 중 · 나머지 ' + (ins.length - CUT) + '건 숨김</div>'
+              : '')
+       + '</div>';
+  }
+
+  var dis = canW ? '' : ' disabled';
+  h += '<div class="bf-sec"><div class="bf-w2">'
+     + '<div><div class="bf-lbl">Feedback</div>'
+     +   '<div class="bf-hint">의미 있었던 도전 &amp; 배운 점</div>'
+     +   '<textarea class="bf-ta" id="bfFb"' + dis + '>' + bfEsc(card ? card.feedback : '') + '</textarea></div>'
+     + '<div><div class="bf-lbl">Feedforward</div>'
+     +   '<div class="bf-hint">앞으로 도전할 목표 &amp; 핵심 아이디어 (= 앞으로 할 일)</div>'
+     +   '<textarea class="bf-ta" id="bfFf"' + dis + '>' + bfEsc(card ? card.feedforward : '') + '</textarea></div>'
+     + '</div></div>';
+
+  h += '<div class="bf-sec" style="padding:12px 18px 14px">'
+     + '<div class="bf-lbl">질문 &amp; 요청사항</div>'
+     + '<div class="bf-hint">경영진에게 묻고 싶은 것, 필요한 지원</div>'
+     + '<textarea class="bf-ta" id="bfAsk" style="min-height:64px"' + dis + '>' + bfEsc(card ? card.ask : '') + '</textarea>'
+     + '</div>';
+
+  h += '<div class="bf-exec">'
+     + '<div class="bf-lbl" style="color:#92400E">경영자 피드백'
+     +   (priv ? '' : ' <span style="font-weight:400;color:var(--text3)">(경영진·관리자만 작성)</span>') + '</div>'
+     + '<div class="bf-hint">' + (card && card.execAt ? bfEsc(card.execBy || '') + ' · ' + bfEsc(card.execAt) : '아직 없음') + '</div>'
+     + '<textarea class="bf-ta" id="bfExec" style="min-height:76px"' + (priv ? '' : ' disabled') + '>'
+     + bfEsc(card ? card.exec : '') + '</textarea>'
+     + (priv ? '<div style="margin-top:8px"><button class="btn primary" onclick="bfSaveExec()">경영자 피드백 저장</button></div>' : '')
+     + '</div>';
+
+  h += '<div class="bf-foot">'
+     + (canW ? '<button class="btn primary" onclick="bfSave()">💾 저장</button>' : '')
+     + (BF.frozen ? '<button class="btn" onclick="bfLive()">↻ 현재 데이터로 새로 불러오기</button>' : '')
+     + (priv && card ? '<button class="btn danger" onclick="bfDelete()">삭제</button>' : '')
+     + '<span class="sp">'
+     +   (canW ? '항목 ' + rows.length + '건이 이 카드에 함께 저장됩니다'
+             : (BF.scope === 'company' ? '전사 피드백은 경영진·관리자만 작성합니다'
+                                       : '본인 팀 카드만 작성할 수 있습니다 (보기는 가능)'))
+     + '</span></div>';
+  h += '</div>';
+
+  body.innerHTML = h;
+}
+
+function bfLive(){ BF._forceLive = true; bfRender(); BF._forceLive = false; }
+function bfToggleIns(){ BF.insAll = !BF.insAll; bfRender(); }
+
+async function bfSave(){
+  var R = bfSelRange();
+  var payload = {
+    key: bfKey(), scope: BF.scope, team: BF.scope === 'team' ? BF.team : '',
+    periodType: BF.ptype, periodKey: BF.pkey, periodLabel: R.label,
+    cumulative: document.getElementById('bfCum').checked,
+    snapshot: BF.rows.map(function(r){
+      return {id:r.id, pid:r.pid, lv:r.lv, kr:r.kr, label:r.label, team:r.team, pic:r.pic,
+              period:r.period, target:r.target, actual:r.actual, status:r.status,
+              secured:r.secured, rollup:r.rollup || []};
+    }),
+    feedback:    document.getElementById('bfFb').value,
+    feedforward: document.getElementById('bfFf').value,
+    ask:         document.getElementById('bfAsk').value
+  };
+  try{
+    var r = await okrApi('bf_save', payload);
+    BF.cards[r.card.key] = r.card;
+    toast('저장했습니다');
+    bfRender();
+  }catch(e){
+    toast((e && e.data && e.data.error) || '저장 실패', 'error');
+  }
+}
+
+async function bfSaveExec(){
+  var R = bfSelRange();
+  try{
+    var r = await okrApi('bf_exec', {
+      key: bfKey(), scope: BF.scope, team: BF.scope === 'team' ? BF.team : '',
+      periodType: BF.ptype, periodKey: BF.pkey, periodLabel: R.label,
+      exec: document.getElementById('bfExec').value
+    });
+    BF.cards[r.card.key] = r.card;
+    toast('경영자 피드백을 저장했습니다');
+    bfRender();
+  }catch(e){
+    toast((e && e.data && e.data.error) || '저장 실패', 'error');
+  }
+}
+
+async function bfDelete(){
+  if(!confirm('이 카드를 삭제할까요? 작성한 피드백이 모두 지워집니다.')) return;
+  try{
+    await okrApi('bf_delete', {key: bfKey()});
+    delete BF.cards[bfKey()];
+    toast('삭제했습니다');
+    bfRender();
+  }catch(e){ toast((e && e.data && e.data.error) || '삭제 실패', 'error'); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   부스팅 미팅 일정 — 경영자가 가능한 시간을 올리고 팀이 고른다
+   ═══════════════════════════════════════════════════════════════════ */
+
+function scDow(ds){
+  var d = new Date(ds + 'T00:00:00');
+  return ['일','월','화','수','목','금','토'][d.getDay()];
+}
+
+async function scEnsure(){
+  if(BF.slots) return;
+  try{
+    var r = await okrApi('sch_read', {});
+    BF.slots = r.slots || [];
+  }catch(e){
+    BF.slots = [];
+    toast('일정을 불러오지 못했습니다', 'error');
+  }
+}
+async function scReload(){ BF.slots = null; await scEnsure(); scRender(); toast('불러왔습니다'); }
+async function scOpen(){ await scEnsure(); scRender(); }
+
+function scRender(){
+  var body = document.getElementById('scBody');
+  if(!body) return;
+  if(!BF.slots){ body.innerHTML = '<div class="bf-empty">불러오는 중…</div>'; return; }
+
+  var priv = AUTH.isPriv(), mine = bfMyTeams();
+  var teams = (priv ? bfAllTeams() : (mine.length ? mine : bfAllTeams()));
+  var today = new Date(); today.setHours(0,0,0,0);
+  var showPast = document.getElementById('scPast').checked;
+
+  var h = '';
+  if(priv){
+    var d0 = new Date(Date.now() + 86400000).toISOString().slice(0,10);
+    h += '<div class="sc-form">'
+      +  '<div class="sc-f"><label>날짜</label><input type="date" id="scDate" value="'+d0+'"></div>'
+      +  '<div class="sc-f"><label>시작</label><input type="time" id="scStart" value="14:00" step="900"></div>'
+      +  '<div class="sc-f"><label>종료</label><input type="time" id="scEnd" value="15:00" step="900"></div>'
+      +  '<div class="sc-f"><label>정원(팀)</label><input type="number" id="scCap" value="1" min="1" max="20" style="width:74px"></div>'
+      +  '<div class="sc-f" style="flex:1;min-width:180px"><label>메모 (장소 등)</label><input type="text" id="scNote" placeholder="예: 본사 3층 회의실"></div>'
+      +  '<button class="btn primary" onclick="scAdd()">＋ 가능 시간 등록</button>'
+      +  '</div>';
+  } else {
+    h += '<div class="bf-note">경영자가 올린 가능한 시간 중 <b>팀당 하루에 하나</b>를 고를 수 있습니다. '
+      +  '잘못 골랐으면 본인이 예약한 것은 직접 취소할 수 있습니다.</div>';
+  }
+
+  var list = BF.slots.filter(function(s){
+    if(showPast) return true;
+    return new Date(s.date + 'T00:00:00').getTime() >= today.getTime();
+  });
+
+  // 내 팀 예약 현황
+  var myBk = [];
+  BF.slots.forEach(function(s){
+    (s.bookings || []).forEach(function(b){
+      if(mine.some(function(t){ return t.toLowerCase() === String(b.team).toLowerCase(); }))
+        myBk.push(s.date + ' ' + s.start + '–' + s.end + '  ' + b.team);
+    });
+  });
+  if(myBk.length)
+    h += '<div class="bf-note" style="background:var(--green-bg);border-color:#86EFAC;color:#14532D">'
+      +  '<b>내 팀 예약</b> — ' + myBk.map(bfEsc).join(' · ') + '</div>';
+
+  if(!list.length){
+    h += '<div class="bf-empty">' + (priv ? '아직 등록한 시간이 없습니다. 위에서 추가하세요.'
+                                          : '아직 열린 시간이 없습니다. 경영자가 등록하면 여기 뜹니다.') + '</div>';
+    body.innerHTML = h;
+    return;
+  }
+
+  var days = {}, order = [];
+  list.forEach(function(s){ if(!days[s.date]){ days[s.date] = []; order.push(s.date); } days[s.date].push(s); });
+  order.sort();
+
+  order.forEach(function(d){
+    h += '<div class="sc-day"><div class="sc-dayh">' + bfEsc(d) + ' (' + scDow(d) + ')</div>';
+    days[d].sort(function(a,b){ return a.start < b.start ? -1 : 1; }).forEach(function(s){
+      var bk = s.bookings || [], cap = Math.max(1, s.cap || 1), left = cap - bk.length;
+      var isMine = bk.some(function(b){ return mine.some(function(t){ return t.toLowerCase() === String(b.team).toLowerCase(); }); });
+      h += '<div class="sc-slot' + (isMine ? ' mine' : (left <= 0 ? ' full' : '')) + '">'
+        +  '<span class="sc-time">' + bfEsc(s.start) + ' – ' + bfEsc(s.end) + '</span>'
+        +  (s.note ? '<span class="sc-note">' + bfEsc(s.note) + '</span>' : '');
+      bk.forEach(function(b){
+        var canX = priv || b.by === (AUTH.user && AUTH.user.username);
+        h += '<span class="sc-bk">' + bfEsc(b.team)
+          +  (canX ? '<x onclick="scUnbook(\'' + bfEsc(s.id) + '\',\'' + bfEsc(b.team) + '\')" title="예약 취소">✕</x>' : '<x style="opacity:.3;cursor:default">✕</x>')
+          +  '</span>';
+      });
+      h += '<span class="sc-right">'
+        +  '<span class="sc-open">' + (left > 0 ? '남은 자리 ' + left + '/' + cap : '마감') + '</span>';
+      if(left > 0){
+        var opts = teams.map(function(t){ return '<option value="' + bfEsc(t) + '">' + bfEsc(t) + '</option>'; }).join('');
+        h += '<select class="filter-sel" id="bk_' + bfEsc(s.id) + '" style="width:104px">' + opts + '</select>'
+          +  '<button class="btn primary" onclick="scBook(\'' + bfEsc(s.id) + '\')">예약</button>';
+      }
+      if(priv) h += '<button class="btn danger" onclick="scDel(\'' + bfEsc(s.id) + '\')">삭제</button>';
+      h += '</span></div>';
+    });
+    h += '</div>';
+  });
+
+  body.innerHTML = h;
+}
+
+async function scAdd(){
+  var p = {
+    date:  document.getElementById('scDate').value,
+    start: document.getElementById('scStart').value,
+    end:   document.getElementById('scEnd').value,
+    cap:   parseInt(document.getElementById('scCap').value, 10) || 1,
+    note:  document.getElementById('scNote').value
+  };
+  if(!p.date || !p.start || !p.end){ toast('날짜와 시간을 채우세요', 'error'); return; }
+  try{
+    var r = await okrApi('sch_add', p);
+    BF.slots.push(r.slot);
+    toast('등록했습니다');
+    scRender();
+  }catch(e){ toast((e && e.data && e.data.error) || '등록 실패', 'error'); }
+}
+
+async function scDel(id){
+  if(!confirm('이 시간을 삭제할까요? 예약도 함께 지워집니다.')) return;
+  try{
+    await okrApi('sch_delete', {id: id});
+    BF.slots = BF.slots.filter(function(s){ return s.id !== id; });
+    toast('삭제했습니다');
+    scRender();
+  }catch(e){ toast((e && e.data && e.data.error) || '삭제 실패', 'error'); }
+}
+
+async function scBook(id){
+  var sel = document.getElementById('bk_' + id);
+  if(!sel){ return; }
+  try{
+    var r = await okrApi('sch_book', {id: id, team: sel.value});
+    BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
+    toast(sel.value + ' 예약 완료');
+    scRender();
+  }catch(e){ toast((e && e.data && e.data.error) || '예약 실패', 'error'); }
+}
+
+async function scUnbook(id, team){
+  try{
+    var r = await okrApi('sch_unbook', {id: id, team: team});
+    BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
+    toast('예약을 취소했습니다');
+    scRender();
+  }catch(e){ toast((e && e.data && e.data.error) || '취소 실패', 'error'); }
+}
+
 
 // 시작: 로그인 Status 확인 → 접속 or 로그인 화면
 bootAuth();
