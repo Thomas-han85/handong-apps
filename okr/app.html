@@ -169,7 +169,7 @@ tr.dragging{opacity:.35}
 .row-done-hide{display:none !important}
 
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-2";</script>
 </head>
 <body>
 
@@ -8869,7 +8869,9 @@ function setFilterTab(tab){
 }
 
 // ══ NAS 설정 ══
-const NAS_API = 'https://handongec.synology.me:8443/okr/api.php';
+/* 상대경로 — 앱이 놓인 폴더의 api.php 를 부른다.
+   절대주소를 박아두면 서버가 바뀔 때마다 앱이 죽는다. 2026-08 서버 이전 때 실제로 그랬다. */
+const NAS_API = 'api.php';
 let nasMode = false;
 
 /* ===================== HANDONG OKR — AUTH/PERMISSION MODULE (v2) =====================
