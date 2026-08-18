@@ -1,0 +1,3569 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Punch List | HANDONG</title>
+<script>
+/* ── 버전 자동 감지 & 강제 새로고침 ── */
+(async function(){
+  try{
+    // ?_v= 파라미터가 이미 있으면 버전 저장 후 정리
+    const sp=new URLSearchParams(location.search);
+    if(sp.has('_v')){
+      localStorage.setItem('pl_ver',sp.get('_v'));
+      history.replaceState(null,'',location.pathname);
+      return;
+    }
+    // API에서 현재 서버 파일 버전(mtime) 조회 — API는 no-cache 헤더 포함
+    const res=await fetch('punchlist_api.php?action=version&_='+Date.now());
+    const d=await res.json();
+    if(!d.ok)return;
+    const stored=localStorage.getItem('pl_ver');
+    if(stored && stored!==String(d.version)){
+      // 버전 불일치 → URL에 버전 파라미터를 붙여 강제 새 요청
+      location.href=location.pathname+'?_v='+d.version;
+    }else if(!stored){
+      localStorage.setItem('pl_ver',String(d.version));
+    }
+  }catch(e){}
+})();
+</script>
+<style>
+:root{--navy:#0D2137;--navy-mid:#1A3550;--navy-light:#243F5A;--gold:#F5A623;--bg:#EEF2F7;--surface:#fff;--surface2:#F8FAFC;--border:#D4DDE8;--border-light:#E8EFF6;--text:#1A2B3C;--text2:#4A6882;--text3:#8BACC8;--green:#0F7B4E;--green-bg:#D1FAE5;--green-mid:#10B981;--red:#C8322A;--red-bg:#FEE2E2;--amber:#D97706;--amber-bg:#FEF3C7;--radius:12px;--radius-sm:8px;--shadow:0 2px 12px rgba(13,33,55,.10)}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;-webkit-tap-highlight-color:transparent}
+.home-card,.home-card *{
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+  touch-action:manipulation;
+}
+.toggle-btn,.ebtn,.btn-back,.add-row-btn,.saved-item,.saved-del,.row-del{
+  -webkit-user-select:none;user-select:none;
+  touch-action:manipulation;
+}
+body{font-family:'Apple SD Gothic Neo',-apple-system,'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.screen{display:none;min-height:100vh}.screen.active{display:block}#homeScreen.active{display:flex;flex-direction:column}
+.hdr{background:var(--navy);height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;position:sticky;top:0;z-index:200;box-shadow:0 2px 10px rgba(0,0,0,.3)}
+.hdr-left{display:flex;align-items:center;gap:10px}.logo-badge{background:var(--gold);color:var(--navy);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;letter-spacing:.5px}
+.hdr-title{color:#fff;font-size:15px;font-weight:700}.hdr-sub{color:var(--text3);font-size:11px;margin-top:1px}
+.btn-back{background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;padding:6px 10px;border-radius:8px;font-family:inherit}
+.btn-back:hover{background:var(--navy-light);color:var(--gold)}
+.home-hero{padding:40px 24px 28px;text-align:center;background:var(--navy)}
+.home-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:24px}
+.home-logo-text{color:#fff;font-size:20px;font-weight:800}.home-logo-text span{color:var(--gold)}
+.home-h1{color:#fff;font-size:24px;font-weight:800;line-height:1.3;margin-bottom:8px}
+.home-sub{color:var(--text3);font-size:13px;line-height:1.6}
+.home-cards{padding:20px;display:flex;flex-direction:column;gap:12px;max-width:500px;margin:0 auto;width:100%;background:var(--navy)}
+.home-card{background:var(--navy-mid);border:1.5px solid var(--navy-light);border-radius:14px;padding:20px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:16px;width:100%;text-align:left;font-family:inherit;-webkit-appearance:none;appearance:none}
+.home-card:hover,.home-card.primary{border-color:var(--gold)}.home-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.home-card-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.ic-gold{background:rgba(245,166,35,.15)}.ic-blue{background:rgba(21,101,192,.2)}
+.home-card-body{flex:1}.home-card-title{color:#fff;font-size:15px;font-weight:700;margin-bottom:4px}
+.home-card-desc{color:var(--text3);font-size:12px;line-height:1.5}
+.saved-wrap{padding:0 20px 60px;max-width:500px;margin:0 auto;width:100%;background:var(--navy);flex:1}
+.saved-hdr{color:var(--text3);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;padding-top:4px}
+.saved-item{background:var(--navy-mid);border:1.5px solid var(--navy-light);border-radius:12px;padding:14px 16px;margin-bottom:8px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:12px}
+.saved-item:hover{border-color:var(--gold);background:var(--navy-light)}
+.saved-info{flex:1;min-width:0}.saved-name{color:#fff;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.saved-meta{color:var(--text3);font-size:11px;margin-top:2px}
+.s-badge{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
+.s-pending{background:rgba(217,119,6,.2);color:#FCD34D}.s-done{background:rgba(16,185,129,.15);color:#6EE7B7}.s-partial{background:rgba(59,130,246,.15);color:#93C5FD}
+.saved-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:4px;border-radius:6px;line-height:1}
+.saved-del:hover{color:var(--red);background:rgba(220,38,38,.15)}
+.saved-empty{text-align:center;color:var(--text3);font-size:13px;padding:28px 20px;border:1.5px dashed var(--navy-light);border-radius:12px}
+.main{max-width:900px;margin:0 auto;padding:16px 14px 90px}
+.card{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.card-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.setting-group{display:flex;flex-direction:column;gap:6px}.setting-label{font-size:12px;font-weight:600;color:var(--text2)}
+.btn-group{display:flex;gap:6px;flex-wrap:wrap}
+.toggle-btn{padding:7px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.toggle-btn:hover{border-color:var(--navy);color:var(--navy)}.toggle-btn.active{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.inp-group{display:flex;flex-direction:column;gap:4px}.inp-label{font-size:12px;font-weight:600;color:var(--text2)}
+.t-input{padding:8px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:var(--surface2);color:var(--text);width:100%;transition:all .15s}
+.t-input:focus{outline:none;border-color:#1565C0;background:#fff;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+.row-item{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+.row-hdr{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--surface2);border-bottom:1px solid var(--border-light)}
+.row-num{background:var(--navy);color:var(--gold);font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;flex-shrink:0}
+.row-desc{flex:1;padding:7px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:13px;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s}
+.row-desc:focus{outline:none;border-color:#1565C0}
+.row-del{padding:6px 11px;border:1px solid var(--border);background:var(--surface);color:var(--text3);border-radius:var(--radius-sm);font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;flex-shrink:0;transition:all .15s}
+.row-del:hover{background:var(--red-bg);border-color:#FCA5A5;color:var(--red)}
+.pairs-wrap{padding:12px 14px}
+/* Before + After pair */
+.pair-set{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;background:var(--surface2);border:1px solid var(--border-light);border-radius:10px;padding:8px}
+.pair-cell{border-radius:8px;overflow:hidden;position:relative}
+.pair-lbl{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;position:absolute;top:5px;left:5px;z-index:2}
+.lbl-b{background:rgba(217,119,6,.85);color:#fff}.lbl-a{background:rgba(15,123,78,.85);color:#fff}
+.photo-box{aspect-ratio:4/3;position:relative;cursor:pointer;border-radius:8px;overflow:hidden}
+.photo-box img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-rm{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:3}
+.photo-rm:hover{background:var(--red)}
+.empty-box{aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;cursor:pointer;border-radius:8px;transition:all .15s;border:2px dashed var(--border)}
+.eb-b{border-color:#FCD34D;background:#FFFBEB}.eb-b:hover{background:#FEF3C7;border-color:#F59E0B}
+.eb-a{border-color:#86EFAC;background:#F0FDF4}.eb-a:hover{background:#DCFCE7;border-color:var(--green-mid)}
+.empty-icon{font-size:20px;opacity:.5}.empty-txt{font-size:10px;font-weight:700;color:var(--text3)}
+.disabled-box{aspect-ratio:4/3;border-radius:8px;background:var(--bg);border:2px dashed var(--border-light);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px}
+.photo-meta{padding:6px 7px;background:var(--surface2);border-top:1px solid var(--border-light)}
+.meta-lbl{font-size:9px;color:var(--text3);font-weight:700;margin-bottom:2px}
+.meta-inp{width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:inherit;background:#fff;color:var(--text);margin-bottom:4px;transition:border-color .15s}
+.meta-inp:last-child{margin-bottom:0}.meta-inp:focus{outline:none;border-color:#1565C0}
+.add-row-btn{width:100%;padding:12px;border:2px dashed var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px}
+.add-row-btn:hover{border-color:var(--navy);color:var(--navy);background:rgba(13,33,55,.04)}
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:7px;justify-content:center;z-index:100;box-shadow:0 -4px 16px rgba(0,0,0,.08);flex-wrap:wrap}
+.ebtn{padding:10px 16px;border-radius:var(--radius-sm);font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-save{background:var(--navy);color:var(--gold)}.btn-save:hover{background:var(--navy-mid)}
+.btn-pdf{background:var(--red);color:#fff}.btn-pdf:hover{background:#B91C1C}
+.btn-ppt{background:#C55A11;color:#fff}.btn-ppt:hover{background:#9C4609}
+.btn-xls{background:var(--green);color:#fff}.btn-xls:hover{background:#0A6041}
+.btn-rst{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}.btn-rst:hover{background:var(--border)}
+/* followup */
+.fu-info{background:var(--navy-mid);padding:10px 16px;display:flex;gap:16px;flex-wrap:wrap}
+.fu-info-item{display:flex;flex-direction:column;gap:1px}
+.fu-info-lbl{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:.5px}
+.fu-info-val{font-size:13px;color:#fff;font-weight:600}
+.fu-prog{background:var(--surface);border-bottom:1px solid var(--border-light);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.prog-wrap{flex:1;min-width:160px}.prog-lbl{font-size:11px;color:var(--text2);font-weight:600;margin-bottom:4px}
+.prog-bg{height:6px;background:var(--border);border-radius:10px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--green-mid),#34D399);border-radius:10px;transition:width .4s}
+.prog-stat{font-size:12px;color:var(--text2)}.prog-stat strong{color:var(--green)}
+.fu-item{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);margin-bottom:12px;box-shadow:var(--shadow);overflow:hidden}
+.fu-item-hdr{padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border-light);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fu-desc{font-size:13px;font-weight:600;color:var(--text);flex:1;min-width:0}
+.fu-status{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;flex-shrink:0}
+.st-pending{background:var(--amber-bg);color:var(--amber)}.st-partial{background:#DBEAFE;color:#1D4ED8}.st-done{background:var(--green-bg);color:var(--green)}
+.fu-pairs{padding:12px 14px;display:flex;flex-direction:column;gap:0}
+.fu-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--surface2);border:1px solid var(--border-light);border-radius:10px;padding:8px}
+.fu-cell{border-radius:8px;overflow:hidden;position:relative}
+.fu-photo{aspect-ratio:4/3;position:relative;border-radius:8px;overflow:hidden}
+.fu-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.fu-photo-rm{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;z-index:3}
+.fu-photo-rm:hover{background:var(--red)}
+.fu-empty{aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;border-radius:8px;border:2px dashed #86EFAC;background:#F0FDF4;transition:all .15s}
+.fu-empty:hover{background:#DCFCE7;border-color:var(--green-mid)}
+.fu-empty-icon{font-size:20px;opacity:.6}.fu-empty-txt{font-size:10px;font-weight:700;color:var(--green)}
+/* followup item edit */
+.fu-edit-btn{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text3);font-size:11px;cursor:pointer;padding:3px 8px;font-family:inherit;transition:all .15s;flex-shrink:0}
+.fu-edit-btn:hover{border-color:var(--navy);color:var(--navy);background:var(--surface2)}
+.fu-desc-input{flex:1;padding:5px 9px;border:1.5px solid #1565C0;border-radius:6px;font-size:13px;font-weight:600;font-family:inherit;background:#fff;color:var(--text);min-width:0}
+.fu-desc-input:focus{outline:none;box-shadow:0 0 0 3px rgba(21,101,192,.1)}
+/* after photo caption in followup */
+.fu-cap-wrap{padding:5px 6px;background:var(--surface2);border-top:1px solid var(--border-light)}
+.fu-cap-inp{width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s}
+.fu-cap-inp:focus{outline:none;border-color:#1565C0}
+.fu-before-meta{padding:5px 6px;background:var(--surface2);border-top:1px solid var(--border-light);display:flex;flex-direction:column;gap:3px}
+.fu-before-inp{width:100%;border:1px solid var(--border);border-radius:5px;padding:4px 7px;font-size:11px;font-family:inherit;background:#fff;color:var(--text);transition:border-color .15s}
+.fu-before-inp:focus{outline:none;border-color:#1565C0}
+.fu-del-row-btn{padding:4px 10px;border:1px solid #FCA5A5;background:var(--red-bg);color:var(--red);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;flex-shrink:0;transition:all .15s;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+.fu-del-row-btn:hover{background:var(--red);color:#fff}
+.fu-pair-wrap{position:relative;margin-bottom:10px}
+.fu-pair-wrap .fu-pair{margin-bottom:0}
+.fu-pair-del{position:absolute;top:6px;right:6px;z-index:5;padding:3px 9px;border:1px solid #FCA5A5;background:rgba(254,226,226,.92);color:var(--red);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-user-select:none;user-select:none;touch-action:manipulation;backdrop-filter:blur(2px)}
+.fu-pair-del:hover{background:var(--red);color:#fff}
+.fu-add-row{display:flex;gap:8px;padding:6px 8px;background:var(--surface2);border-top:1px solid var(--border-light)}
+.fu-add-btn{display:flex;align-items:center;gap:5px;padding:6px 14px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;border:1.5px solid;font-family:inherit;transition:.15s}
+.fu-add-btn.before{background:rgba(13,33,55,.06);color:var(--navy);border-color:var(--navy)}
+.fu-add-btn.before:hover{background:var(--navy);color:#fff}
+.fu-add-btn.after{background:rgba(16,185,129,.07);color:#059669;border-color:#059669}
+.fu-add-btn.after:hover{background:#059669;color:#fff}
+.fu-paste-badge{font-size:10px;padding:3px 8px;border-radius:5px;font-weight:700;letter-spacing:.3px}
+.fu-paste-badge.b{background:rgba(13,33,55,.12);color:var(--navy)}
+.fu-paste-badge.a{background:rgba(16,185,129,.12);color:#059669}
+.modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-ov.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;max-width:360px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:8px}.modal p{font-size:13px;color:var(--text2);margin-bottom:18px;line-height:1.6}
+.modal-btns{display:flex;gap:8px}
+.m-input{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:inherit;margin-bottom:12px;transition:border-color .15s}
+.m-input:focus{outline:none;border-color:#1565C0}
+.loading{display:none;position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:1000;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+.loading.show{display:flex}
+.spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--text2);font-weight:600}
+.toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--navy);color:var(--gold);padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;white-space:nowrap;opacity:0;transition:all .25s;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* ════ KNOWLEDGE BASE ════ */
+.kb-btn{padding:4px 12px;border:1px solid var(--gold);background:rgba(245,166,35,.12);color:var(--gold);border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-user-select:none;user-select:none;touch-action:manipulation;transition:all .15s}
+.kb-btn:hover{background:var(--gold);color:var(--navy)}
+.kb-send-bar{padding:10px 14px;background:var(--navy);border-top:1px solid var(--navy-light);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.kb-send-bar label{color:#fff;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;cursor:pointer}
+.fu-pair-check{width:17px;height:17px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+/* Knowledge List Screen */
+.kl-item{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:16px;margin-bottom:10px;cursor:pointer;transition:all .15s;box-shadow:var(--shadow)}
+.kl-item:hover{border-color:var(--gold);transform:translateY(-1px)}
+.kl-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.kl-meta{font-size:11px;color:var(--text3);display:flex;gap:10px;flex-wrap:wrap}
+.kl-meta span{display:flex;align-items:center;gap:3px}
+.kl-preview{font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.kl-thumb-row{display:flex;gap:5px;margin-top:8px}
+.kl-thumb{width:48px;height:36px;object-fit:cover;border-radius:5px;border:1px solid var(--border-light)}
+/* Knowledge Build Screen */
+.kb-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:1100px;margin:0 auto;padding:16px 14px 100px}
+@media(max-width:700px){.kb-layout{grid-template-columns:1fr}}
+.kb-left{}
+.kb-right{}
+.kb-section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.kb-section-title::before{content:'';width:3px;height:12px;background:var(--gold);border-radius:2px}
+.kb-card{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow);position:relative}
+.kb-card-title-inp{width:100%;border:none;border-bottom:1.5px solid var(--border);padding:6px 0;font-size:14px;font-weight:700;font-family:inherit;color:var(--text);background:transparent;outline:none;margin-bottom:8px}
+.kb-card-title-inp:focus{border-bottom-color:var(--gold)}
+.kb-card-body-inp{width:100%;border:1px solid var(--border-light);border-radius:6px;padding:8px;font-size:12px;font-family:inherit;color:var(--text);background:var(--surface2);resize:vertical;min-height:70px;outline:none;transition:border-color .15s}
+.kb-card-body-inp:focus{border-color:#1565C0}
+.kb-card-del{position:absolute;top:8px;right:8px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 5px;border-radius:4px}
+.kb-card-del:hover{color:var(--red);background:var(--red-bg)}
+.kb-link-row{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px}
+.kb-linked-badge{background:var(--amber-bg);color:var(--amber);font-size:10px;font-weight:700;padding:2px 8px;border-radius:12px;cursor:pointer;display:flex;align-items:center;gap:3px}
+.kb-linked-badge:hover{background:var(--amber);color:#fff}
+.kb-add-knowledge-btn{width:100%;padding:11px;border:2px dashed var(--border);border-radius:var(--radius);background:transparent;color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px}
+.kb-add-knowledge-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* Photo item in right panel */
+.kb-photo-item{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:10px;margin-bottom:8px;box-shadow:var(--shadow)}
+.kb-photo-item-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.kb-photo-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.kb-photo-thumb{aspect-ratio:4/3;object-fit:cover;border-radius:6px;width:100%;display:block}
+.kb-photo-empty{aspect-ratio:4/3;border-radius:6px;background:var(--bg);border:1px dashed var(--border);display:flex;align-items:center;justify-content:center}
+.kb-link-btn{padding:3px 9px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-left:auto;flex-shrink:0}
+.kb-link-btn:hover,.kb-link-btn.linked{background:var(--gold);color:var(--navy);border-color:var(--gold)}
+/* Card-Photo color linking */
+.kb-card[data-color]{border-left:5px solid var(--card-color,var(--border));padding-left:14px}
+.kb-card-color-tag{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--card-color,var(--text3));margin-right:6px;vertical-align:middle;flex-shrink:0}
+.kb-card-num{font-size:10px;font-weight:800;color:var(--card-color,var(--text3));letter-spacing:.5px;margin-bottom:4px;display:flex;align-items:center;gap:4px}
+.kb-saved-badge{margin-left:auto;font-size:10px;color:#10B981;font-weight:700;background:rgba(16,185,129,.12);padding:2px 8px;border-radius:10px;letter-spacing:.3px}
+.kb-photo-item.linked-photo{border-left:5px solid var(--linked-color,var(--border));padding-left:9px}
+.kb-photo-link-bars{display:flex;gap:3px;margin-top:6px;flex-wrap:wrap}
+.kb-photo-link-bar{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;color:#fff}
+.kb-photo-link-bar .x{cursor:pointer;opacity:.7;font-size:11px;line-height:1}
+.kb-photo-link-bar .x:hover{opacity:1}
+.kb-link-btn[data-card-color]{border-color:var(--btn-color,var(--border));color:var(--btn-color,var(--text2))}
+.kb-link-btn[data-card-color]:hover,.kb-link-btn.linked[data-card-color]{background:var(--btn-color,var(--gold));color:#fff;border-color:var(--btn-color,var(--gold))}
+.kb-photo-proj{font-size:10px;color:var(--gold);font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:4px}
+.kb-photo-proj::before{content:'📍';font-size:10px}
+
+/* ── File Attachments ─────────────────────────── */
+.att-section{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+.att-section-title{font-size:12px;font-weight:800;color:var(--text2);letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.att-upload-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.att-upload-btn{display:inline-flex;align-items:center;gap:6px;background:var(--navy);color:var(--gold);border:1.5px solid var(--gold);border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:.15s}
+.att-upload-btn:hover{background:var(--navy-mid)}
+.att-upload-btn input[type=file]{display:none}
+.att-uploading{font-size:11px;color:var(--text3);font-style:italic}
+.att-list{display:flex;flex-direction:column;gap:6px}
+.att-item{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;transition:.15s}
+.att-item:hover{border-color:var(--gold)}
+.att-icon{font-size:20px;flex-shrink:0;width:28px;text-align:center}
+.att-info{flex:1;min-width:0}
+.att-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.att-meta{font-size:10px;color:var(--text3);margin-top:2px}
+.att-dl-btn{flex-shrink:0;background:none;border:1.5px solid var(--border);color:var(--text2);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;cursor:pointer;transition:.15s}
+.att-dl-btn:hover{border-color:var(--gold);color:var(--gold)}
+.att-del-btn{flex-shrink:0;background:none;border:none;color:var(--text3);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;transition:.15s}
+.att-del-btn:hover{color:var(--red)}
+.att-empty{font-size:11px;color:var(--text3);text-align:center;padding:12px;font-style:italic}
+.att-nas-warn{font-size:10px;color:#F59E0B;display:flex;align-items:center;gap:4px}
+
+/* KB Files Section (klistScreen) */
+.kb-files-section{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px}
+.kb-files-title{font-size:12px;font-weight:800;color:var(--text2);letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.kb-file-item{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;transition:.15s;cursor:pointer}
+.kb-file-item:hover{border-color:var(--gold);background:rgba(245,166,35,.04)}
+.kb-file-icon{font-size:22px;flex-shrink:0;width:30px;text-align:center}
+.kb-file-info{flex:1;min-width:0}
+.kb-file-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text}
+.kb-file-name-input{font-size:12px;font-weight:600;color:var(--text);background:transparent;border:none;border-bottom:1.5px solid var(--gold);outline:none;width:100%;font-family:inherit;padding:0}
+.kb-file-meta{font-size:10px;color:var(--text3);margin-top:2px}
+.kb-file-open{flex-shrink:0;background:var(--navy);color:var(--gold);border:1.5px solid var(--gold);border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.kb-file-open:hover{background:var(--gold);color:var(--navy)}
+.kb-file-del{flex-shrink:0;background:none;border:none;color:var(--text3);font-size:17px;cursor:pointer;padding:2px 4px;line-height:1;transition:.15s}
+.kb-file-del:hover{color:var(--red)}
+
+/* PDF Viewer Modal */
+.pdf-viewer-ov{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;display:none;flex-direction:column}
+.pdf-viewer-ov.active{display:flex}
+.pdf-viewer-hdr{background:var(--navy);padding:10px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:2px solid var(--gold)}
+.pdf-viewer-title{flex:1;color:var(--gold);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pdf-viewer-close{background:none;border:1.5px solid var(--text3);color:var(--text2);border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.pdf-viewer-close:hover{border-color:var(--red);color:var(--red)}
+.pdf-viewer-dl{background:var(--gold);color:var(--navy);border:none;border-radius:6px;padding:5px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:.15s}
+.pdf-viewer-dl:hover{opacity:.85}
+.pdf-viewer-frame{flex:1;width:100%;border:none;background:#fff}
+
+/* KB List checkbox selection */
+.kl-item{position:relative;padding-left:44px}
+.kl-check{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:20px;height:20px;accent-color:var(--gold);cursor:pointer;flex-shrink:0}
+.kl-item.kl-selected{border-color:var(--gold);background:rgba(245,166,35,.06)}
+.kl-action-bar{position:fixed;bottom:0;left:0;right:0;background:var(--navy);border-top:2px solid var(--gold);padding:10px 16px;z-index:200;display:none;align-items:center;gap:10px;flex-wrap:wrap}
+.kl-action-bar.active{display:flex}
+.kl-action-count{color:var(--gold);font-size:13px;font-weight:800;flex-shrink:0}
+.kl-action-btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1.5px solid;font-family:inherit;transition:.15s}
+.kl-action-btn.del{background:var(--red);color:#fff;border-color:var(--red)}
+.kl-action-btn.del:hover{opacity:.85}
+.kl-action-btn.exp{background:var(--navy-mid);color:var(--gold);border-color:var(--gold)}
+.kl-action-btn.exp:hover{background:var(--gold);color:var(--navy)}
+.kl-action-btn.clr{background:none;color:var(--text3);border-color:transparent;font-size:11px}
+
+/* ── KB View Toggle (Cards vs Table) ── */
+.kl-view-toggle{display:inline-flex;background:var(--bg);border:1.5px solid var(--border);border-radius:7px;overflow:hidden}
+.kl-view-toggle button{background:transparent;border:none;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;color:var(--text2);font-family:inherit}
+.kl-view-toggle button.active{background:var(--navy);color:var(--gold)}
+
+/* ── Filter Bar ── */
+.kl-filter-bar{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.kl-filter-bar .lbl{font-size:10px;font-weight:800;color:var(--text3);letter-spacing:.6px;text-transform:uppercase}
+.kl-filter-input{font-size:12px;padding:5px 10px;border:1.5px solid var(--border);border-radius:6px;font-family:inherit;background:var(--bg);color:var(--text);outline:none;min-width:160px}
+.kl-filter-input:focus{border-color:var(--gold)}
+.kl-chip-row{display:flex;flex-wrap:wrap;gap:4px}
+.kl-chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:14px;cursor:pointer;border:1.5px solid var(--border);background:var(--bg);color:var(--text2);font-family:inherit;transition:.12s}
+.kl-chip.active{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.kl-chip:hover{border-color:var(--gold)}
+.kl-clear-filters{font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit;margin-left:auto}
+
+/* ── Table View ── */
+.kl-table-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;overflow:auto;max-height:calc(100vh - 280px)}
+.kl-table{width:100%;border-collapse:collapse;font-size:12px}
+.kl-table th{position:sticky;top:0;background:var(--navy);color:var(--gold);font-size:11px;font-weight:800;letter-spacing:.5px;padding:9px 10px;text-align:left;border-bottom:2px solid var(--gold);z-index:2;white-space:nowrap}
+.kl-table td{padding:8px 10px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.kl-table tr:hover td{background:rgba(245,166,35,.04)}
+.kl-table tr.kl-tr-selected td{background:rgba(245,166,35,.10)}
+.kl-cell-edit{cursor:cell;position:relative;min-width:80px}
+.kl-cell-edit:hover{background:rgba(13,33,55,.04)}
+.kl-cell-edit.kl-cell-active{background:rgba(245,166,35,.12);outline:2px solid var(--gold);outline-offset:-2px}
+.kl-cell-inp{width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;outline:none;padding:0;color:var(--text)}
+.kl-cell-sel{width:100%;border:none;background:transparent;font-size:12px;font-family:inherit;outline:none;padding:0;color:var(--text);cursor:pointer}
+.kl-fill-handle{position:absolute;bottom:-3px;right:-3px;width:8px;height:8px;background:var(--gold);border:1.5px solid #fff;border-radius:2px;cursor:crosshair;z-index:3;display:none}
+.kl-cell-active .kl-fill-handle{display:block}
+.kl-cell-title{font-weight:600;color:var(--text);max-width:300px}
+.kl-cell-site{font-weight:700;color:var(--navy)}
+.kl-disc-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:800;letter-spacing:.3px}
+.kl-disc-arch{background:#DBEAFE;color:#1E40AF}
+.kl-disc-int{background:#FEF3C7;color:#92400E}
+.kl-disc-mep{background:#D1FAE5;color:#065F46}
+.kl-disc-other{background:#E5E7EB;color:#374151}
+.kl-disc-empty{background:transparent;color:var(--text3);font-style:italic;font-weight:600}
+.kl-cat-quality{background:#E0E7FF;color:#3730A3}
+.kl-cat-safety{background:#FEE2E2;color:#991B1B}
+.kl-cat-other{background:#E5E7EB;color:#374151}
+.kl-row-action{display:flex;gap:4px;align-items:center}
+.kl-row-btn{background:none;border:1px solid var(--border);color:var(--text2);border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit}
+.kl-row-btn:hover{border-color:var(--gold);color:var(--gold)}
+.kl-pending-save{background:#FEF3C7;padding:8px 14px;border-radius:8px;margin-bottom:10px;display:none;align-items:center;gap:10px;font-size:12px;color:#92400E;font-weight:700}
+.kl-pending-save.active{display:flex}
+.kl-pending-save button{background:var(--gold);color:var(--navy);border:none;padding:5px 14px;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px;font-family:inherit}
+.kl-fill-marker{position:absolute;border:2px dashed var(--gold);pointer-events:none;z-index:10}
+
+/* File rename hover button */
+.kb-file-name-wrap{display:flex;align-items:center;gap:6px;min-width:0}
+.kb-file-rename{flex-shrink:0;background:none;border:1px solid var(--border);color:var(--text3);border-radius:5px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;opacity:0;transition:.15s}
+.kb-file-item:hover .kb-file-rename{opacity:1}
+.kb-file-rename:hover{border-color:var(--gold);color:var(--gold)}
+.kr-photo-proj{font-size:11px;font-weight:700;color:var(--gold);background:rgba(245,166,35,.08);padding:4px 8px;border-radius:6px;margin-bottom:6px;display:inline-block}
+/* Knowledge Report Screen */
+.kr-header{background:var(--navy);padding:20px 20px 16px}
+.kr-title{color:#fff;font-size:18px;font-weight:700;margin-bottom:4px}
+.kr-meta{color:var(--text3);font-size:12px;display:flex;gap:12px;flex-wrap:wrap}
+.kr-section{background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);padding:16px;margin:14px;box-shadow:var(--shadow)}
+.kr-section h3{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.kr-section h3::before{content:'';width:3px;height:11px;background:var(--gold);border-radius:2px}
+.kr-lesson-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.kr-lesson-body{font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap}
+.kr-photo-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kr-photo-pair{background:var(--surface2);border:1px solid var(--border-light);border-radius:10px;padding:8px}
+.kr-photo-pair-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.kr-photo-img{aspect-ratio:4/3;object-fit:cover;border-radius:6px;width:100%;display:block}
+.kr-desc{font-size:11px;color:var(--text2);font-weight:600}
+.kr-assignee{font-size:10px;color:var(--text3)}
+
+@media(max-width:600px){.settings-grid{grid-template-columns:1fr}.info-grid{grid-template-columns:1fr 1fr}.ebtn{padding:9px 11px;font-size:11px}}
+@media(max-width:400px){.info-grid{grid-template-columns:1fr}}
+</style>
+<script>/* HANDONG_PUNCH_APP */ var APP_VERSION = "2026.08.18-1";</script>
+</head>
+<body>
+<!-- HOME -->
+<div id="homeScreen" class="screen active">
+  <div class="hdr"><div class="hdr-left"><span class="logo-badge">HANDONG</span><div><div class="hdr-title">Punch List</div></div></div></div>
+  <div class="home-hero">
+    <div class="home-logo"><span class="logo-badge">HANDONG</span><span class="home-logo-text">Punch<span>List</span></span></div>
+    <div class="home-h1">Smart Punch List<br>for Site Defect Management</div>
+    <div class="home-sub">Photo-based defect report<br>creation & follow-up management</div>
+  </div>
+  <div class="home-cards">
+    <button class="home-card primary" onclick="goNewReport()" type="button">
+      <div class="home-card-icon ic-gold">📋</div>
+      <div class="home-card-body"><div class="home-card-title">New Report</div><div class="home-card-desc">Create a new punch list report.<br>Upload Before photos to get started.</div></div>
+      <span style="color:var(--text3);font-size:20px">›</span>
+    </button>
+    <button class="home-card" onclick="toggleSaved()" type="button">
+      <div class="home-card-icon ic-blue">📂</div>
+      <div class="home-card-body"><div class="home-card-title">Open Saved Report</div><div class="home-card-desc">Add After Photos & Follow-up</div></div>
+      <span style="color:var(--text3);font-size:20px">›</span>
+    </button>
+    <button class="home-card" onclick="goKnowledgeList()" type="button" style="border-color:rgba(245,166,35,.3)">
+      <div class="home-card-icon" style="background:rgba(16,185,129,.15)">📚</div>
+      <div class="home-card-body"><div class="home-card-title">Knowledge Base</div><div class="home-card-desc">Lessons learned from completed items</div></div>
+      <span style="color:var(--text3);font-size:20px">›</span>
+    </button>
+  </div>
+  <div class="saved-wrap" id="savedWrap" style="display:none">
+    <div class="saved-hdr">Saved Reports</div>
+    <div id="savedList"></div>
+  </div>
+</div>
+
+<!-- EDIT -->
+<div id="editScreen" class="screen">
+  <div class="hdr">
+    <div class="hdr-left"><button class="btn-back" onclick="goHome()">← Home</button><div><div class="hdr-title">Edit Report</div></div></div>
+    <span id="editBadge" style="font-size:11px;color:var(--text3)"></span><span id="nasStatus" style="font-size:11px;margin-left:8px">⟳ Checking NAS...</span>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="card-title">Settings</div>
+      <div class="settings-grid">
+        <div class="setting-group"><div class="setting-label">Slots per Page</div>
+          <div class="btn-group" id="colBtns">
+            <button class="toggle-btn active" onclick="setCol(2,this)">2 slots</button>
+            <button class="toggle-btn" onclick="setCol(4,this)">4 slots</button>
+            <button class="toggle-btn" onclick="setCol(6,this)">6 slots</button>
+          </div>
+        </div>
+        <div class="setting-group"><div class="setting-label">Photo Type</div>
+          <div class="btn-group" id="modeBtns">
+            <button class="toggle-btn active" onclick="setMode('both',this)">Before + After</button>
+            <button class="toggle-btn" onclick="setMode('before',this)">Before Only</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Project Info</div>
+      <div class="info-grid">
+        <div class="inp-group"><div class="inp-label">Project Name</div><input class="t-input" id="projName" placeholder="e.g. BenTre Apartment"></div>
+        <div class="inp-group"><div class="inp-label">Author</div><input class="t-input" id="projAuthor" placeholder="e.g. John Doe"></div>
+        <div class="inp-group"><div class="inp-label">Date</div><input class="t-input" type="date" id="projDate"></div>
+      </div>
+    </div>
+    <div id="rowsContainer"></div>
+    <button class="add-row-btn" onclick="addRow()">＋ Add Item</button>
+  </div>
+  <div class="bottom-bar" id="editBottomBar" style="display:none">
+    <button class="ebtn btn-save" onclick="openSaveModal()">💾 Save Report</button>
+    <button class="ebtn btn-pdf" onclick="exportPDF()">📄 PDF</button>
+    <button class="ebtn btn-ppt" onclick="exportPPT()">📊 PPT</button>
+    <button class="ebtn btn-xls" onclick="exportExcel()">📋 Excel</button>
+    <button class="ebtn btn-rst" onclick="openModal('resetModal')">🗑 Reset</button>
+  </div>
+</div>
+
+<!-- FOLLOWUP -->
+<div id="followupScreen" class="screen">
+  <div class="hdr">
+    <div class="hdr-left"><button class="btn-back" onclick="goHome()">← Home</button>
+      <div><div class="hdr-title">Follow-up</div><div class="hdr-sub" id="fuSub"></div></div>
+    </div>
+    <button class="ebtn btn-save" style="font-size:12px;padding:7px 13px" onclick="saveFollowup()">💾 Save</button>
+  </div>
+  <div id="fuInfoBar" class="fu-info"></div>
+  <div id="fuProg" class="fu-prog"></div>
+  <div class="main" id="fuContainer" style="padding-bottom:20px"></div>
+  <!-- Report Attachments -->
+  <div class="main" id="reportAttWrap" style="display:none;padding-top:0;padding-bottom:130px">
+    <div class="att-section" id="reportAttSection">
+      <div class="att-section-title">📎 ATTACHMENTS
+        <span id="reportAttNasWarn" class="att-nas-warn" style="display:none">⚠ NAS required for file upload</span>
+      </div>
+      <div class="att-upload-row">
+        <label class="att-upload-btn">
+          <span>＋ Upload File</span>
+          <input type="file" id="reportFileInput" accept=".pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt" multiple onchange="handleReportFileUpload(event)">
+        </label>
+        <span class="att-uploading" id="reportAttUploading" style="display:none">Uploading...</span>
+      </div>
+      <div class="att-list" id="reportAttList">
+        <div class="att-empty">No attachments yet</div>
+      </div>
+    </div>
+  </div>
+  <!-- KB send bar -->
+  <div id="kbSendBar" style="display:none;position:fixed;bottom:56px;left:0;right:0;background:var(--navy);border-top:1.5px solid var(--gold);padding:10px 16px;z-index:101;align-items:center;gap:10px;flex-wrap:wrap">
+    <span id="kbCheckedCount" style="color:var(--gold);font-size:12px;font-weight:700">0 selected</span>
+    <button class="kb-btn" onclick="sendToKnowledge()">📚 Send to Knowledge Base</button>
+    <button onclick="clearKbChecks()" style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">✕ Clear</button>
+  </div>
+  <!-- Follow-up bottom bar: slot selector + export -->
+  <div class="bottom-bar" id="fuBottomBar" style="display:none">
+    <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+      <span style="font-size:11px;color:var(--text2);font-weight:600">Slots:</span>
+      <div class="btn-group" id="fuColBtns">
+        <button class="toggle-btn active" onclick="setFuCol(2,this)">2</button>
+        <button class="toggle-btn" onclick="setFuCol(4,this)">4</button>
+        <button class="toggle-btn" onclick="setFuCol(6,this)">6</button>
+      </div>
+    </div>
+    <button class="ebtn btn-pdf" onclick="exportFuPDF()">📄 PDF</button>
+    <button class="ebtn btn-ppt" onclick="exportFuPPT()">📊 PPT</button>
+    <button class="ebtn btn-xls" onclick="exportFuExcel()">📋 Excel</button>
+  </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- ════ KNOWLEDGE BUILD SCREEN ════ -->
+<div id="kbuildScreen" class="screen">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" onclick="showScreen('followupScreen')">← Back</button>
+      <div><div class="hdr-title">Build Knowledge</div><div class="hdr-sub" id="kbuildSub"></div></div>
+    </div>
+    <button class="ebtn btn-save" style="font-size:12px;padding:7px 13px" onclick="saveKnowledge()">💾 Save</button>
+  </div>
+  <div class="kb-layout">
+    <!-- LEFT: Knowledge Cards -->
+    <div class="kb-left">
+      <div class="kb-section-title">Lessons Learned / Feedback</div>
+      <button class="kb-add-knowledge-btn" onclick="addKbCard()">＋ Add Knowledge</button>
+      <div id="kbCardsContainer"></div>
+    </div>
+    <!-- RIGHT: Selected Photos -->
+    <div class="kb-right">
+      <div class="kb-section-title">Selected Items</div>
+      <div id="kbPhotosPanel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ KNOWLEDGE LIST SCREEN ════ -->
+<div id="klistScreen" class="screen">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" id="klistBackBtn" onclick="klistGoBack()">← Home</button>
+      <div><div class="hdr-title">Knowledge Base</div></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <label class="ebtn" style="font-size:11px;padding:7px 11px;background:var(--navy-mid);color:var(--gold);border:1.5px solid var(--gold);cursor:pointer;display:inline-flex;align-items:center;gap:5px">
+        <span>📎 Upload File</span>
+        <input type="file" id="kbFilesInput" accept=".pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt" multiple style="display:none" onchange="handleKbListFileUpload(event)">
+      </label>
+      <span class="att-uploading" id="kbFilesUploading" style="display:none;font-size:10px;color:var(--gold);font-weight:700">Uploading...</span>
+      <button class="ebtn btn-xls" style="font-size:11px;padding:7px 11px" onclick="exportKbExcel()">📋 Excel</button>
+      <button class="ebtn btn-ppt" style="font-size:11px;padding:7px 11px" onclick="exportKbPPT()">📊 PPT</button>
+      <button class="ebtn btn-pdf" style="font-size:11px;padding:7px 11px" onclick="exportKbPDF()">📄 PDF</button>
+      <button class="ebtn" id="klSelectToggle" style="font-size:11px;padding:7px 11px;background:var(--navy-mid);color:var(--text2);border:1.5px solid var(--border)" onclick="toggleKlSelectMode()">☑ Select</button>
+    </div>
+  </div>
+  <div class="main" style="padding-bottom:80px">
+    <!-- Filter Bar -->
+    <div class="kl-filter-bar" id="klFilterBar">
+      <span class="lbl">Search</span>
+      <input type="text" class="kl-filter-input" id="klSearchInp" placeholder="Title or content..." oninput="applyKlFilters()">
+      <span class="lbl">Site</span>
+      <div class="kl-chip-row" id="klSiteChips"></div>
+      <span class="lbl">Discipline</span>
+      <div class="kl-chip-row" id="klDiscChips"></div>
+      <span class="lbl">Category</span>
+      <div class="kl-chip-row" id="klCatChips"></div>
+      <div class="kl-view-toggle">
+        <button id="klViewCards" class="active" onclick="setKlView('cards')">☰ Cards</button>
+        <button id="klViewTable" onclick="setKlView('table')">▦ Table</button>
+      </div>
+      <button class="kl-clear-filters" onclick="clearKlFilters()">Clear filters</button>
+    </div>
+
+    <!-- Pending save bar (table edits) -->
+    <div class="kl-pending-save" id="klPendingSave">
+      <span>⚠ <span id="klPendingCount">0</span> unsaved change(s)</span>
+      <button onclick="saveKlEdits()">💾 Save</button>
+      <button onclick="discardKlEdits()" style="background:var(--bg);color:var(--text3);border:1px solid var(--border)">Discard</button>
+    </div>
+
+    <div id="klistContainer"></div>
+    <div id="klTableWrap" class="kl-table-wrap" style="display:none"></div>
+  </div>
+  <!-- 선택 액션바 -->
+  <div class="kl-action-bar" id="klActionBar">
+    <span class="kl-action-count" id="klActionCount">0 selected</span>
+    <button class="ll-action-btn exp kl-action-btn exp" onclick="exportKbSelectedPDF()">📄 PDF</button>
+    <button class="kl-action-btn exp" onclick="exportKbSelectedPPT()">📊 PPT</button>
+    <button class="kl-action-btn exp" onclick="exportKbSelectedExcel()">📋 Excel</button>
+    <button class="kl-action-btn del" onclick="deleteKbSelected()">🗑 Delete</button>
+    <button class="kl-action-btn clr" onclick="clearKlSelection()">✕ Clear</button>
+  </div>
+</div>
+
+<!-- ════ KNOWLEDGE REPORT SCREEN ════ -->
+<div id="kreportScreen" class="screen">
+  <div class="hdr">
+    <div class="hdr-left">
+      <button class="btn-back" onclick="showScreen('klistScreen')">← List</button>
+      <div><div class="hdr-title">Knowledge Report</div></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="ebtn btn-pdf" style="font-size:11px;padding:7px 11px" onclick="exportSingleKbPDF()">📄 PDF</button>
+      <button class="ebtn btn-pdf" style="font-size:11px;padding:7px 11px;background:var(--red)" onclick="deleteKbItem()">🗑</button>
+    </div>
+  </div>
+  <div id="kreportContent" style="padding-bottom:40px"></div>
+</div>
+
+
+<!-- PDF Viewer Modal -->
+<div class="pdf-viewer-ov" id="pdfViewerOv">
+  <div class="pdf-viewer-hdr">
+    <span class="pdf-viewer-title" id="pdfViewerTitle">Document</span>
+    <a id="pdfViewerDlBtn" href="#" target="_blank" download class="pdf-viewer-dl">⬇ Download</a>
+    <button class="pdf-viewer-close" onclick="closePdfViewer()">✕ Close</button>
+  </div>
+  <iframe class="pdf-viewer-frame" id="pdfViewerFrame" src=""></iframe>
+</div>
+
+<div class="modal-ov" id="resetModal"><div class="modal"><h3>⚠️ Reset</h3><p>All photos and data will be deleted. Continue?</p><div class="modal-btns"><button class="ebtn btn-rst" style="flex:1" onclick="closeModal('resetModal')">Cancel</button><button class="ebtn btn-pdf" style="flex:1" onclick="doReset()">Delete</button></div></div></div>
+<div class="modal-ov" id="saveModal"><div class="modal"><h3>💾 Save Report</h3><p>After saving, others can load this report to add After photos.</p><input class="m-input" id="saveNameInput" placeholder="Report name"><div class="modal-btns"><button class="ebtn btn-rst" style="flex:1" onclick="closeModal('saveModal')">Cancel</button><button class="ebtn btn-save" style="flex:1" onclick="doSave()">Save</button></div></div></div>
+<div class="modal-ov" id="delRptModal"><div class="modal"><h3>🗑 Delete Report</h3><p>Delete this report? This cannot be undone.</p><div class="modal-btns"><button class="ebtn btn-rst" style="flex:1" onclick="closeModal('delRptModal')">Cancel</button><button class="ebtn btn-pdf" style="flex:1" onclick="doDelReport()">Delete</button></div></div></div>
+<div class="loading" id="loading"><div class="spinner"></div><div class="loading-txt" id="loadTxt">Processing...</div></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js">
+/* ══════════════════════════════════════════
+   FOLLOWUP EXPORT — PDF / PPT / Excel
+══════════════════════════════════════════ */
+async function exportFuPDF(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  showLoading(true,'Generating PDF...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,H=297,M=10,pW=W-M*2;
+    const pn=fuData.projName||'Punch List',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const fMode=fuMode;
+    let y=M,pNum=1;
+    function hdr(){
+      doc.setFillColor(13,33,55);doc.rect(0,0,W,20,'F');
+      doc.setFontSize(13);doc.setTextColor(245,166,35);doc.setFont(undefined,'bold');doc.text('PUNCH LIST',M,12);
+      doc.setFontSize(7.5);doc.setTextColor(155,184,212);doc.setFont(undefined,'normal');
+      doc.text(pn,M,17.5);doc.text(pa+'  '+pd+'  p.'+pNum,W-M,17.5,{align:'right'});
+      y=24;
+    }
+    function chk(n){if(y+n>H-M){doc.addPage();pNum++;hdr();}}
+    hdr();
+    const secW=fMode==='both'?(pW-4)/2:pW,pC=2,gap=2,cW=(secW-gap*(pC-1))/pC,cH=cW*.72;
+    for(let ri=0;ri<fuData.rows.length;ri++){
+      const row=fuData.rows[ri];
+      const bs=[],as_=[];
+      for(const p of(row.beforePhotos||[])){bs.push(fuPhotos[p.id]||null);}
+      for(const p of(row.afterPhotos||[])){as_.push(fuPhotos[p.id]||null);}
+      const bR=Math.max(Math.ceil(bs.filter(Boolean).length/pC),1);
+      const aR=fMode==='both'?Math.max(Math.ceil(as_.filter(Boolean).length/pC),1):0;
+      chk(8+(fMode==='both'?Math.max(bR,aR):bR)*(cH+gap)+5.5+6);
+      doc.setFillColor(240,244,248);doc.roundedRect(M,y,pW,6.5,1,1,'F');
+      doc.setFontSize(7.5);doc.setTextColor(90,122,150);doc.setFont(undefined,'bold');doc.text('No.'+(ri+1),M+2.5,y+4.2);
+      doc.setFont(undefined,'normal');doc.setTextColor(26,43,60);doc.text((row.desc||'(No description)').slice(0,72),M+14,y+4.2);
+      y+=8;
+      function drawGrid(srcs,lbl,col,xS,mR){
+        doc.setFontSize(6.5);doc.setTextColor(...col);doc.setFont(undefined,'bold');
+        doc.text(lbl+' ('+srcs.filter(Boolean).length+')',xS,y+4);
+        const gY=y+5.5,tot=mR*pC;
+        for(let i=0;i<tot;i++){
+          const c=i%pC,rr=Math.floor(i/pC),cx=xS+c*(cW+gap),cy=gY+rr*(cH+gap);
+          doc.setFillColor(248,250,252);doc.setDrawColor(209,220,232);doc.setLineWidth(0.25);doc.roundedRect(cx,cy,cW,cH,0.8,0.8,'FD');
+          if(srcs[i]){try{doc.addImage(srcs[i],'JPEG',cx+.4,cy+.4,cW-.8,cH-.8);}catch(e){}}
+          else{doc.setFontSize(5);doc.setTextColor(200,212,220);doc.text('—',cx+cW/2,cy+cH/2+1,{align:'center'});}
+          if(doc.setGState)doc.setGState(doc.GState({opacity:0.5}));
+          doc.setFillColor(0,0,0);doc.roundedRect(cx+1,cy+1,5,3,0.5,0.5,'F');
+          if(doc.setGState)doc.setGState(doc.GState({opacity:1}));
+          doc.setFontSize(4.5);doc.setTextColor(255,255,255);doc.setFont(undefined,'bold');doc.text(String(i+1),cx+3.5,cy+2.8,{align:'center'});
+        }
+      }
+      if(fMode==='both'){const mR=Math.max(bR,aR);drawGrid(bs,'■ Before',[180,60,10],M,mR);drawGrid(as_,'■ After',[20,130,60],M+secW+4,mR);y+=5.5+mR*(cH+gap)+4;}
+      else{drawGrid(bs,'■ Before',[180,60,10],M,bR);y+=5.5+bR*(cH+gap)+4;}
+      doc.setDrawColor(220,228,238);doc.setLineWidth(0.2);doc.line(M,y,W-M,y);y+=4;
+    }
+    const fn='PunchList_'+pn+'_'+(pd||today())+'.pdf',uri=doc.output('datauristring');
+    const w=window.open('');
+    if(w){w.document.write('<html><head><title>'+fn+'</title></head><body style="margin:0"><p style="font-family:sans-serif;padding:16px;color:#555">Long-press to save.</p><a href="'+uri+'" download="'+fn+'" style="display:block;margin:0 16px;padding:12px 20px;background:#0D2137;color:#F5A623;border-radius:8px;text-align:center;font-family:sans-serif;font-weight:bold;text-decoration:none">📥 Save PDF</a><br><iframe src="'+uri+'" style="width:100%;height:90vh;border:none"></iframe></body></html>');}
+    else{const a=document.createElement('a');a.href=uri;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  }catch(e){alert('PDF error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+async function exportFuExcel(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  showLoading(true,'Generating Excel...');await new Promise(r=>setTimeout(r,50));
+  try{
+    const wb=XLSX.utils.book_new();
+    const pn=fuData.projName||'PunchList',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const fuRows=fuData.rows;
+    const mB=Math.max(...fuRows.map(r=>(r.beforePhotos||[]).length),0);
+    const mA=Math.max(...fuRows.map(r=>(r.afterPhotos||[]).length),0);
+    const data=[['HANDONG PUNCH LIST'],[],['Project',pn],['Author',pa],['Date',pd],['Mode',fuMode==='both'?'Before+After':'Before Only'],[]];
+    const hdr=['No','Description'];
+    for(let i=1;i<=mB;i++){hdr.push('Before'+i+' Note');hdr.push('Before'+i+' Assignee');}
+    for(let i=1;i<=mA;i++)hdr.push('After'+i+' Note');
+    data.push(hdr);
+    fuRows.forEach((row,ri)=>{
+      const r=[ri+1,row.desc||''];
+      for(let i=0;i<mB;i++){r.push((row.beforePhotos||[])[i]?.caption||'');r.push((row.beforePhotos||[])[i]?.assignee||'');}
+      for(let i=0;i<mA;i++)r.push((row.afterPhotos||[])[i]?.caption||'');
+      data.push(r);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:4},{wch:40},...Array(mB*2+mA).fill({wch:18})];
+    XLSX.utils.book_append_sheet(wb,ws,'PunchList');
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}),blob=new Blob([out],{type:'application/octet-stream'}),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='PunchList_'+pn+'_'+(pd||today())+'.xlsx';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  }catch(e){alert('Excel error: '+e.message);}
+  showLoading(false);
+}
+
+async function exportFuPPT(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  if(typeof PptxGenJS==='undefined'){alert('PPT library loading. Please try again.');return;}
+  showLoading(true,'Generating PPT...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const pn=fuData.projName||'Punch List',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const fMode=fuMode,RPS=fuColCount/2;
+    const pres=new PptxGenJS();
+    pres.defineLayout({name:'A4P',width:7.5,height:10.83});pres.layout='A4P';
+    const SW=7.5,SH=10.83,NAVY='0D2137',GOLD='F5A623',LGRAY='F0F4F8';
+    const ts=pres.addSlide();ts.background={color:NAVY};
+    ts.addShape(pres.shapes.RECTANGLE,{x:.4,y:SH*.3,w:.07,h:2,fill:{color:GOLD},line:{color:GOLD}});
+    ts.addText('PUNCH LIST',{x:.6,y:SH*.28,w:6.5,h:1.1,fontSize:40,bold:true,color:GOLD,fontFace:'Calibri'});
+    ts.addText(pn,{x:.6,y:SH*.28+1.1,w:6.5,h:.7,fontSize:20,color:'CADCFC',fontFace:'Calibri'});
+    ts.addText('Author: '+(pa||'—')+'
+Date: '+(pd||'—')+'
+Type: '+(fMode==='both'?'Before+After':'Before Only'),
+      {x:.6,y:SH*.65,w:6.3,h:1.2,fontSize:13,color:'7A9BBF',fontFace:'Calibri',lineSpacingMultiple:1.4});
+    const MAR=.18,HDR_H=.52,CAP_H=.28,GAP=.1,COLS=2;
+    const fullW=SW-MAR*2,secW=fMode==='both'?(fullW-MAR)/2:fullW;
+    const cW=(secW-GAP)/2,cH=cW*.75;
+    for(let ri=0;ri<fuData.rows.length;ri++){
+      const row=fuData.rows[ri];
+      const bs=(row.beforePhotos||[]).map(p=>fuPhotos[p.id]||null);
+      const as_=(row.afterPhotos||[]).map(p=>fuPhotos[p.id]||null);
+      const slides=fMode==='both'
+        ?Math.max(Math.ceil(Math.max(bs.length,1)/RPS),Math.ceil(Math.max(as_.length,1)/RPS),1)
+        :Math.max(Math.ceil(Math.max(bs.length,1)/RPS),1);
+      for(let si=0;si<slides;si++){
+        const slide=pres.addSlide();slide.background={color:LGRAY};
+        slide.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:SW,h:HDR_H,fill:{color:NAVY},line:{color:NAVY}});
+        slide.addText('No.'+(ri+1)+'  '+(row.desc||'(No description)').slice(0,38),
+          {x:.22,y:0,w:5.6,h:HDR_H,fontSize:11,bold:true,color:GOLD,fontFace:'Calibri',valign:'middle'});
+        slide.addText((pd||'')+'  '+(si+1)+'/'+slides,
+          {x:5.5,y:0,w:1.78,h:HDR_H,fontSize:8.5,color:'7A9BBF',align:'right',valign:'middle',fontFace:'Calibri'});
+        const bX=MAR,aX=fMode==='both'?MAR+secW+MAR:MAR,startR=si*RPS;
+        function addCell(src,sx,col,row2,lbl){
+          const x=sx+col*(cW+GAP),yp=HDR_H+MAR+row2*(cH+CAP_H+GAP);
+          slide.addShape(pres.shapes.RECTANGLE,{x,y:yp,w:cW,h:cH+CAP_H,fill:{color:'FFFFFF'},line:{color:'D1DCE8',pt:.8}});
+          if(src){
+            const d=src.startsWith('data:')?src.replace(/^data:image\/\w+;base64,/,'image/jpeg;base64,'):src;
+            try{slide.addImage({data:d,x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,sizing:{type:'contain',w:cW-.06,h:cH-.06}});}catch(e){}
+          }else{
+            slide.addShape(pres.shapes.RECTANGLE,{x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,fill:{color:'F1F5F9'},line:{color:'E2E8F0',pt:.5}});
+          }
+          slide.addText(lbl,{x:x+.04,y:yp+cH,w:cW-.08,h:CAP_H,fontSize:7,color:'5A7A96',align:'center',valign:'middle',fontFace:'Calibri'});
+        }
+        for(let r2=0;r2<RPS;r2++)for(let col=0;col<COLS;col++){
+          if(fMode==='both'){
+            const pi=startR*COLS+r2*COLS+col;
+            addCell(bs[pi]||null,bX,col,r2,'Before '+(pi+1));
+            addCell(as_[pi]||null,aX,col,r2,'After '+(pi+1));
+          }else{
+            const pi=startR+r2;
+            if(col===0){addCell(bs[pi]||null,bX,col,r2,bs[pi]?'Before '+(pi+1):'');}
+            else{slide.addShape(pres.shapes.RECTANGLE,{x:bX+col*(cW+GAP),y:HDR_H+MAR+r2*(cH+CAP_H+GAP),w:cW,h:cH+CAP_H,fill:{color:'F8FAFC'},line:{color:'E2E8F0',pt:.5}});}
+          }
+        }
+      }
+    }
+    pres.writeFile({fileName:'PunchList_'+pn+'_'+(pd||today())+'.pptx'});
+  }catch(e){alert('PPT error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+/* ── IndexedDB ── */
+const DB_NAME='PunchListDB',DB_VER=1,STORE='photos';
+let db=null;
+function openDB(){return new Promise((res,rej)=>{if(db){res(db);return;}const req=indexedDB.open(DB_NAME,DB_VER);req.onupgradeneeded=e=>e.target.result.createObjectStore(STORE,{keyPath:'id'});req.onsuccess=e=>{db=e.target.result;res(db);};req.onerror=e=>rej(e);});}
+function dbPut(id,data){return new Promise(async(res,rej)=>{const d=await openDB();const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).put({id,data});tx.oncomplete=()=>res();tx.onerror=rej;});}
+function dbGet(id){return new Promise(async(res,rej)=>{const d=await openDB();const req=d.transaction(STORE,'readonly').objectStore(STORE).get(id);req.onsuccess=()=>res(req.result?.data??null);req.onerror=rej;});}
+function dbDel(id){return new Promise(async(res,rej)=>{const d=await openDB();const tx=d.transaction(STORE,'readwrite');tx.objectStore(STORE).delete(id);tx.oncomplete=()=>res();tx.onerror=rej;});}
+
+
+/* ══════════════════════════════════════════
+   NAS API — Synology Web Station
+   PUT /volume1/web/punchlist/punchlist_api.php
+══════════════════════════════════════════ */
+const API_URL = './punchlist_api.php';
+let nasOnline = false;
+let userName = localStorage.getItem('pl_username') || '';
+
+// Ask username on first visit
+function ensureUsername() {
+  if (!userName) {
+    const name = prompt('Enter your name (saved with reports):');
+    userName = name ? name.trim() : 'Unknown';
+    localStorage.setItem('pl_username', userName);
+  }
+}
+
+// NAS connectivity check
+async function checkNAS() {
+  try {
+    const r = await fetch(API_URL + '?action=list', {signal: AbortSignal.timeout(3000)});
+    nasOnline = r.ok;
+  } catch(e) { nasOnline = false; }
+  updateNASStatus();
+}
+
+function updateNASStatus() {
+  const el = document.getElementById('nasStatus');
+  if (!el) return;
+  el.textContent = nasOnline ? '🟢 NAS Connected' : '🔴 Local Only';
+  el.style.color = nasOnline ? '#10B981' : '#F59E0B';
+}
+
+// ── NAS: load report list ──
+async function nasLoadList() {
+  if (!nasOnline) return null;
+  try {
+    const r = await fetch(API_URL + '?action=list');
+    const d = await r.json();
+    return d.ok ? d.reports : null;
+  } catch(e) { return null; }
+}
+
+// ── NAS: load single report ──
+async function nasLoadReport(id) {
+  if (!nasOnline) return null;
+  try {
+    const r = await fetch(API_URL + '?action=load&id=' + encodeURIComponent(id));
+    const d = await r.json();
+    return d.ok ? d.report : null;
+  } catch(e) { return null; }
+}
+
+// ── NAS: save report ──
+async function nasSaveReport(body) {
+  if (!nasOnline) return null;
+  try {
+    const r = await fetch(API_URL + '?action=save', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    return d.ok ? d : null;
+  } catch(e) { return null; }
+}
+
+// ── NAS: delete report ──
+async function nasDeleteReport(id) {
+  if (!nasOnline) return false;
+  try {
+    const r = await fetch(API_URL + '?action=delete&id=' + encodeURIComponent(id), {method:'DELETE'});
+    const d = await r.json();
+    return d.ok;
+  } catch(e) { return false; }
+}
+
+// Auto-refresh every 30 seconds when on home/followup screen
+let _autoRefresh = null;
+function startAutoRefresh() { _autoRefresh = setInterval(()=>{ if(document.getElementById('homeScreen').classList.contains('active')) renderSavedList(); }, 30000); }
+function stopAutoRefresh()  { clearInterval(_autoRefresh); }
+
+/* ── STATE ── */
+let colCount=2,mode='both',rows=[],rowId=0,photoId=0,currentRptId=null,fuData=null,fuPhotos={},pendingDelId=null,fuColCount=2,fuMode='both';
+
+/* ── SCREEN ── */
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  const editBar = document.getElementById('editBottomBar');
+  const fuBar   = document.getElementById('fuBottomBar');
+  const kbBar   = document.getElementById('kbSendBar');
+  if(editBar) editBar.style.display = id==='editScreen'      ? 'flex' : 'none';
+  if(fuBar)   fuBar.style.display   = id==='followupScreen'  ? 'flex' : 'none';
+  if(kbBar)   kbBar.style.display   = (id==='followupScreen' && kbCheckedItems.length>0) ? 'flex' : 'none';
+}
+function goHome(){showScreen('homeScreen');renderSavedList();}
+function goNewReport(){
+  currentRptId=null;rows=[];rowId=0;photoId=0;colCount=2;mode='both';
+  document.getElementById('projName').value='';
+  document.getElementById('projAuthor').value='';
+  
+/* ── Clipboard Paste (Ctrl+V) ── */
+document.addEventListener('paste', async (e) => {
+  // Only active when editScreen is visible
+  const editActive = document.getElementById('editScreen')?.classList.contains('active');
+  const fuActive   = document.getElementById('followupScreen')?.classList.contains('active');
+  if (!editActive && !fuActive) return;
+
+  const items = Array.from(e.clipboardData?.items || []);
+  const imgItems = items.filter(item => item.type.startsWith('image/'));
+  if (!imgItems.length) return;
+
+  e.preventDefault();
+
+  if (editActive) {
+    // 편집화면: 현재 포커스된 row에 붙여넣기, 없으면 마지막 row
+    const focusedRow = document.activeElement?.closest('.row-item');
+    const targetRid  = focusedRow ? parseInt(focusedRow.dataset.rid) : rows[rows.length - 1]?.id;
+    if (!targetRid) { showToast('⚠️ Add an item first'); return; }
+    const r = rows.find(x => x.id === targetRid);
+    if (!r) return;
+    showLoading(true, 'Pasting image...');
+    for (const item of imgItems) {
+      const file = item.getAsFile();
+      if (!file) continue;
+      const src = await resizeJpeg(file);
+      if (!src) continue;
+      const pid = ++photoId;
+      await dbPut('ph_' + pid, src);
+      r.beforePhotos.push({ id: pid, caption: '', assignee: '', _src: src });
+    }
+    showLoading(false);
+    rerenderPairs(targetRid);
+    showToast('✅ Image pasted!');
+
+  } else if (fuActive) {
+    if (!fuData || !fuData.rows.length) { showToast('⚠️ No report loaded'); return; }
+    // 붙여넣기 타겟: fuPasteTarget 기반, 미설정이면 마지막 아이템 After
+    const ri   = fuPasteTarget.ri != null ? fuPasteTarget.ri : fuData.rows.length - 1;
+    const type = fuPasteTarget.ri != null ? fuPasteTarget.type : 'after';
+    showLoading(true, 'Pasting image...');
+    for (const item of imgItems) {
+      const file = item.getAsFile();
+      if (!file) continue;
+      const src = await resizeJpeg(file);
+      if (!src) continue;
+      const pid = 'fu_paste_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+      fuPhotos[pid] = src;
+      if (type === 'before') {
+        if (!fuData.rows[ri].beforePhotos) fuData.rows[ri].beforePhotos = [];
+        fuData.rows[ri].beforePhotos.push({ id: pid, caption: '', assignee: '' });
+      } else {
+        if (!fuData.rows[ri].afterPhotos) fuData.rows[ri].afterPhotos = [];
+        fuData.rows[ri].afterPhotos.push({ id: pid, caption: '', assignee: '' });
+      }
+    }
+    showLoading(false);
+    renderFollowup();
+    const lbl = type === 'before' ? 'Before' : 'After';
+    showToast('✅ Pasted to Item ' + (ri+1) + ' ' + lbl + '!');
+  }
+});
+
+document.getElementById('projDate').value=today();
+  document.getElementById('editBadge').textContent='New';
+  resetToggle('colBtns',0);resetToggle('modeBtns',0);
+  renderRows();addRow();showScreen('editScreen');
+}
+function resetToggle(gid,idx){document.getElementById(gid).querySelectorAll('.toggle-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));}
+
+/* ── SAVED LIST ── */
+function getMeta(){try{return JSON.parse(localStorage.getItem('pl_meta')||'[]');}catch{return[];}}
+function setMeta(arr){localStorage.setItem('pl_meta',JSON.stringify(arr));}
+function toggleSaved(){const w=document.getElementById('savedWrap');w.style.display=w.style.display==='none'?'block':'none';renderSavedList();}
+async function renderSavedList(){
+  const el=document.getElementById('savedList');if(!el)return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px">⟳ Loading...</div>';
+  let list=await nasLoadList();
+  if(list){setMeta(list);}else{list=getMeta();}
+  if(!list||!list.length){el.innerHTML='<div class="saved-empty">No saved reports yet.</div>';return;}
+  const sorted=list.slice().sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+  el.innerHTML=sorted.map(r=>{
+    const done=r.afterCount||0,total=r.beforeCount||0;
+    const cls=done>=total&&total>0?'s-done':done>0?'s-partial':'s-pending';
+    const txt=done>=total&&total>0?'Done':done>0?`In Progress ${done}/${total}`:'Pending';
+    const by=r.savedBy?' · '+esc(r.savedBy):'';
+    return `<div class="saved-item" onclick="openReport('${r.id}')"><div style="font-size:20px">📋</div><div class="saved-info"><div class="saved-name">${esc(r.name)}</div><div class="saved-meta">${r.projName?esc(r.projName)+' · ':''}${r.date} · ${r.rowCount} items${by}</div></div><span class="s-badge ${cls}">${txt}</span><button class="saved-del" onclick="event.stopPropagation();confirmDel('${r.id}')">🗑</button></div>`;
+  }).join('');
+}
+async function openReport(id){
+  showLoading(true,'Loading report...');
+  try{
+    // Try NAS first
+    let detail = await nasLoadReport(id);
+    if(detail){
+      // Load photos from NAS (URL-based, set as src directly)
+      fuData={...detail};fuPhotos={};fuColCount=detail.colCount||2;fuMode=detail.mode||'both';syncFuColBtns();
+      for(const row of detail.rows){
+        for(const p of(row.beforePhotos||[])){if(p.src&&!p.src.startsWith('data:'))fuPhotos[p.id]=p.src; else if(p.src)fuPhotos[p.id]=p.src;}
+        for(const p of(row.afterPhotos||[])){if(p.src&&!p.src.startsWith('data:'))fuPhotos[p.id]=p.src; else if(p.src)fuPhotos[p.id]=p.src;}
+      }
+      document.getElementById('fuSub').textContent=detail.projName||'';
+      showScreen('followupScreen');renderFollowup();showLoading(false);return;
+    }
+    // Fallback: IndexedDB
+    const meta=getMeta().find(r=>r.id===id);if(!meta){showLoading(false);return;}
+    const dbDetail=await dbGet('rpt_'+id);if(!dbDetail){showLoading(false);alert('Report data not found.');return;}
+    detail = dbDetail;
+    fuData={...meta,rows:detail.rows};fuPhotos={};
+  initReportAttachments(id);   // 첨부파일 섹션 초기화
+    fuColCount=meta.colCount||2;fuMode=meta.mode||'both';syncFuColBtns();
+    for(const row of detail.rows){
+      for(const p of(row.beforePhotos||[])){const s=await dbGet('ph_'+p.id);if(s)fuPhotos[p.id]=s;}
+      for(const p of(row.afterPhotos||[])){const s=await dbGet('ph_'+p.id);if(s)fuPhotos[p.id]=s;}
+    }
+    document.getElementById('fuSub').textContent=meta.projName||'';
+    showScreen('followupScreen');renderFollowup();
+  }catch(e){alert('Error: '+e.message);}
+  showLoading(false);
+}
+function confirmDel(id){pendingDelId=id;openModal('delRptModal');}
+async function doDelReport(){
+  const id=pendingDelId;closeModal('delRptModal');
+  await nasDeleteReport(id);
+  const detail=await dbGet('rpt_'+id).catch(()=>null);
+  if(detail){for(const row of(detail.rows||[])){for(const p of[...(row.beforePhotos||[]),...(row.afterPhotos||[])])await dbDel('ph_'+p.id).catch(()=>{});}}
+  await dbDel('rpt_'+id).catch(()=>{});
+  setMeta(getMeta().filter(r=>r.id!==id));renderSavedList();showToast('Report deleted.');
+}
+
+/* ── SETTINGS ── */
+function setCol(n,btn){colCount=n;btn.closest('.btn-group').querySelectorAll('.toggle-btn').forEach(b=>b.classList.toggle('active',b===btn));renderRows();}
+function setMode(m,btn){mode=m;btn.closest('.btn-group').querySelectorAll('.toggle-btn').forEach(b=>b.classList.toggle('active',b===btn));renderRows();}
+
+/* ── ROWS ── */
+function addRow(){rows.push({id:++rowId,desc:'',beforePhotos:[],afterPhotos:[]});renderRows();setTimeout(()=>document.getElementById('row-'+rowId)?.scrollIntoView({behavior:'smooth',block:'nearest'}),100);}
+function delRow(id){['before','after'].forEach(t=>document.getElementById('fi-'+id+'-'+t)?.remove());rows=rows.filter(r=>r.id!==id);renderRows();}
+function updDesc(id,val){const r=rows.find(x=>x.id===id);if(r)r.desc=val;}
+
+/* ── FILE INPUT (body permanent store) ── */
+function getInput(rId,type){
+  const fid='fi-'+rId+'-'+type;let inp=document.getElementById(fid);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;inp.id=fid;inp.style.display='none';inp.addEventListener('change',e=>uploadPhotos(e,rId,type));document.body.appendChild(inp);}
+  return inp;
+}
+function getFuInput(ri,targetIdx){
+  const fid='fi-fu-'+ri;let inp=document.getElementById(fid);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;inp.id=fid;inp.style.display='none';document.body.appendChild(inp);}
+  inp.onchange=e=>uploadFuPhotos(e,ri,targetIdx);
+  return inp;
+}
+function getFuBeforeInput(ri){
+  const fid='fi-fu-before-'+ri;let inp=document.getElementById(fid);
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.multiple=true;inp.id=fid;inp.style.display='none';document.body.appendChild(inp);}
+  inp.onchange=e=>uploadFuBeforePhotos(e,ri);
+  return inp;
+}
+
+// + Before / + After 버튼 클릭 — 파일 선택 열기 + 붙여넣기 타겟 설정
+function fuAddBtnClick(ri, type) {
+  // 붙여넣기 타겟 설정 (토글: 같은 버튼 다시 누르면 해제)
+  if (fuPasteTarget.ri === ri && fuPasteTarget.type === type) {
+    fuPasteTarget = { ri: null, type: 'after' };
+    renderFollowup();
+    return;
+  }
+  fuPasteTarget = { ri, type };
+  renderFollowup();
+  // 파일 선택 다이얼로그도 즉시 열기
+  if (type === 'before') {
+    getFuBeforeInput(ri).click();
+  } else {
+    getFuInput(ri).click();
+  }
+}
+
+/* ── photo upload — FileReader immediately convert ── */
+function filterFiles(files){
+  const imgs=[],vids=[];
+  files.forEach(f=>{
+    // Exclude video only; allow image/* and unknown types (HEIC etc)
+    if(f.type.startsWith('video/'))vids.push(f.name);
+    else imgs.push(f);
+  });
+  if(vids.length){showToast('⚠️ Video '+vids.length+' items will be excluded');setTimeout(()=>alert('Video files upload count .\n\nexclude:\n'+vids.slice(0,5).map(n=>'• '+n).join('\n')+(vids.length>5?'\nand '+(vids.length-5)+' items':'')),200);}
+  return imgs;
+}
+
+// Follow-up 화면에서 Before 사진 추가
+async function uploadFuBeforePhotos(e, ri) {
+  const files = filterFiles(Array.from(e.target.files));
+  e.target.value = '';
+  if (!files.length || !fuData) return;
+  showLoading(true, 'Adding before photo(s)...');
+  for (const file of files) {
+    const src = await resizeJpeg(file);
+    if (!src) continue;
+    const pid = 'fu_b_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    fuPhotos[pid] = src;
+    if (!fuData.rows[ri].beforePhotos) fuData.rows[ri].beforePhotos = [];
+    fuData.rows[ri].beforePhotos.push({ id: pid, caption: '', assignee: '' });
+  }
+  showLoading(false);
+  renderFollowup();
+  showToast('✅ Before photo(s) added. Press Save to confirm.');
+}
+
+async function resizeJpeg(file){
+  try{
+    // HEIC/HEIF detect → heic2any JPEG convert
+    const isHeic = file.type==='image/heic'||file.type==='image/heif'
+      ||file.name.toLowerCase().endsWith('.heic')||file.name.toLowerCase().endsWith('.heif');
+    
+    let blob = file;
+    if(isHeic && typeof heic2any !== 'undefined'){
+      try{
+        blob = await heic2any({blob:file, toType:'image/jpeg', quality:0.85});
+        if(Array.isArray(blob)) blob = blob[0];
+      }catch(e){ console.warn('heic2any failed, trying FileReader directly',e); blob=file; }
+    }
+    
+    // Read via FileReader
+    const dataUrl = await new Promise((res,rej)=>{
+      const reader=new FileReader();
+      reader.onload=ev=>res(ev.target.result);
+      reader.onerror=rej;
+      reader.readAsDataURL(blob);
+    });
+    if(!dataUrl) return null;
+    
+    // Image → Canvas → JPEG
+    const img = await new Promise((res,rej)=>{
+      const im=new Image();
+      im.onload=()=>res(im);
+      im.onerror=()=>res(null); // even if failed null return
+      im.src=dataUrl;
+    });
+    
+    if(!img){ return dataUrl; } // If canvas fails, return dataUrl as-is
+    
+    const MAX=1600;
+    let w=img.naturalWidth,h=img.naturalHeight;
+    if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;} }
+    const cv=document.createElement('canvas');
+    cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(img,0,0,w,h);
+    return cv.toDataURL('image/jpeg',0.85);
+  }catch(e){
+    console.error('resizeJpeg error',e);
+    return null;
+  }
+}
+
+async function uploadPhotos(e,rId,type){
+  const allFiles=Array.from(e.target.files);
+  e.target.value=''; // first Resetmust same file re-select available
+  const files=filterFiles(allFiles);
+  if(!files.length)return;
+  const r=rows.find(x=>x.id===rId);if(!r)return;
+  const arr=type==='before'?r.beforePhotos:r.afterPhotos;
+  showLoading(true,'photo Processing... 0/'+files.length);
+  let ok=0;
+  for(let i=0;i<files.length;i++){
+    setLoadTxt('photo Processing... '+(i+1)+'/'+files.length+' (Done:'+ok+')');
+    try{
+      const src=await resizeJpeg(files[i]);
+      if(!src){console.warn('src null for',files[i].name);continue;}
+      const pid=++photoId;
+      await dbPut('ph_'+pid,src);
+      arr.push({id:pid,caption:'',assignee:'',_src:src});
+      ok++;
+    }catch(err){console.error('upload err',files[i].name,err);}
+  }
+  showLoading(false);
+  if(ok===0)showToast('⚠️ Could not process photos. Please try again.');
+  else showToast('✅ '+ok+' photos Add됨');
+  rerenderPairs(rId);
+}
+
+async function uploadFuPhotos(e,ri,targetIdx){
+  const files=filterFiles(Array.from(e.target.files));e.target.value='';
+  if(!files.length||!fuData)return;
+  showLoading(true,'After photo Processing...');
+  if(!fuData.rows[ri].afterPhotos)fuData.rows[ri].afterPhotos=[];
+  const aPhotos=fuData.rows[ri].afterPhotos;
+  for(let i=0;i<files.length;i++){
+    setLoadTxt('After photo Processing... '+(i+1)+'/'+files.length);
+    const src=await resizeJpeg(files[i]);if(!src)continue;
+    const pid='fu_'+Date.now()+'_'+i;
+    fuPhotos[pid]=src;
+    // beforeIdx: 첫 번째 파일은 클릭한 슬롯, 추가 파일은 null(자동 배치)
+    const slotIdx=(targetIdx!=null&&i===0)?targetIdx:null;
+    const photoObj={id:pid,caption:'',assignee:'',beforeIdx:slotIdx};
+    if(slotIdx!=null){
+      // 같은 슬롯에 이미 사진이 있으면 교체
+      const existing=aPhotos.findIndex(p=>p&&p.beforeIdx===slotIdx);
+      if(existing>=0){delete fuPhotos[aPhotos[existing].id];aPhotos[existing]=photoObj;}
+      else{aPhotos.push(photoObj);}
+    }else{
+      aPhotos.push(photoObj);
+    }
+  }
+  showLoading(false);renderFollowup();
+}
+
+/* ── RENDER EDIT ── */
+function pSrc(p){return p._src||'';}  // kept for compat
+
+// Set img src via DOM (not innerHTML) to avoid base64 special char issues
+function setImgSrc(el, src) {
+  if(!el || !src) return;
+  const imgs = el.querySelectorAll ? el.querySelectorAll('img[data-pending]') : [];
+  imgs.forEach(img => {
+    const pid = img.dataset.pending;
+    if(pid) img.src = src;
+  });
+}
+
+function buildPairs(r){
+  if(mode==='both'){
+    const len=Math.max(r.beforePhotos.length,r.afterPhotos.length,0);
+    let html='';
+    for(let i=0;i<=len;i++){
+      const bp=r.beforePhotos[i]||null;
+      const ap=r.afterPhotos[i]||null;
+      if(i===len&&!bp&&!ap){
+        // last Add row
+        html+=`<div class="pair-set">
+          <div class="pair-cell"><div class="empty-box eb-b" onclick="getInput(${r.id},'before').click()"><div class="empty-icon">📷</div><div class="empty-txt">Before Add</div></div></div>
+          <div class="pair-cell"><div class="disabled-box"><span style="font-size:10px;color:var(--text3);text-align:center">Before Add after<br>input available</span></div></div>
+        </div>`;
+        break;
+      }
+      const bCell=bp
+        ?`<div class="pair-cell"><span class="pair-lbl lbl-b">Before ${i+1}</span><div class="photo-box"><img data-pending="${bp.id}" style="width:100%;height:100%;object-fit:cover;display:block"><button class="photo-rm" onclick="rmPhoto(${r.id},'before',${i})">×</button></div><div class="photo-meta"><div class="meta-lbl">Description</div><input class="meta-inp" placeholder="Defect details..." value="${esc(bp.caption||'')}" onchange="updMeta(${r.id},'before',${i},'caption',this.value)"><div class="meta-lbl">Assignee</div><input class="meta-inp" placeholder="Assignee name" value="${esc(bp.assignee||'')}" onchange="updMeta(${r.id},'before',${i},'assignee',this.value)"></div></div>`
+        :`<div class="pair-cell"><div class="empty-box eb-b" onclick="getInput(${r.id},'before').click()"><div class="empty-icon">📷</div><div class="empty-txt">Before Add</div></div></div>`;
+      const aCell=ap
+        ?`<div class="pair-cell"><span class="pair-lbl lbl-a">After ${i+1}</span><div class="photo-box"><img data-pending="${ap.id}" style="width:100%;height:100%;object-fit:cover;display:block"><button class="photo-rm" onclick="rmPhoto(${r.id},'after',${i})">×</button></div><div class="photo-meta"><div class="meta-lbl">Description</div><input class="meta-inp" placeholder="Correction details..." value="${esc(ap.caption||'')}" onchange="updMeta(${r.id},'after',${i},'caption',this.value)"></div></div>`
+        :(bp?`<div class="pair-cell"><div class="empty-box eb-a" onclick="getInput(${r.id},'after').click()"><div class="empty-icon">📷</div><div class="empty-txt">After Add</div></div></div>`
+            :`<div class="pair-cell"><div class="disabled-box"><span style="font-size:10px;color:var(--text3);text-align:center">Before Add after<br>input available</span></div></div>`);
+      html+=`<div class="pair-set">${bCell}${aCell}</div>`;
+    }
+    return html;
+  } else {
+    // Before Only
+    let html='';
+    r.beforePhotos.forEach((bp,i)=>{
+      html+=`<div class="pair-set">
+        <div class="pair-cell"><span class="pair-lbl lbl-b">Before ${i+1}</span><div class="photo-box"><img data-pending="${bp.id}" style="width:100%;height:100%;object-fit:cover;display:block"><button class="photo-rm" onclick="rmPhoto(${r.id},'before',${i})">×</button></div><div class="photo-meta"><div class="meta-lbl">Description</div><input class="meta-inp" placeholder="Defect details..." value="${esc(bp.caption||'')}" onchange="updMeta(${r.id},'before',${i},'caption',this.value)"><div class="meta-lbl">Assignee</div><input class="meta-inp" placeholder="Assignee name" value="${esc(bp.assignee||'')}" onchange="updMeta(${r.id},'before',${i},'assignee',this.value)"></div></div>
+        <div class="pair-cell"><div class="disabled-box"><span style="font-size:10px;color:var(--text3);text-align:center">After area<br><span style="font-size:9px">Save after Add available</span></span></div></div>
+      </div>`;
+    });
+    html+=`<div class="pair-set"><div class="pair-cell"><div class="empty-box eb-b" onclick="getInput(${r.id},'before').click()"><div class="empty-icon">📷</div><div class="empty-txt">Before Add</div></div></div><div class="pair-cell"><div class="disabled-box"></div></div></div>`;
+    return html;
+  }
+}
+
+function rerenderPairs(rId){
+  const r=rows.find(x=>x.id===rId);if(!r)return;
+  const wrap=document.querySelector('#row-'+rId+' .pairs-wrap');
+  if(!wrap)return;
+  wrap.innerHTML=buildPairs(r);
+  // innerHTML after img src directly setting (base64 HTML escape issue prevention)
+  const allPhotos=[...r.beforePhotos,...r.afterPhotos];
+  allPhotos.forEach(p=>{
+    if(!p._src)return;
+    wrap.querySelectorAll('img[data-pending="'+p.id+'"]').forEach(img=>{img.src=p._src;});
+  });
+}
+
+function rmPhoto(rId,type,idx){
+  const r=rows.find(x=>x.id===rId);if(!r)return;
+  const arr=type==='before'?r.beforePhotos:r.afterPhotos;
+  const pid=arr[idx]?.id;if(pid)dbDel('ph_'+pid).catch(()=>{});
+  arr.splice(idx,1);rerenderPairs(rId);
+}
+function updMeta(rId,type,idx,key,val){const r=rows.find(x=>x.id===rId);if(!r)return;const arr=type==='before'?r.beforePhotos:r.afterPhotos;if(arr[idx])arr[idx][key]=val;}
+
+function renderRows(){
+  const container=document.getElementById('rowsContainer');
+  if(!rows.length){container.innerHTML='<div style="text-align:center;padding:28px;color:var(--text3);font-size:13px">below <b>Add Item</b> button을 press Punch List Item Adddo</div>';return;}
+  const existing=new Set([...container.querySelectorAll('.row-item')].map(el=>+el.dataset.rid));
+  const current=new Set(rows.map(r=>r.id));
+  existing.forEach(id=>{if(!current.has(id))document.getElementById('row-'+id)?.remove();});
+  rows.forEach((r,ri)=>{
+    let el=document.getElementById('row-'+r.id);
+    if(!el){
+      el=document.createElement('div');el.className='row-item';el.id='row-'+r.id;el.dataset.rid=r.id;
+      el.innerHTML=`<div class="row-hdr"><span class="row-num">Item ${ri+1}</span><input class="row-desc" placeholder="Enter defect description" value="${esc(r.desc||'')}" oninput="updDesc(${r.id},this.value)"><button class="row-del" onclick="delRow(${r.id})">Delete</button></div><div class="pairs-wrap">${buildPairs(r)}</div>`;
+      container.appendChild(el);
+      getInput(r.id,'before');getInput(r.id,'after');
+      // Set img src
+      const pw=el.querySelector('.pairs-wrap');
+      [...r.beforePhotos,...r.afterPhotos].forEach(p=>{if(p._src)pw.querySelectorAll('img[data-pending="'+p.id+'"]').forEach(img=>img.src=p._src);});
+    } else {
+      el.querySelector('.row-num').textContent='Item '+(ri+1);
+    }
+  });
+}
+
+/* ── SAVE ── */
+function openSaveModal(){const pn=document.getElementById('projName').value||'';document.getElementById('saveNameInput').value=pn?pn+' - '+today():'Punch List - '+today();openModal('saveModal');}
+async function doSave(){
+  const name=document.getElementById('saveNameInput').value.trim();if(!name){alert('Please enter a report name.');return;}
+  closeModal('saveModal');showLoading(true,'Saving report...');
+  try{
+    const id=currentRptId||('rpt_'+Date.now());currentRptId=id;
+    const rptRows=rows.map(r=>({id:r.id,desc:r.desc||'',beforePhotos:r.beforePhotos.map(p=>({id:p.id,caption:p.caption||'',assignee:p.assignee||''})),afterPhotos:r.afterPhotos.map(p=>({id:p.id,caption:p.caption||'',assignee:p.assignee||''}))}));
+    await dbPut('rpt_'+id,{rows:rptRows});
+    const bc=rows.reduce((s,r)=>s+r.beforePhotos.length,0),ac=rows.reduce((s,r)=>s+r.afterPhotos.length,0);
+    const meta={id,name,projName:document.getElementById('projName').value,projAuthor:document.getElementById('projAuthor').value,projDate:document.getElementById('projDate').value,date:today(),mode,colCount,rowCount:rows.length,beforeCount:bc,afterCount:ac,savedAt:new Date().toISOString(),savedBy:userName};
+    const list=getMeta();const idx=list.findIndex(r=>r.id===id);if(idx>=0)list[idx]=meta;else list.push(meta);setMeta(list);
+    // Build NAS payload with photo data
+    const nasPayload={...meta,rows:rptRows.map((rr,ri)=>({...rr,
+      beforePhotos:rr.beforePhotos.map(p=>({...p,src:rows[ri].beforePhotos.find(x=>x.id===p.id)?._src||''})),
+      afterPhotos: rr.afterPhotos.map(p=>({...p,src:rows[ri].afterPhotos.find(x=>x.id===p.id)?._src||''}))
+    }))};
+    const nasRes=await nasSaveReport(nasPayload);
+    showToast(nasRes?'✅ Saved to NAS · '+userName:'✅ Saved locally (NAS offline)');
+    // 첨부파일 섹션 — 보고서 ID 확정된 이후에 초기화
+    initReportAttachments(id);
+  }catch(e){alert('Save error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+/* ── FOLLOWUP ── */
+function renderFollowup(){
+  if(!fuData)return;const r=fuData;
+  document.getElementById('fuInfoBar').innerHTML=`<div class="fu-info-item"><div class="fu-info-lbl">Project</div><div class="fu-info-val">${esc(r.projName||'—')}</div></div><div class="fu-info-item"><div class="fu-info-lbl">Author</div><div class="fu-info-val">${esc(r.projAuthor||'—')}</div></div><div class="fu-info-item"><div class="fu-info-lbl">Date</div><div class="fu-info-val">${r.projDate||'—'}</div></div><div class="fu-info-item"><div class="fu-info-lbl">Item</div><div class="fu-info-val">${r.rows.length} items</div></div>`;
+  const totalB=r.rows.reduce((s,row)=>s+(row.beforePhotos||[]).length,0);
+  const totalA=r.rows.reduce((s,row)=>s+(row.afterPhotos||[]).filter(p=>p&&fuPhotos[p.id]).length,0);
+  const pct=totalB>0?Math.round(totalA/totalB*100):0;
+  document.getElementById('fuProg').innerHTML=`<div class="prog-wrap"><div class="prog-lbl">Completion Rate</div><div class="prog-bg"><div class="prog-fill" style="width:${pct}%"></div></div></div><div class="prog-stat">Before <strong>${totalB}</strong> photos · After <strong>${totalA}</strong> photos Done (<strong>${pct}%</strong>)</div>`;
+  const container=document.getElementById('fuContainer');container.innerHTML='';
+  r.rows.forEach((row,ri)=>{
+    const bPhotos=row.beforePhotos||[],aPhotos=row.afterPhotos||[];
+    // beforeIdx 기반 슬롯 맵 (구버전 배열 위치 폴백)
+    const afterBySlot={};
+    aPhotos.forEach((p,idx)=>{if(!p)return;const slot=(p.beforeIdx!=null)?p.beforeIdx:idx;afterBySlot[slot]=p;});
+    const aDone=Object.values(afterBySlot).filter(p=>p&&fuPhotos[p.id]).length;
+    const sc=aDone>=bPhotos.length&&bPhotos.length>0?'st-done':aDone>0?'st-partial':'st-pending';
+    const st=aDone>=bPhotos.length&&bPhotos.length>0?'✅ Done':aDone>0?'🔄 In Progress':'⏳ Pending';
+    const maxPairs=Math.max(bPhotos.length,1);
+    let pairsHTML='';
+    for(let i=0;i<maxPairs;i++){
+      const bp=bPhotos[i]||null,ap=afterBySlot[i]||null;
+      const bSrc=bp?fuPhotos[bp.id]:null,aSrc=ap?fuPhotos[ap.id]:null;
+      const bPid=bp?bp.id:null,aPid=ap?ap.id:null;
+      const bCell=bSrc
+        ?`<div class="fu-cell" style="overflow:hidden;border-radius:8px;background:var(--surface);border:1px solid var(--border-light)"><div class="fu-photo"><img data-fupid="${bPid}" style="width:100%;height:100%;object-fit:cover;display:block"><span class="pair-lbl lbl-b">Before ${i+1}</span></div><div class="fu-before-meta"><input class="fu-before-inp" placeholder="Defect description..." value="${esc(bp.caption||'')}" oninput="updFuBeforeCaption(${ri},${i},this.value)"><input class="fu-before-inp" placeholder="Assignee..." value="${esc(bp.assignee||'')}" oninput="updFuBeforeAssignee(${ri},${i},this.value)"></div></div>`
+        :`<div class="fu-cell"><div style="aspect-ratio:4/3;border-radius:8px;background:var(--bg);border:2px dashed var(--border-light);display:flex;align-items:center;justify-content:center"><span style="font-size:11px;color:var(--text3)">No photo</span></div></div>`;
+      // After cell: 사진 있으면 사진+설명입력칸, 없으면 업로드 버튼
+      const aCell=aSrc
+        ?`<div class="fu-cell" style="overflow:hidden;border-radius:8px;background:var(--surface);border:1px solid var(--border-light)"><div class="fu-photo"><img data-fupid="${aPid}" style="width:100%;height:100%;object-fit:cover;display:block"><span class="pair-lbl lbl-a">After ${i+1}</span><button class="fu-photo-rm" onclick="rmFuPhoto(${ri},${i})">×</button></div><div class="fu-cap-wrap"><input class="fu-cap-inp" placeholder="Correction details..." value="${esc(ap&&ap.caption||'')}" oninput="updFuAfterCaption(${ri},${i},this.value)"></div></div>`
+        :`<div class="fu-cell"><div class="fu-empty" onclick="getFuInput(${ri},${i}).click()"><div class="fu-empty-icon">📷</div><div class="fu-empty-txt">After photo Add</div></div></div>`;
+      const isChecked = kbCheckedItems.some(x=>x.key===ri+'_'+i);
+      pairsHTML+=`<div class="fu-pair-wrap">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 6px 0;background:var(--surface2)">
+          <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:var(--text2);font-weight:600;-webkit-user-select:none;user-select:none">
+            <input type="checkbox" class="fu-pair-check" ${isChecked?'checked':''} onchange="toggleKbCheck(${ri},${i},this)"> Add to Knowledge
+          </label>
+        </div>
+        <div class="fu-pair">${bCell}${aCell}</div>
+        <button class="fu-pair-del" onclick="deleteFuPair(${ri},${i})">🗑</button>
+      </div>`;
+    }
+    if(aDone>=bPhotos.length&&bPhotos.length>0){
+      pairsHTML+=`<div class="fu-pair"><div class="fu-cell"><div style="aspect-ratio:4/3;border-radius:8px;background:var(--bg);border:2px dashed var(--border-light);display:flex;align-items:center;justify-content:center"><span style="font-size:11px;color:var(--text3)">—</span></div></div><div class="fu-cell"><div class="fu-empty" onclick="getFuInput(${ri}).click()"><div class="fu-empty-icon">📷</div><div class="fu-empty-txt">After Add</div></div></div></div>`;
+    }
+    const itemEl=document.createElement('div');itemEl.className='fu-item';
+    // 헤더: 설명 텍스트 + 수정버튼
+    const pasteActive_b = fuPasteTarget.ri===ri && fuPasteTarget.type==='before';
+    const pasteActive_a = fuPasteTarget.ri===ri && fuPasteTarget.type==='after';
+    itemEl.innerHTML=`<div class="fu-item-hdr" id="fu-hdr-${ri}">
+      <span class="row-num">Item ${ri+1}</span>
+      <span class="fu-desc" id="fu-desc-txt-${ri}">${esc(row.desc||'(No description)')}</span>
+      <button class="fu-edit-btn" onclick="startFuDescEdit(${ri})">✏️ Edit</button>
+      <span class="fu-status ${sc}">${st}</span>
+    </div>
+    <div class="fu-pairs">${pairsHTML}</div>
+    <div class="fu-add-row">
+      <button class="fu-add-btn before ${pasteActive_b?'active':''}"
+        style="${pasteActive_b?'background:var(--navy);color:#fff;':''}"
+        onclick="fuAddBtnClick(${ri},'before')">
+        📷 ＋ Before${pasteActive_b?' <span class=\'fu-paste-badge b\'>Ctrl+V ready</span>':''}
+      </button>
+      <button class="fu-add-btn after ${pasteActive_a?'active':''}"
+        style="${pasteActive_a?'background:#059669;color:#fff;':''}"
+        onclick="fuAddBtnClick(${ri},'after')">
+        📷 ＋ After${pasteActive_a?' <span class=\'fu-paste-badge a\'>Ctrl+V ready</span>':''}
+      </button>
+    </div>`;
+    container.appendChild(itemEl);
+    getFuInput(ri);
+    itemEl.querySelectorAll('img[data-fupid]').forEach(img=>{
+      const pid=img.dataset.fupid;if(pid&&fuPhotos[pid])img.src=fuPhotos[pid];
+    });
+  });
+}
+
+// followup item 설명 인라인 편집
+function startFuDescEdit(ri){
+  const hdr=document.getElementById('fu-hdr-'+ri);
+  const txtEl=document.getElementById('fu-desc-txt-'+ri);
+  if(!hdr||!txtEl)return;
+  const cur=fuData.rows[ri].desc||'';
+  const inp=document.createElement('input');
+  inp.className='fu-desc-input';inp.value=cur;inp.placeholder='항목 설명 입력...';
+  const doneBtn=document.createElement('button');
+  doneBtn.className='fu-edit-btn';doneBtn.style.borderColor='var(--green)';doneBtn.style.color='var(--green)';doneBtn.textContent='✔ 확인';
+  doneBtn.onclick=()=>{fuData.rows[ri].desc=inp.value.trim();renderFollowup();};
+  inp.onkeydown=e=>{if(e.key==='Enter')doneBtn.click();if(e.key==='Escape')renderFollowup();};
+  txtEl.replaceWith(inp);
+  hdr.querySelector('.fu-edit-btn').replaceWith(doneBtn);
+  inp.focus();inp.select();
+}
+
+// followup after photo 캡션 업데이트
+function updFuBeforeCaption(ri,slotIdx,val){
+  if(!fuData)return;
+  const bp=(fuData.rows[ri].beforePhotos||[])[slotIdx];
+  if(bp)bp.caption=val;
+}
+function updFuBeforeAssignee(ri,slotIdx,val){
+  if(!fuData)return;
+  const bp=(fuData.rows[ri].beforePhotos||[])[slotIdx];
+  if(bp)bp.assignee=val;
+}
+function deleteFuPair(ri, slotIdx){
+  if(!fuData)return;
+  const row=fuData.rows[ri];if(!row)return;
+  // Before 사진 삭제
+  const bp=(row.beforePhotos||[])[slotIdx];
+  if(bp&&bp.id)delete fuPhotos[bp.id];
+  row.beforePhotos.splice(slotIdx,1);
+  // 해당 슬롯의 After 사진도 삭제
+  const aPhotos=row.afterPhotos||[];
+  const apIdx=aPhotos.findIndex(p=>p&&(p.beforeIdx!=null?p.beforeIdx:aPhotos.indexOf(p))===slotIdx);
+  if(apIdx>=0){const ap=aPhotos[apIdx];if(ap&&ap.id)delete fuPhotos[ap.id];aPhotos.splice(apIdx,1);}
+  // 남은 afterPhotos의 beforeIdx 재조정
+  aPhotos.forEach(p=>{if(p&&p.beforeIdx!=null&&p.beforeIdx>slotIdx)p.beforeIdx--;});
+  // 행이 비면 항목 자체 삭제
+  if(row.beforePhotos.length===0){
+    fuData.rows.splice(ri,1);
+    showToast('Item deleted. Press Save to confirm.');
+  } else {
+    showToast('Photo deleted. Press Save to confirm.');
+  }
+  renderFollowup();
+}
+
+function deleteFuItem(ri){
+  if(!fuData)return;
+  if(!confirm('Delete this item? This cannot be undone.'))return;
+  // Clean up fuPhotos cache
+  const row=fuData.rows[ri];
+  if(row){
+    [...(row.beforePhotos||[]),...(row.afterPhotos||[])].forEach(p=>{if(p&&p.id)delete fuPhotos[p.id];});
+  }
+  fuData.rows.splice(ri,1);
+  renderFollowup();
+  showToast('Item deleted. Press Save to confirm.');
+}
+function updFuAfterCaption(ri,slotIdx,val){
+  if(!fuData)return;
+  const aPhotos=fuData.rows[ri].afterPhotos||[];
+  const ap=aPhotos.find(p=>p&&(p.beforeIdx!=null?p.beforeIdx:aPhotos.indexOf(p))===slotIdx);
+  if(ap)ap.caption=val;
+}
+function rmFuPhoto(ri,slotIdx){
+  if(!fuData)return;const row=fuData.rows[ri];if(!row)return;
+  const aPhotos=row.afterPhotos||[];
+  // beforeIdx 기반으로 찾기, 없으면 배열 위치로 폴백
+  let idx=aPhotos.findIndex(p=>p&&p.beforeIdx===slotIdx);
+  if(idx<0)idx=aPhotos.findIndex((p,i)=>p&&p.beforeIdx==null&&i===slotIdx);
+  if(idx>=0){const p=aPhotos[idx];if(p)delete fuPhotos[p.id];aPhotos.splice(idx,1);}
+  renderFollowup();
+}
+async function saveFollowup(){
+  if(!fuData)return;showLoading(true,'Saving follow-up...');
+  try{
+    for(const row of fuData.rows)for(const p of(row.afterPhotos||[]))if(p&&fuPhotos[p.id])await dbPut('ph_'+p.id,fuPhotos[p.id]);
+    const rptRows=fuData.rows.map(r=>({id:r.id,desc:r.desc||'',beforePhotos:(r.beforePhotos||[]).map(p=>({id:p.id,caption:p.caption||'',assignee:p.assignee||''})),afterPhotos:(r.afterPhotos||[]).filter(p=>p!=null).map(p=>({id:p.id,caption:p.caption||'',assignee:p.assignee||'',beforeIdx:p.beforeIdx!=null?p.beforeIdx:null}))}));
+    await dbPut('rpt_'+fuData.id,{rows:rptRows});
+    const list=getMeta();const idx=list.findIndex(r=>r.id===fuData.id);
+    if(idx>=0){list[idx].afterCount=fuData.rows.reduce((s,r)=>s+(r.afterPhotos||[]).filter(p=>p&&fuPhotos[p.id]).length,0);setMeta(list);}
+    // Save to NAS
+    const fuNasPayload={...fuData,savedBy:userName,savedAt:new Date().toISOString(),
+      rows:fuData.rows.map(row=>({...row,
+        afterPhotos:(row.afterPhotos||[]).filter(p=>p!=null).map(p=>({...p,src:fuPhotos[p.id]||p.src||'',beforeIdx:p.beforeIdx!=null?p.beforeIdx:null}))
+      }))};
+    const fuRes=await nasSaveReport(fuNasPayload);
+    showToast(fuRes?'✅ Follow-up saved to NAS · '+userName:'✅ Follow-up saved locally');
+    renderFollowup();
+  }catch(e){alert('Save error: '+e.message);}
+  showLoading(false);
+}
+
+/* ── EXPORT ── */
+async function getSrc(p, isFu=false){
+  if(isFu){
+    // followup mode: use fuPhotos cache (NAS URL or base64)
+    if(fuPhotos[p.id]) return fuPhotos[p.id];
+    return null;
+  }
+  return p._src||await dbGet('ph_'+p.id)||null;
+}
+
+async function exportPDF(){
+  if(!rows.length){alert('Please add items first.');return;}
+  showLoading(true,'Generating PDF...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const{jsPDF}=window.jspdf;const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,H=297,M=10,pW=W-M*2;
+    const pn=document.getElementById('projName').value||'Punch List';
+    const pa=document.getElementById('projAuthor').value||'';
+    const pd=document.getElementById('projDate').value||'';
+    let y=M,pNum=1;
+    function hdr(){doc.setFillColor(13,33,55);doc.rect(0,0,W,20,'F');doc.setFontSize(13);doc.setTextColor(245,166,35);doc.setFont(undefined,'bold');doc.text('PUNCH LIST',M,12);doc.setFontSize(7.5);doc.setTextColor(155,184,212);doc.setFont(undefined,'normal');doc.text(pn,M,17.5);doc.text(pa+'  '+pd+'  p.'+pNum,W-M,17.5,{align:'right'});y=24;}
+    function chk(n){if(y+n>H-M){doc.addPage();pNum++;hdr();}}
+    hdr();
+    const secW=mode==='both'?(pW-4)/2:pW,pC=2,gap=2,cW=(secW-gap*(pC-1))/pC,cH=cW*.72;
+    for(let ri=0;ri<rows.length;ri++){
+      const r=rows[ri];
+      const bs=[],as_=[];
+      for(const p of r.beforePhotos){const s=await getSrc(p);bs.push(s);}
+      for(const p of r.afterPhotos){const s=await getSrc(p);as_.push(s);}
+      const bR=Math.max(Math.ceil(bs.length/pC),1),aR=mode==='both'?Math.max(Math.ceil(as_.length/pC),1):0;
+      chk(8+(mode==='both'?Math.max(bR,aR):bR)*(cH+gap)+5.5+6);
+      doc.setFillColor(240,244,248);doc.roundedRect(M,y,pW,6.5,1,1,'F');
+      doc.setFontSize(7.5);doc.setTextColor(90,122,150);doc.setFont(undefined,'bold');doc.text('No.'+(ri+1),M+2.5,y+4.2);
+      doc.setFont(undefined,'normal');doc.setTextColor(26,43,60);doc.text((r.desc||'(No description)').slice(0,72),M+14,y+4.2);y+=8;
+      function grid(srcs,lbl,col,xS,mR){
+        doc.setFontSize(6.5);doc.setTextColor(...col);doc.setFont(undefined,'bold');doc.text(lbl+' ('+srcs.length+' photos)',xS,y+4);
+        const gY=y+5.5,tot=mR*pC;
+        for(let i=0;i<tot;i++){
+          const c=i%pC,rr=Math.floor(i/pC),cx=xS+c*(cW+gap),cy=gY+rr*(cH+gap);
+          doc.setFillColor(248,250,252);doc.setDrawColor(209,220,232);doc.setLineWidth(0.25);doc.roundedRect(cx,cy,cW,cH,0.8,0.8,'FD');
+          if(srcs[i]){try{doc.addImage(srcs[i],'JPEG',cx+.4,cy+.4,cW-.8,cH-.8);}catch(e){}}
+          else{doc.setFontSize(5);doc.setTextColor(200,212,220);doc.text('—',cx+cW/2,cy+cH/2+1,{align:'center'});}
+          if(doc.setGState)doc.setGState(doc.GState({opacity:0.5}));
+          doc.setFillColor(0,0,0);doc.roundedRect(cx+1,cy+1,5,3,0.5,0.5,'F');
+          if(doc.setGState)doc.setGState(doc.GState({opacity:1}));
+          doc.setFontSize(4.5);doc.setTextColor(255,255,255);doc.setFont(undefined,'bold');doc.text(String(i+1),cx+3.5,cy+2.8,{align:'center'});
+        }
+      }
+      if(mode==='both'){const mR=Math.max(bR,aR);grid(bs,'■ Before',[180,60,10],M,mR);grid(as_,'■ After',[20,130,60],M+secW+4,mR);y+=5.5+mR*(cH+gap)+4;}
+      else{grid(bs,'■ Before',[180,60,10],M,bR);y+=5.5+bR*(cH+gap)+4;}
+      doc.setDrawColor(220,228,238);doc.setLineWidth(0.2);doc.line(M,y,W-M,y);y+=4;
+    }
+    const fn='PunchList_'+pn+'_'+(pd||today())+'.pdf',uri=doc.output('datauristring');
+    const w=window.open('');if(w){w.document.write('<html><head><title>'+fn+'</title></head><body style="margin:0"><p style="font-family:sans-serif;padding:16px;color:#555">Saveto below button을 long-press press.</p><a href="'+uri+'" download="'+fn+'" style="display:block;margin:0 16px;padding:12px 20px;background:#0D2137;color:#F5A623;border-radius:8px;text-align:center;font-family:sans-serif;font-weight:bold;text-decoration:none">📥 PDF Save</a><br><iframe src="'+uri+'" style="width:100%;height:90vh;border:none"></iframe></body></html>');}
+    else{const a=document.createElement('a');a.href=uri;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  }catch(e){alert('PDF Error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+async function exportExcel(){
+  if(!rows.length){alert('Please add items first.');return;}
+  showLoading(true,'Generating Excel...');await new Promise(r=>setTimeout(r,50));
+  try{
+    const wb=XLSX.utils.book_new();
+    const pn=document.getElementById('projName').value||'PunchList',pa=document.getElementById('projAuthor').value||'',pd=document.getElementById('projDate').value||'';
+    const mB=Math.max(...rows.map(r=>r.beforePhotos.length),0),mA=Math.max(...rows.map(r=>r.afterPhotos.length),0);
+    const data=[['HANDONG SMART PMIS — PUNCH LIST'],[],['Project',pn],['Author',pa],['Date',pd],['type',mode==='both'?'Before + After':'Before Only'],[]];
+    const hdr=['No','Defect description'];
+    for(let i=1;i<=mB;i++){hdr.push('Before'+i+' Description');hdr.push('Before'+i+' Assignee');}
+    for(let i=1;i<=mA;i++)hdr.push('After'+i+' Description');
+    data.push(hdr);
+    rows.forEach((r,ri)=>{const row=[ri+1,r.desc||''];for(let i=0;i<mB;i++){row.push(r.beforePhotos[i]?.caption||'');row.push(r.beforePhotos[i]?.assignee||'');}for(let i=0;i<mA;i++)row.push(r.afterPhotos[i]?.caption||'');data.push(row);});
+    const ws=XLSX.utils.aoa_to_sheet(data);ws['!cols']=[{wch:4},{wch:40},...Array(mB*2+mA).fill({wch:18})];
+    XLSX.utils.book_append_sheet(wb,ws,'Punch List');
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'}),blob=new Blob([out],{type:'application/octet-stream'}),url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='PunchList_'+pn+'_'+(pd||today())+'.xlsx';document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  }catch(e){alert('Excel Error: '+e.message);}
+  showLoading(false);
+}
+
+async function exportPPT(){
+  if(!rows.length){alert('Please add items first.');return;}
+  if(typeof PptxGenJS==='undefined'){alert('PPT library loading. Please try again shortly.');return;}
+  showLoading(true,'Generating PPT...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const pn=document.getElementById('projName').value||'Punch List',pa=document.getElementById('projAuthor').value||'',pd=document.getElementById('projDate').value||'';
+    const pres=new PptxGenJS();pres.defineLayout({name:'A4P',width:7.5,height:10.83});pres.layout='A4P';
+    const SW=7.5,SH=10.83,NAVY='0D2137',GOLD='F5A623',LGRAY='F0F4F8';
+    const ts=pres.addSlide();ts.background={color:NAVY};
+    ts.addShape(pres.shapes.RECTANGLE,{x:.4,y:SH*.3,w:.07,h:2,fill:{color:GOLD},line:{color:GOLD}});
+    ts.addText('PUNCH LIST',{x:.6,y:SH*.28,w:6.5,h:1.1,fontSize:40,bold:true,color:GOLD,fontFace:'Calibri'});
+    ts.addText(pn,{x:.6,y:SH*.28+1.1,w:6.5,h:.7,fontSize:20,color:'CADCFC',fontFace:'Calibri'});
+    ts.addText('Author: '+(pa||'—')+'\nDate: '+(pd||'—')+'\ntype: '+(mode==='both'?'Before + After':'Before Only'),{x:.6,y:SH*.65,w:6.3,h:1.2,fontSize:13,color:'7A9BBF',fontFace:'Calibri',lineSpacingMultiple:1.4});
+    const MAR=.18,HDR_H=.52,CAP_H=.28,GAP=.1;
+    // colCount: 2=1row×2col, 4=2row×2col, 6=3row×2col
+    const COLS=2;
+    const RPS=colCount/2; // per slide row count (2 slots→1row, 4 slots→2row, 6 slots→3row)
+    const fullW=SW-MAR*2;
+    // both: halfeach(Before/After), before: full-width(leftcol=photo,rightcol=empty)
+    const secW=mode==='both'?(fullW-MAR)/2:fullW;
+    const cW=(secW-GAP)/2,cH=cW*.75;
+    for(let ri=0;ri<rows.length;ri++){
+      const r=rows[ri];
+      const bs=[],as_=[];
+      for(const p of r.beforePhotos){const s=await getSrc(p);bs.push(s);}
+      for(const p of r.afterPhotos){const s=await getSrc(p);as_.push(s);}
+      // slide count: both=RPS*COLSbased on, before=col0only so using RPS(3) photos/slide
+      const slides = mode==='both'
+        ? Math.max(Math.ceil(Math.max(bs.length,1)/RPS), Math.ceil(Math.max(as_.length,1)/RPS), 1)
+        : Math.max(Math.ceil(Math.max(bs.length,1)/RPS), 1);
+      for(let si=0;si<slides;si++){
+        const slide=pres.addSlide();slide.background={color:LGRAY};
+        slide.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:SW,h:HDR_H,fill:{color:NAVY},line:{color:NAVY}});
+        slide.addText('No.'+(ri+1)+'  '+(r.desc||'(No description)').slice(0,38),{x:.22,y:0,w:5.6,h:HDR_H,fontSize:11,bold:true,color:GOLD,fontFace:'Calibri',valign:'middle'});
+        slide.addText((pd||'')+'  '+(si+1)+'/'+slides,{x:5.5,y:0,w:1.78,h:HDR_H,fontSize:8.5,color:'7A9BBF',align:'right',valign:'middle',fontFace:'Calibri'});
+        const bX=MAR,aX=mode==='both'?MAR+secW+MAR:MAR,startR=si*RPS;
+        function addCell(src,sx,col,row,lbl){
+          const x=sx+col*(cW+GAP),yp=HDR_H+MAR+row*(cH+CAP_H+GAP);
+          slide.addShape(pres.shapes.RECTANGLE,{x,y:yp,w:cW,h:cH+CAP_H,fill:{color:'FFFFFF'},line:{color:'D1DCE8',pt:.8}});
+          if(src)slide.addImage({data:src.replace('data:image/jpeg;base64,','image/jpeg;base64,'),x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,sizing:{type:'contain',w:cW-.06,h:cH-.06}});
+          else slide.addShape(pres.shapes.RECTANGLE,{x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,fill:{color:'F1F5F9'},line:{color:'E2E8F0',pt:.5}});
+          slide.addText(lbl,{x:x+.04,y:yp+cH,w:cW-.08,h:CAP_H,fontSize:7,color:'5A7A96',align:'center',valign:'middle',fontFace:'Calibri'});
+        }
+        for(let row=0;row<RPS;row++)for(let col=0;col<COLS;col++){
+          if(mode==='both'){
+            // Before + After: left half=Before, right half=After
+            const pi=startR*COLS+row*COLS+col;
+            addCell(bs[pi]||null,bX,col,row,'Before '+(pi+1));
+            addCell(as_[pi]||null,aX,col,row,'After '+(pi+1));
+          } else {
+            // Before Only: col0(leftcol)only photo, col1(rightcol)은 empty
+            // per slide 3 photos (RPS=3row, col0only use)
+            const pi = startR + row; // col0only so use row index is 곧 photo index
+            if(col===0){
+              // left col: Before photo
+              addCell(bs[pi]||null, bX, col, row, bs[pi] ? 'Before '+(pi+1) : '');
+            } else {
+              // right col: empty (After slot)
+              slide.addShape(pres.shapes.RECTANGLE,{
+                x:bX+col*(cW+GAP),
+                y:HDR_H+MAR+row*(cH+CAP_H+GAP),
+                w:cW, h:cH+CAP_H,
+                fill:{color:'F8FAFC'}, line:{color:'E2E8F0',pt:.5}
+              });
+            }
+          }
+        }
+      }
+    }
+    pres.writeFile({fileName:'PunchList_'+pn+'_'+(pd||today())+'.pptx'});
+  }catch(e){alert('PPT Error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+/* ── UTILS ── */
+function syncFuColBtns(){
+  const btns=document.getElementById('fuColBtns');
+  if(!btns)return;
+  btns.querySelectorAll('.toggle-btn').forEach(b=>{
+    const n=parseInt(b.textContent);
+    b.classList.toggle('active',n===fuColCount);
+  });
+}
+
+function setFuCol(n,btn){
+  fuColCount=n;
+  btn.closest('.btn-group').querySelectorAll('.toggle-btn').forEach(b=>b.classList.toggle('active',b===btn));
+}
+
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function doReset(){closeModal('resetModal');rows=[];rowId=0;photoId=0;document.getElementById('rowsContainer').innerHTML='';goHome();}
+function showLoading(v,t){document.getElementById('loading').classList.toggle('show',v);if(t)setLoadTxt(t);}
+function setLoadTxt(t){document.getElementById('loadTxt').textContent=t;}
+function today(){return new Date().toISOString().slice(0,10);}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+let _tt=null;
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2800);}
+
+/* ── INIT ── */
+document.getElementById('projDate').value=today();
+ensureUsername();
+openDB().then(()=>renderSavedList()).catch(console.error);
+checkNAS().then(()=>{ if(document.getElementById('homeScreen').classList.contains('active')) renderSavedList(); });
+startAutoRefresh();
+
+/* ══════════════════════════════
+   FOLLOWUP EXPORT
+══════════════════════════════ */
+async function exportFuPDF(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  showLoading(true,'Generating PDF...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const{jsPDF}=window.jspdf;
+    const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    const W=210,H=297,M=10,pW=W-M*2;
+    const pn=fuData.projName||'Punch List',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const fMode=fuMode;
+    // Grid: 2slots→1col×2row, 4slots→2col×2row, 6slots→2col×3row
+    const pC=fuColCount<=2?1:2;
+    const pRows=fuColCount<=4?2:3;
+    const PPS=pC*pRows;
+    // secW: 항상 반폭 사용 (Before=왼쪽, After=오른쪽, before-only시 오른쪽은 빈칸)
+    const gap=2, secW=(pW-4)/2;
+    const cW=(secW-gap*(pC-1))/pC, cH=cW*0.75;
+    let y=M,pNum=1;
+    function hdr(){
+      doc.setFillColor(13,33,55);doc.rect(0,0,W,20,'F');
+      doc.setFontSize(13);doc.setTextColor(245,166,35);doc.setFont(undefined,'bold');doc.text('PUNCH LIST',M,12);
+      doc.setFontSize(7.5);doc.setTextColor(155,184,212);doc.setFont(undefined,'normal');
+      doc.text(pn,M,17.5);doc.text(pa+'  '+pd+'  p.'+pNum,W-M,17.5,{align:'right'});y=24;
+    }
+    function chk(n){if(y+n>H-M){doc.addPage();pNum++;hdr();}}
+    hdr();
+    const aSecX=M+secW+4; // after section x position
+    for(let ri=0;ri<fuData.rows.length;ri++){
+      const row=fuData.rows[ri];
+      const bs=(row.beforePhotos||[]).map(p=>fuPhotos[p.id]||null);
+      const aSlotMap={};(row.afterPhotos||[]).forEach((p,idx)=>{if(!p)return;const slot=p.beforeIdx!=null?p.beforeIdx:idx;aSlotMap[slot]=fuPhotos[p.id]||null;});
+      const as_=(row.beforePhotos||[]).map((b,i)=>aSlotMap[i]||null);
+      const bChunks=Math.max(Math.ceil(bs.filter(Boolean).length/PPS),1);
+      const aChunks=fMode==='both'?Math.max(Math.ceil(as_.filter(Boolean).length/PPS),1):0;
+      const totalChunks=fMode==='both'?Math.max(bChunks,aChunks):bChunks;
+      const chunkH=7+pRows*(cH+gap)+4;
+      for(let ci=0;ci<totalChunks;ci++){
+        chk(chunkH+9);
+        // Item 헤더 (첫 청크만)
+        if(ci===0){
+          doc.setFillColor(240,244,248);doc.roundedRect(M,y,pW,6.5,1,1,'F');
+          doc.setFontSize(7.5);doc.setTextColor(90,122,150);doc.setFont(undefined,'bold');doc.text('No.'+(ri+1),M+2.5,y+4.2);
+          doc.setFont(undefined,'normal');doc.setTextColor(26,43,60);doc.text((row.desc||'(No description)').slice(0,72),M+14,y+4.2);
+          y+=8;
+        }
+        // Before 섹션 라벨
+        doc.setFontSize(6.5);doc.setTextColor(180,60,10);doc.setFont(undefined,'bold');
+        doc.text('■ Before ('+(ci*PPS+1)+'-'+Math.min((ci+1)*PPS,bs.filter(Boolean).length)+')',M,y+4);
+        if(fMode==='both'){doc.setTextColor(20,130,60);doc.text('■ After ('+(ci*PPS+1)+'-'+Math.min((ci+1)*PPS,as_.filter(Boolean).length)+')',aSecX,y+4);}
+        y+=6;
+        const gY=y;
+        for(let r2=0;r2<pRows;r2++)for(let col=0;col<pC;col++){
+          const pi=ci*PPS+r2*pC+col;
+          const cx=M+col*(cW+gap), cy=gY+r2*(cH+gap);
+          doc.setFillColor(248,250,252);doc.setDrawColor(209,220,232);doc.setLineWidth(0.25);doc.roundedRect(cx,cy,cW,cH,0.8,0.8,'FD');
+          if(bs[pi]){try{doc.addImage(bs[pi],'JPEG',cx+.4,cy+.4,cW-.8,cH-.8);}catch(e){}}
+          else{doc.setFontSize(5);doc.setTextColor(200,212,220);doc.text('-',cx+cW/2,cy+cH/2,{align:'center'});}
+          if(fMode==='both'){
+            const ax=aSecX+col*(cW+gap);
+            doc.setFillColor(248,250,252);doc.setDrawColor(209,220,232);doc.setLineWidth(0.25);doc.roundedRect(ax,cy,cW,cH,0.8,0.8,'FD');
+            if(as_[pi]){try{doc.addImage(as_[pi],'JPEG',ax+.4,cy+.4,cW-.8,cH-.8);}catch(e){}}
+            else{doc.setFontSize(5);doc.setTextColor(200,212,220);doc.text('-',ax+cW/2,cy+cH/2,{align:'center'});}
+          }
+        }
+        y+=pRows*(cH+gap)+3;
+      }
+      doc.setDrawColor(220,228,238);doc.setLineWidth(0.2);doc.line(M,y,W-M,y);y+=4;
+    }
+    const fn='PunchList_'+pn+'_'+(pd||today())+'.pdf',uri=doc.output('datauristring');
+    const w=window.open('');
+    if(w)w.document.write('<html><body style="margin:0"><a href="'+uri+'" download="'+fn+'" style="display:block;padding:12px 20px;background:#0D2137;color:#F5A623;border-radius:8px;text-align:center;font-family:sans-serif;font-weight:bold;text-decoration:none;margin:16px">Save PDF</a><iframe src="'+uri+'" style="width:100%;height:90vh;border:none"></iframe></body></html>');
+    else{const a=document.createElement('a');a.href=uri;a.download=fn;document.body.appendChild(a);a.click();document.body.removeChild(a);}
+  }catch(e){alert('PDF error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+async function exportFuExcel(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  showLoading(true,'Generating Excel...');await new Promise(r=>setTimeout(r,50));
+  try{
+    const wb=XLSX.utils.book_new();
+    const pn=fuData.projName||'PunchList',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const mB=Math.max(...fuData.rows.map(r=>(r.beforePhotos||[]).length),0);
+    const mA=mB; // after slots match before slots
+    const data=[['HANDONG PUNCH LIST'],[],['Project',pn],['Author',pa],['Date',pd],[]];
+    const hdr=['No','Description'];
+    for(let i=1;i<=mB;i++){hdr.push('Before'+i+' Note');hdr.push('Before'+i+' Assignee');}
+    for(let i=1;i<=mA;i++)hdr.push('After'+i+' Note');
+    data.push(hdr);
+    fuData.rows.forEach((row,ri)=>{
+      const r=[ri+1,row.desc||''];
+      // beforeIdx 기반 슬롯맵으로 after 캡션 매핑
+      const aSlotMapE={};(row.afterPhotos||[]).forEach((p,idx)=>{if(!p)return;const slot=p.beforeIdx!=null?p.beforeIdx:idx;aSlotMapE[slot]=p;});
+      for(let i=0;i<mB;i++){r.push((row.beforePhotos||[])[i]?.caption||'');r.push((row.beforePhotos||[])[i]?.assignee||'');}
+      for(let i=0;i<mA;i++)r.push(aSlotMapE[i]?.caption||'');
+      data.push(r);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:4},{wch:40},...Array(mB*2+mA).fill({wch:18})];
+    XLSX.utils.book_append_sheet(wb,ws,'PunchList');
+    const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    const blob=new Blob([out],{type:'application/octet-stream'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='PunchList_'+pn+'_'+(pd||today())+'.xlsx';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},1000);
+  }catch(e){alert('Excel error: '+e.message);}
+  showLoading(false);
+}
+
+async function exportFuPPT(){
+  if(!fuData||!fuData.rows.length){alert('No report loaded.');return;}
+  if(typeof PptxGenJS==='undefined'){alert('PPT library loading. Please try again.');return;}
+  showLoading(true,'Generating PPT...');await new Promise(r=>setTimeout(r,80));
+  try{
+    const pn=fuData.projName||'Punch List',pa=fuData.projAuthor||'',pd=fuData.projDate||'';
+    const fMode=fuMode;
+    // Grid: 2slots=1col×2row, 4slots=2col×2row, 6slots=2col×3row
+    const COLS=fuColCount<=2?1:2;
+    const ROWS=fuColCount<=4?2:3;
+    const PPS=COLS*ROWS;
+    const pres=new PptxGenJS();
+    pres.defineLayout({name:'A4P',width:7.5,height:10.83});pres.layout='A4P';
+    const SW=7.5,SH=10.83,NAVY='0D2137',GOLD='F5A623',LGRAY='F0F4F8';
+    const ts=pres.addSlide();ts.background={color:NAVY};
+    ts.addShape(pres.shapes.RECTANGLE,{x:.4,y:SH*.3,w:.07,h:2,fill:{color:GOLD},line:{color:GOLD}});
+    ts.addText('PUNCH LIST',{x:.6,y:SH*.28,w:6.5,h:1.1,fontSize:40,bold:true,color:GOLD,fontFace:'Calibri'});
+    ts.addText(pn,{x:.6,y:SH*.28+1.1,w:6.5,h:.7,fontSize:20,color:'CADCFC',fontFace:'Calibri'});
+    ts.addText('Author: '+(pa||'-')+'\nDate: '+(pd||'-'),{x:.6,y:SH*.65,w:6.3,h:1.2,fontSize:13,color:'7A9BBF',fontFace:'Calibri'});
+    // 셀 크기: 슬라이드 꽉 채우도록 계산
+    const MAR=.18,HDR_H=.52,CAP_H=.22,GAP=.08;
+    const fullW=SW-MAR*2;
+    const secW=fMode==='both'?(fullW-MAR)/2:fullW;
+    const cW=(secW-GAP*(COLS-1))/COLS;
+    const availH=SH-HDR_H-2*MAR;
+    const cH=(availH-ROWS*(CAP_H+GAP))/ROWS;
+    for(let ri=0;ri<fuData.rows.length;ri++){
+      const row=fuData.rows[ri];
+      const bs=(row.beforePhotos||[]).map(p=>fuPhotos[p.id]||null);
+      const aSlotMapP={};(row.afterPhotos||[]).forEach((p,idx)=>{if(!p)return;const slot=p.beforeIdx!=null?p.beforeIdx:idx;aSlotMapP[slot]=fuPhotos[p.id]||null;});
+      const as_=(row.beforePhotos||[]).map((b,i)=>aSlotMapP[i]||null);
+      const slides=fMode==='both'
+        ?Math.max(Math.ceil(Math.max(bs.length,1)/PPS),Math.ceil(Math.max(as_.length,1)/PPS),1)
+        :Math.max(Math.ceil(Math.max(bs.length,1)/PPS),1);
+      const bX=MAR,aX=fMode==='both'?MAR+secW+MAR:MAR;
+      for(let si=0;si<slides;si++){
+        const slide=pres.addSlide();slide.background={color:LGRAY};
+        slide.addShape(pres.shapes.RECTANGLE,{x:0,y:0,w:SW,h:HDR_H,fill:{color:NAVY},line:{color:NAVY}});
+        slide.addText('No.'+(ri+1)+'  '+(row.desc||'').slice(0,38),{x:.22,y:0,w:5.6,h:HDR_H,fontSize:11,bold:true,color:GOLD,fontFace:'Calibri',valign:'middle'});
+        slide.addText((pd||'')+'  '+(si+1)+'/'+slides,{x:5.5,y:0,w:1.78,h:HDR_H,fontSize:8.5,color:'7A9BBF',align:'right',valign:'middle',fontFace:'Calibri'});
+        const startP=si*PPS;
+        function ac(src,sx,col,r2,lbl){
+          const x=sx+col*(cW+GAP),yp=HDR_H+MAR+r2*(cH+CAP_H+GAP);
+          slide.addShape(pres.shapes.RECTANGLE,{x,y:yp,w:cW,h:cH+CAP_H,fill:{color:'FFFFFF'},line:{color:'D1DCE8',pt:.8}});
+          if(src){try{slide.addImage({data:src.replace(/^data:image\/\w+;base64,/,'image/jpeg;base64,'),x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,sizing:{type:'contain',w:cW-.06,h:cH-.06}});}catch(e){}}
+          else{slide.addShape(pres.shapes.RECTANGLE,{x:x+.03,y:yp+.03,w:cW-.06,h:cH-.06,fill:{color:'F1F5F9'},line:{color:'E2E8F0',pt:.5}});}
+          slide.addText(lbl,{x:x+.04,y:yp+cH,w:cW-.08,h:CAP_H,fontSize:6.5,color:'5A7A96',align:'center',valign:'middle',fontFace:'Calibri'});
+        }
+        for(let r2=0;r2<ROWS;r2++)for(let col=0;col<COLS;col++){
+          const pi=startP+r2*COLS+col;
+          if(fMode==='both'){
+            ac(bs[pi]||null,bX,col,r2,'Before '+(pi+1));
+            ac(as_[pi]||null,aX,col,r2,'After '+(pi+1));
+          }else{
+            ac(bs[pi]||null,bX,col,r2,bs[pi]?'Before '+(pi+1):'');
+          }
+        }
+      }
+    }
+    pres.writeFile({fileName:'PunchList_'+pn+'_'+(pd||today())+'.pptx'});
+  }catch(e){alert('PPT error: '+e.message);console.error(e);}
+  showLoading(false);
+}
+
+/* ════════════════════════════════════════════
+   KNOWLEDGE BASE SYSTEM
+════════════════════════════════════════════ */
+
+// ── State ──
+let kbCheckedItems = [];   // [{ri, slotIdx, bSrc, aSrc, bCaption, aCaption, assignee, projName, projDate}]
+let kbCards = [];          // [{id, title, body, linkedItems:[itemIdx]}]
+let kbCardId = 0;
+let currentKbData = null;  // knowledge item being built
+let kbList = [];           // saved knowledge items
+let currentKbReport = null;
+let klistFromScreen = 'home';
+let fuPasteTarget = { ri: null, type: 'after' };  // 붙여넣기 타겟 (row index + before/after)   // klistScreen 진입 컨텍스트 (back 버튼이 어디로 갈지 결정)
+let klSelectMode = false;        // KB 리스트 선택 모드
+let klSelectedIds = new Set();   // 선택된 entry ID 집합
+let klView = 'cards';            // 'cards' | 'table'
+let klFilters = { search:'', sites: new Set(), discs: new Set(), cats: new Set() };
+let klEditMap = {};              // {entryId: {discipline, projName, title}}  (저장 대기중인 변경)
+let klFillState = null;          // 드래그 채우기 상태
+
+// ── LocalStorage helpers for KB ──
+function getKbList() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('pl_kb') || '[]');
+    // Migrate legacy entries (multi-card per entry) → split into one card per entry
+    let migrated = false;
+    const out = [];
+    for (const entry of raw) {
+      if (!entry || !entry.cards) { out.push(entry); continue; }
+      const validCards = entry.cards.filter(c => c && c.title && c.title.trim());
+      if (validCards.length <= 1) { out.push(entry); continue; }
+      // Split: one entry per card
+      migrated = true;
+      const baseId = entry.id || ('kb_' + Date.now());
+      validCards.forEach((card, ci) => {
+        const linkedIdxs = card.linkedItems || [];
+        const itemsForCard = linkedIdxs.length
+          ? linkedIdxs.map(i => entry.items?.[i]).filter(Boolean)
+          : (entry.items || []).slice();
+        out.push({
+          id: baseId + '_' + ci,
+          savedAt: entry.savedAt, savedBy: entry.savedBy || '',
+          projName: entry.projName || '', projDate: entry.projDate || '',
+          cards: [{ id: 1, title: card.title, body: card.body || '', linkedItems: itemsForCard.map((_, i) => i) }],
+          items: itemsForCard,
+        });
+      });
+    }
+    if (migrated) localStorage.setItem('pl_kb', JSON.stringify(out));
+    return out;
+  } catch { return []; }
+}
+function setKbList(arr) { localStorage.setItem('pl_kb', JSON.stringify(arr)); }
+
+// ── Navigate to Knowledge List ──
+async function goKnowledgeList() {
+  await migrateFatKbEntriesIfNeeded();
+  kbList = getKbList();
+  klistFromScreen = 'home';
+  renderKbList();
+  showScreen('klistScreen');
+  initKbListFiles();   // 파일 섹션 로드
+}
+
+// 옛 형식(items[].bSrc/aSrc 직접 들고 있음) → 새 형식(IndexedDB key 참조) 1회 변환
+let _kbMigrated = false;
+async function migrateFatKbEntriesIfNeeded() {
+  if (_kbMigrated) return;
+  _kbMigrated = true;
+  try {
+    const raw = JSON.parse(localStorage.getItem('pl_kb') || '[]');
+    let changed = false;
+    for (const entry of raw) {
+      if (!entry || !entry.items) continue;
+      for (let ii = 0; ii < entry.items.length; ii++) {
+        const it = entry.items[ii];
+        if (it.bSrc && !it.bKey) {
+          const key = 'kbph_' + entry.id + '_' + ii + '_b';
+          try { await dbPut(key, it.bSrc); it.bKey = key; delete it.bSrc; changed = true; }
+          catch(e) { console.warn('migrate b failed', e); }
+        }
+        if (it.aSrc && !it.aKey) {
+          const key = 'kbph_' + entry.id + '_' + ii + '_a';
+          try { await dbPut(key, it.aSrc); it.aKey = key; delete it.aSrc; changed = true; }
+          catch(e) { console.warn('migrate a failed', e); }
+        }
+      }
+    }
+    if (changed) {
+      try { localStorage.setItem('pl_kb', JSON.stringify(raw)); console.log('[KB] Fat entries migrated to IndexedDB'); }
+      catch(e) { console.error('[KB] migrate save failed', e); }
+    }
+  } catch(e) { console.error('migrateFatKbEntriesIfNeeded:', e); }
+}
+
+// ── Checkbox handling in Follow-up ──
+function toggleKbCheck(ri, slotIdx, checkbox) {
+  const key = ri + '_' + slotIdx;
+  const bp  = (fuData?.rows[ri]?.beforePhotos || [])[slotIdx];
+  const ap  = (fuData?.rows[ri]?.afterPhotos  || []).find(p => (p.beforeIdx != null ? p.beforeIdx : 0) === slotIdx);
+  if (checkbox.checked) {
+    kbCheckedItems.push({
+      key, ri, slotIdx,
+      bSrc:     bp ? fuPhotos[bp.id] : null,
+      aSrc:     ap ? fuPhotos[ap.id] : null,
+      bCaption: bp?.caption || '',
+      aCaption: ap?.caption || '',
+      assignee: bp?.assignee || '',
+      projName: fuData?.projName || '',
+      projDate: fuData?.projDate || '',
+      desc:     fuData?.rows[ri]?.desc || '',
+    });
+  } else {
+    kbCheckedItems = kbCheckedItems.filter(x => x.key !== key);
+  }
+  updateKbSendBar();
+}
+
+function updateKbSendBar() {
+  const bar = document.getElementById('kbSendBar');
+  const cnt = document.getElementById('kbCheckedCount');
+  if (!bar) return;
+  bar.style.display = kbCheckedItems.length > 0 ? 'flex' : 'none';
+  if (cnt) cnt.textContent = kbCheckedItems.length + ' selected';
+}
+
+function clearKbChecks() {
+  kbCheckedItems = [];
+  updateKbSendBar();
+  renderFollowup();
+}
+
+// ── Send checked items to KB Build screen ──
+function sendToKnowledge() {
+  if (!kbCheckedItems.length) return;
+  currentKbData = {
+    projName: fuData?.projName || '',
+    projDate: fuData?.projDate || '',
+    items: [...kbCheckedItems],
+  };
+  kbCards = [];
+  kbCardId = 0;
+  document.getElementById('kbuildSub').textContent = currentKbData.projName || '';
+  renderKbBuild();
+  showScreen('kbuildScreen');
+}
+
+// ── Render KB Build Screen ──
+function renderKbBuild() {
+  renderKbCards();
+  renderKbPhotosPanel();
+}
+
+function addKbCard() {
+  kbCards.push({ id: ++kbCardId, title: '', body: '', linkedItems: [] });
+  renderKbCards();
+  renderKbPhotosPanel();
+}
+
+function delKbCard(id) {
+  kbCards = kbCards.filter(c => c.id !== id);
+  renderKbCards();
+  renderKbPhotosPanel();
+}
+
+function updKbCardTitle(id, val) { const c = kbCards.find(x => x.id === id); if (c) c.title = val; }
+function updKbCardBody(id, val)  { const c = kbCards.find(x => x.id === id); if (c) c.body  = val; }
+
+function toggleKbLink(cardId, itemIdx) {
+  const card = kbCards.find(c => c.id === cardId);
+  if (!card) return;
+  const pos = card.linkedItems.indexOf(itemIdx);
+  if (pos >= 0) card.linkedItems.splice(pos, 1);
+  else card.linkedItems.push(itemIdx);
+  renderKbCards();
+  renderKbPhotosPanel();
+}
+
+// 카드 인덱스 -> 고유 색상 (반복용 팔레트)
+const KB_CARD_COLORS = ['#3B82F6','#10B981','#F59E0B','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316','#6366F1','#84CC16'];
+const KB_DISCIPLINES = ['Architecture', 'Interior', 'MEP', 'Other'];
+const KB_CATEGORIES = ['Quality', 'Safety', 'Other'];
+function discBadgeClass(d) {
+  if (d === 'Architecture') return 'kl-disc-arch';
+  if (d === 'Interior')     return 'kl-disc-int';
+  if (d === 'MEP')          return 'kl-disc-mep';
+  if (d)                    return 'kl-disc-other';
+  return 'kl-disc-empty';
+}
+function catBadgeClass(c) {
+  if (c === 'Quality') return 'kl-cat-quality';
+  if (c === 'Safety')  return 'kl-cat-safety';
+  if (c)               return 'kl-cat-other';
+  return 'kl-disc-empty';
+}
+function kbCardColor(cardId) {
+  const idx = kbCards.findIndex(c => c.id === cardId);
+  return KB_CARD_COLORS[(idx >= 0 ? idx : 0) % KB_CARD_COLORS.length];
+}
+
+function renderKbCards() {
+  const el = document.getElementById('kbCardsContainer');
+  if (!el) return;
+  if (!kbCards.length) {
+    el.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px">Press <b>+ Add Knowledge</b> to create a lesson</div>';
+    return;
+  }
+  el.innerHTML = kbCards.map((card, cIdx) => {
+    const color = kbCardColor(card.id);
+    const linkedBadges = card.linkedItems.map(idx => {
+      const item = currentKbData?.items[idx];
+      return item ? `<span class="kb-linked-badge" style="background:${color}22;color:${color};border:1px solid ${color}66" onclick="toggleKbLink(${card.id},${idx})">📷 Item ${idx+1} ×</span>` : '';
+    }).join('');
+    return `<div class="kb-card" data-color="${color}" style="--card-color:${color}">
+      <button class="kb-card-del" onclick="delKbCard(${card.id})">×</button>
+      <div class="kb-card-num"><span class="kb-card-color-tag"></span>KNOWLEDGE #${cIdx+1}</div>
+      <input class="kb-card-title-inp" placeholder="Lesson title..." value="${esc(card.title)}" oninput="updKbCardTitle(${card.id},this.value)">
+      <textarea class="kb-card-body-inp" placeholder="Detailed description (optional)..." oninput="updKbCardBody(${card.id},this.value)">${esc(card.body)}</textarea>
+      <div class="kb-link-row">${linkedBadges || '<span style="font-size:10px;color:var(--text3)">→ Click "Link to #'+(cIdx+1)+'" on the right to attach photos</span>'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderKbPhotosPanel() {
+  const el = document.getElementById('kbPhotosPanel');
+  if (!el || !currentKbData) return;
+  el.innerHTML = currentKbData.items.map((item, idx) => {
+    const linkedBy = kbCards.filter(c => c.linkedItems.includes(idx));
+    const isLinked = linkedBy.length > 0;
+    // 첫 번째 연결된 카드 색상으로 좌측 보더 (다중 연결 시 첫 카드 우선)
+    const primaryColor = isLinked ? kbCardColor(linkedBy[0].id) : null;
+    const cardOpts = kbCards.map((c, cIdx) => {
+      const color = kbCardColor(c.id);
+      const isLk = c.linkedItems.includes(idx);
+      return `<button class="kb-link-btn ${isLk?'linked':''}" data-card-color="1" style="--btn-color:${color}" onclick="toggleKbLink(${c.id},${idx})">${isLk?'✓':''} #${cIdx+1}</button>`;
+    }).join('');
+    // 연결된 카드 표시 바 (어느 지식과 연결됐는지)
+    const linkedBars = linkedBy.map(c => {
+      const cIdx = kbCards.findIndex(x => x.id === c.id);
+      const color = kbCardColor(c.id);
+      const ttl = c.title ? c.title : '(untitled)';
+      return `<span class="kb-photo-link-bar" style="background:${color}"><span>#${cIdx+1} ${esc(ttl).slice(0,20)}</span><span class="x" onclick="toggleKbLink(${c.id},${idx})">×</span></span>`;
+    }).join('');
+    const itemClass = isLinked ? 'kb-photo-item linked-photo' : 'kb-photo-item';
+    const itemStyle = primaryColor ? `--linked-color:${primaryColor}` : '';
+    const projLine = item.projName ? `<div class="kb-photo-proj">${esc(item.projName)}${item.projDate?' · '+item.projDate:''}</div>` : '';
+    return `<div class="${itemClass}" style="${itemStyle}">
+      ${projLine}
+      <div class="kb-photo-item-hdr">
+        <span class="row-num" style="background:var(--navy)">Item ${idx+1}</span>
+        <span style="font-size:11px;color:var(--text2);font-weight:600;flex:1">${esc(item.desc||'(No desc)')}</span>
+        ${isLinked ? `<span style="font-size:10px;color:var(--green);font-weight:700">✓ ${linkedBy.length}</span>` : ''}
+      </div>
+      <div class="kb-photo-pair">
+        ${item.bSrc ? `<img class="kb-photo-thumb" data-kbsrc="${idx}_b" style="aspect-ratio:4/3;object-fit:cover;border-radius:6px;width:100%;display:block">` : '<div class="kb-photo-empty"><span style="font-size:10px;color:var(--text3)">No before</span></div>'}
+        ${item.aSrc ? `<img class="kb-photo-thumb" data-kbsrc="${idx}_a" style="aspect-ratio:4/3;object-fit:cover;border-radius:6px;width:100%;display:block">` : '<div class="kb-photo-empty"><span style="font-size:10px;color:var(--text3)">No after</span></div>'}
+      </div>
+      ${item.assignee ? `<div style="font-size:10px;color:var(--text3);margin-top:4px">👤 ${esc(item.assignee)}</div>` : ''}
+      ${linkedBars ? `<div class="kb-photo-link-bars">${linkedBars}</div>` : ''}
+      <div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">
+        ${kbCards.length ? '<span style="font-size:10px;color:var(--text3);margin-right:3px">Link:</span>' : ''}
+        ${cardOpts || '<span style="font-size:10px;color:var(--text3)">← Add a knowledge card first</span>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Set img src after DOM update
+  setTimeout(() => {
+    el.querySelectorAll('img[data-kbsrc]').forEach(img => {
+      const [idx, type] = img.dataset.kbsrc.split('_');
+      const item = currentKbData?.items[parseInt(idx)];
+      if (item) img.src = type === 'b' ? item.bSrc : item.aSrc;
+    });
+  }, 10);
+}
+
+// ── Save Knowledge ──
+// 사진(base64) IndexedDB 키 컨벤션: kbph_{entryId}_{itemIdx}_{b|a}
+async function saveKnowledge() {
+  try {
+    if (!kbCards || !kbCards.length) { alert('Add at least one knowledge card.'); return; }
+    const validCards = kbCards.filter(c => c && typeof c.title === 'string' && c.title.trim());
+    if (!validCards.length) { alert('Enter a title for at least one knowledge card.'); return; }
+
+    showLoading(true, 'Saving knowledge...');
+    const list = getKbList();
+    const ts = Date.now();
+    const allItems = (currentKbData && currentKbData.items) ? currentKbData.items : [];
+    const projName = (currentKbData && currentKbData.projName) || '';
+    const projDate = (currentKbData && currentKbData.projDate) || '';
+    const savedAt = new Date().toISOString();
+    const savedBy = userName || '';
+
+    // 카드별 entry 생성 — 사진은 IndexedDB로 분리, localStorage에는 메타만
+    const newEntries = [];
+    for (let ci = 0; ci < validCards.length; ci++) {
+      const card = validCards[ci];
+      const linkedIdxs = Array.isArray(card.linkedItems) ? card.linkedItems : [];
+      const itemsForCard = linkedIdxs.length
+        ? linkedIdxs.map(i => allItems[i]).filter(Boolean)
+        : allItems.slice();
+      const entryId = 'kb_' + ts + '_' + ci;
+
+      // 사진을 IndexedDB로 분리 저장하고 메타만 만든다
+      const lightItems = [];
+      for (let ii = 0; ii < itemsForCard.length; ii++) {
+        const item = itemsForCard[ii];
+        const bKey = 'kbph_' + entryId + '_' + ii + '_b';
+        const aKey = 'kbph_' + entryId + '_' + ii + '_a';
+        if (item.bSrc) { try { await dbPut(bKey, item.bSrc); } catch(e) { console.warn('dbPut b failed', e); } }
+        if (item.aSrc) { try { await dbPut(aKey, item.aSrc); } catch(e) { console.warn('dbPut a failed', e); } }
+        // src 제외, 키 정보만 남김
+        const { bSrc, aSrc, ...rest } = item;
+        lightItems.push({
+          ...rest,
+          bKey: item.bSrc ? bKey : null,
+          aKey: item.aSrc ? aKey : null,
+        });
+      }
+
+      const entry = {
+        id: entryId,
+        savedAt, savedBy, projName, projDate,
+        cards: [{ id: 1, title: card.title, body: card.body || '', linkedItems: lightItems.map((_, i) => i) }],
+        items: lightItems,
+      };
+      newEntries.push(entry);
+    }
+
+    newEntries.forEach(entry => { list.push(entry); });
+    try {
+      setKbList(list);
+    } catch(e) {
+      // localStorage quota 문제 — 메타만 저장하므로 거의 발생 안하지만 방어
+      showLoading(false);
+      console.error('localStorage quota:', e);
+      alert('Save failed (storage limit): ' + (e.message || 'unknown') + '\n\nTry deleting some old knowledge items.');
+      return;
+    }
+
+    // NAS 저장: 각 entry의 사진 src를 다시 붙여서 전송 (NAS는 용량 여유 있음)
+    for (let ci = 0; ci < validCards.length; ci++) {
+      const card = validCards[ci];
+      const entry = newEntries[ci];
+      const linkedIdxs = Array.isArray(card.linkedItems) ? card.linkedItems : [];
+      const sourceItems = linkedIdxs.length
+        ? linkedIdxs.map(i => allItems[i]).filter(Boolean)
+        : allItems.slice();
+      const fullEntry = {
+        ...entry,
+        items: entry.items.map((lit, ii) => ({
+          ...lit,
+          bSrc: sourceItems[ii]?.bSrc || null,
+          aSrc: sourceItems[ii]?.aSrc || null,
+        })),
+      };
+      nasSaveKb(fullEntry);
+    }
+
+    showLoading(false);
+    showToast('✅ ' + newEntries.length + ' knowledge item(s) saved!');
+    kbList = list;
+    // 저장 후 KB 리스트로 이동 — Back 누르면 kbuildScreen(사진/카드 유지)으로 복귀
+    klistFromScreen = 'followupScreen';
+    renderKbList();
+    showScreen('klistScreen');
+    initKbListFiles();   // 파일 섹션 로드
+  } catch (e) {
+    showLoading(false);
+    console.error('saveKnowledge error:', e);
+    alert('Save failed: ' + (e && e.message ? e.message : 'unknown error') + '\n\nOpen console (F12) for details.');
+  }
+}
+
+/* ══════════════════════════════════════════
+   FILE ATTACHMENTS — NAS 파일 업로드/다운로드/삭제
+   context_type: 'report' | 'kb'
+   context_id  : 보고서 ID | KB entry ID
+══════════════════════════════════════════ */
+
+// 파일 확장자 → 이모지 아이콘
+function attIcon(ext) {
+  const m = { pdf:'📄', xlsx:'📊', xls:'📊', docx:'📝', doc:'📝', pptx:'📋', ppt:'📋' };
+  return m[ext] || '📁';
+}
+
+// 파일 크기 표시
+function attSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+// ── NAS 파일 API 호출 ─────────────────────────────
+async function nasListFiles(contextId, contextType) {
+  if (!nasOnline) return [];
+  try {
+    const r = await fetch(`${API_URL}?action=list_files&context_id=${encodeURIComponent(contextId)}&context_type=${contextType}`);
+    const d = await r.json();
+    return d.ok ? d.files : [];
+  } catch(e) { return []; }
+}
+
+async function nasUploadFile(file, contextId, contextType, onProgress) {
+  if (!nasOnline) throw new Error('NAS not connected');
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('context_id', contextId);
+  fd.append('context_type', contextType);
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API_URL + '?action=upload_file');
+    xhr.onload = () => {
+      try {
+        const d = JSON.parse(xhr.responseText);
+        if (d.ok) resolve(d); else reject(new Error(d.error || 'Upload failed'));
+      } catch(e) { reject(e); }
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    if (onProgress) xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded/e.total*100)); };
+    xhr.send(fd);
+  });
+}
+
+async function nasDeleteFile(contextId, contextType, filename) {
+  if (!nasOnline) return false;
+  try {
+    const r = await fetch(`${API_URL}?action=delete_file&context_id=${encodeURIComponent(contextId)}&context_type=${contextType}&filename=${encodeURIComponent(filename)}`, { method:'DELETE' });
+    const d = await r.json();
+    return d.ok;
+  } catch(e) { return false; }
+}
+
+function nasGetFileUrl(contextId, contextType, filename) {
+  return `${API_URL}?action=get_file&context_id=${encodeURIComponent(contextId)}&context_type=${contextType}&filename=${encodeURIComponent(filename)}`;
+}
+
+// ── 공통 렌더 함수 ─────────────────────────────────
+function renderAttList(listEl, files, contextId, contextType, onDelete) {
+  if (!files || !files.length) {
+    listEl.innerHTML = '<div class="att-empty">No attachments yet</div>';
+    return;
+  }
+  listEl.innerHTML = files.map(f => {
+    const dateStr = f.uploadedAt ? new Date(f.uploadedAt).toLocaleDateString() : '';
+    return `<div class="att-item" data-filename="${esc(f.filename)}">
+      <span class="att-icon">${attIcon(f.ext)}</span>
+      <div class="att-info">
+        <div class="att-name" title="${esc(f.filename)}">${esc(f.filename)}</div>
+        <div class="att-meta">${attSize(f.size)}${dateStr ? ' · ' + dateStr : ''}</div>
+      </div>
+      <button class="att-dl-btn" onclick="attDownload('${esc(contextId)}','${contextType}','${esc(f.filename)}')">⬇ Open</button>
+      <button class="att-del-btn" onclick="attDelete('${esc(contextId)}','${contextType}','${esc(f.filename)}',this)" title="Delete">×</button>
+    </div>`;
+  }).join('');
+}
+
+function attDownload(contextId, contextType, filename) {
+  window.open(nasGetFileUrl(contextId, contextType, filename), '_blank');
+}
+
+async function attDelete(contextId, contextType, filename, btn) {
+  if (!confirm('Delete "' + filename + '"?')) return;
+  btn.disabled = true;
+  btn.textContent = '...';
+  const ok = await nasDeleteFile(contextId, contextType, filename);
+  if (ok) {
+    const item = btn.closest('.att-item');
+    if (item) item.remove();
+    const listEl = document.getElementById(contextType === 'report' ? 'reportAttList' : 'kbAttList');
+    if (listEl && !listEl.querySelector('.att-item')) {
+      listEl.innerHTML = '<div class="att-empty">No attachments yet</div>';
+    }
+    showToast('File deleted.');
+  } else {
+    btn.disabled = false; btn.textContent = '×';
+    showToast('⚠ Delete failed.');
+  }
+}
+
+// ══ REPORT 파일 첨부 ════════════════════════════════
+
+// 보고서 저장 후(또는 보고서 불러올 때) 호출 — reportId가 확정된 뒤 섹션 표시
+async function initReportAttachments(reportId) {
+  const section = document.getElementById('reportAttSection');
+  const wrap    = document.getElementById('reportAttWrap');
+  const nasWarn = document.getElementById('reportAttNasWarn');
+  if (!section) return;
+  if (wrap) wrap.style.display = '';
+  section.dataset.contextId = reportId;
+  if (!nasOnline) {
+    if (nasWarn) nasWarn.style.display = '';
+    const inp = document.getElementById('reportFileInput');
+    if (inp) inp.disabled = true;
+    const btn = section.querySelector('.att-upload-btn');
+    if (btn) btn.style.opacity = '0.5';
+  } else {
+    if (nasWarn) nasWarn.style.display = 'none';
+  }
+  const files = await nasListFiles(reportId, 'report');
+  renderAttList(document.getElementById('reportAttList'), files, reportId, 'report');
+}
+
+async function handleReportFileUpload(event) {
+  const section = document.getElementById('reportAttSection');
+  const contextId = section?.dataset.contextId;
+  if (!contextId) { showToast('⚠ Save the report first before uploading files.'); event.target.value=''; return; }
+  if (!nasOnline) { showToast('⚠ NAS connection required.'); event.target.value=''; return; }
+
+  const files = Array.from(event.target.files);
+  event.target.value = '';
+  if (!files.length) return;
+
+  const uploadingEl = document.getElementById('reportAttUploading');
+  const listEl = document.getElementById('reportAttList');
+  uploadingEl.style.display = '';
+
+  for (const file of files) {
+    uploadingEl.textContent = 'Uploading ' + file.name + '...';
+    try {
+      await nasUploadFile(file, contextId, 'report', pct => { uploadingEl.textContent = file.name + ' ' + pct + '%'; });
+    } catch(e) { showToast('⚠ ' + file.name + ': ' + e.message); }
+  }
+  uploadingEl.style.display = 'none';
+  // 목록 새로고침
+  const updated = await nasListFiles(contextId, 'report');
+  renderAttList(listEl, updated, contextId, 'report');
+  showToast('✅ Upload complete!');
+}
+
+// ── doSave / openReport 에 attachment init 연동 ──
+// doSave 완료 후, openReport 완료 후 각각 initReportAttachments 호출 (아래 JS 훅)
+
+// ══ KB 파일 첨부 ════════════════════════════════════
+
+/* ══════════════════════════════════════════
+   KB LIST FILES — klistScreen 공용 파일 섹션
+   context_type='kb', context_id='_shared'
+══════════════════════════════════════════ */
+const KB_FILES_CTX = '_shared';  // KB 공용 파일 컨텍스트 ID
+
+async function initKbListFiles() {
+  // 헤더 업로드 버튼 NAS 상태 표시
+  const inp = document.getElementById('kbFilesInput');
+  if (inp) inp.disabled = !nasOnline;
+  // 옛 형식 마이그레이션: NAS에 파일은 있는데 pl_kb에 entry 없으면 자동 생성
+  await migrateOrphanFilesIfNeeded();
+}
+
+// NAS에는 파일이 있는데 pl_kb에 entry 없는 경우 — 자동 entry 생성
+let _kbFilesMigrated = false;
+async function migrateOrphanFilesIfNeeded() {
+  if (_kbFilesMigrated) return;
+  _kbFilesMigrated = true;
+  if (!nasOnline) return;
+  try {
+    const rawFiles = await nasListFiles(KB_FILES_CTX, 'kb');
+    if (!rawFiles || !rawFiles.length) return;
+    const list = getKbList();
+    const existingFilenames = new Set(list.filter(e => e.type === 'file').map(e => e.fileInfo?.filename));
+    const nameMap = JSON.parse(localStorage.getItem('kb_file_names') || '{}');
+    let added = 0;
+    for (const f of rawFiles) {
+      if (existingFilenames.has(f.filename)) continue;
+      const entryId = 'kbfile_' + Date.parse(f.uploadedAt || new Date().toISOString()) + '_' + added;
+      const displayName = nameMap[f.filename] || f.filename;
+      list.push({
+        id: entryId, type: 'file',
+        savedAt: f.uploadedAt || new Date().toISOString(),
+        savedBy: '', projName: '', projDate: '', discipline: '',
+        cards: [{ id: 1, title: displayName, body: '', linkedItems: [] }],
+        items: [],
+        fileInfo: { filename: f.filename, ext: f.ext, size: f.size, uploadedAt: f.uploadedAt }
+      });
+      added++;
+    }
+    if (added) {
+      setKbList(list);
+      kbList = list;
+      console.log('[KB] migrated', added, 'orphan files into KB list');
+      renderKbList();
+    }
+  } catch(e) { console.error('migrateOrphanFilesIfNeeded:', e); }
+}
+
+function renderKbFilesList(files) { /* deprecated — files now in main KB list */ }
+
+async function handleKbListFileUpload(event) {
+  if (!nasOnline) { showToast('⚠ NAS connection required.'); event.target.value=''; return; }
+  const files = Array.from(event.target.files);
+  event.target.value = '';
+  if (!files.length) return;
+  const uploadingEl = document.getElementById('kbFilesUploading');
+  uploadingEl.style.display = '';
+  const list = getKbList();
+  const ts = Date.now();
+  let uploadedCount = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    uploadingEl.textContent = 'Uploading ' + file.name + '...';
+    try {
+      const resp = await nasUploadFile(file, KB_FILES_CTX, 'kb', pct => {
+        uploadingEl.textContent = file.name + ' ' + pct + '%';
+      });
+      // 업로드 성공 → KB 리스트에 entry 추가
+      const entryId = 'kbfile_' + ts + '_' + i;
+      const entry = {
+        id: entryId,
+        type: 'file',
+        savedAt: new Date().toISOString(),
+        savedBy: userName || '',
+        projName: '',
+        projDate: '',
+        discipline: '',
+        cards: [{ id: 1, title: file.name, body: '', linkedItems: [] }],
+        items: [],
+        fileInfo: {
+          filename: resp.filename || file.name,
+          origname: resp.origname || file.name,
+          ext: resp.ext || (file.name.split('.').pop() || '').toLowerCase(),
+          size: resp.size || file.size,
+          uploadedAt: resp.uploadedAt || new Date().toISOString(),
+        }
+      };
+      list.push(entry);
+      nasSaveKb(entry);
+      uploadedCount++;
+    } catch(e) { showToast('⚠ ' + file.name + ': ' + e.message); }
+  }
+  setKbList(list);
+  kbList = list;
+  uploadingEl.style.display = 'none';
+  renderKbList();
+  if (uploadedCount) showToast('✅ ' + uploadedCount + ' file(s) uploaded!');
+}
+
+function openKbFile(filename, ext) {
+  const url = nasGetFileUrl(KB_FILES_CTX, 'kb', filename);
+  if (ext === 'pdf') {
+    // PDF 인라인 뷰어
+    openPdfViewer(url, filename);
+  } else {
+    // Office 등 다운로드
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+}
+
+function openPdfViewer(url, title) {
+  const ov    = document.getElementById('pdfViewerOv');
+  const frame = document.getElementById('pdfViewerFrame');
+  const ttl   = document.getElementById('pdfViewerTitle');
+  const dlBtn = document.getElementById('pdfViewerDlBtn');
+  if (!ov || !frame) return;
+  ttl.textContent = title;
+  dlBtn.href = url;
+  dlBtn.download = title;
+  frame.src = url;
+  ov.classList.add('active');
+}
+
+function closePdfViewer() {
+  const ov    = document.getElementById('pdfViewerOv');
+  const frame = document.getElementById('pdfViewerFrame');
+  if (frame) frame.src = '';
+  if (ov) ov.classList.remove('active');
+}
+
+function startRenameKbFile(nameEl, filename) {
+  // 더블클릭으로 이름 인라인 편집
+  const current = nameEl.textContent;
+  const inp = document.createElement('input');
+  inp.className = 'kb-file-name-input';
+  inp.value = current;
+  nameEl.replaceWith(inp);
+  inp.focus(); inp.select();
+
+  async function commit() {
+    const newName = inp.value.trim() || current;
+    // displayName 변경 — 실제 파일명 변경은 복잡하므로 localStorage에 매핑 저장
+    const map = JSON.parse(localStorage.getItem('kb_file_names') || '{}');
+    map[filename] = newName;
+    localStorage.setItem('kb_file_names', JSON.stringify(map));
+    const div = document.createElement('div');
+    div.className = 'kb-file-name';
+    div.title = 'Double-click to rename';
+    div.setAttribute('ondblclick', `startRenameKbFile(this,'${esc(filename)}')`);
+    div.textContent = newName;
+    inp.replaceWith(div);
+  }
+  inp.addEventListener('blur', commit);
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { inp.value = current; inp.blur(); } });
+}
+
+async function deleteKbListFile(filename, btn) {
+  if (!confirm('Delete "' + filename + '"?')) return;
+  btn.disabled = true;
+  const ok = await nasDeleteFile(KB_FILES_CTX, 'kb', filename);
+  if (ok) {
+    // localStorage 이름 매핑도 정리
+    const map = JSON.parse(localStorage.getItem('kb_file_names') || '{}');
+    delete map[filename]; localStorage.setItem('kb_file_names', JSON.stringify(map));
+    const updated = await nasListFiles(KB_FILES_CTX, 'kb');
+    renderKbFilesList(updated);
+    showToast('File deleted.');
+  } else {
+    btn.disabled = false;
+    showToast('⚠ Delete failed.');
+  }
+}
+
+// KB 사진 hydrate: entry의 light items(bKey/aKey)를 IndexedDB에서 src로 채워서 반환
+async function hydrateKbEntry(entry) {
+  if (!entry || !entry.items) return entry;
+  const items = [];
+  for (const it of entry.items) {
+    const bSrc = it.bSrc || (it.bKey ? await dbGet(it.bKey).catch(()=>null) : null);
+    const aSrc = it.aSrc || (it.aKey ? await dbGet(it.aKey).catch(()=>null) : null);
+    items.push({ ...it, bSrc, aSrc });
+  }
+  return { ...entry, items };
+}
+// 단일 사진 lazy-load (썸네일 등)
+async function loadKbPhoto(item, type) {
+  if (!item) return null;
+  if (type === 'b') return item.bSrc || (item.bKey ? await dbGet(item.bKey).catch(()=>null) : null);
+  return item.aSrc || (item.aKey ? await dbGet(item.aKey).catch(()=>null) : null);
+}
+
+async function nasSaveKb(entry) {
+  if (!nasOnline) return;
+  try {
+    await fetch(API_URL + '?action=save_kb', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(entry),
+    });
+  } catch(e) {}
+}
+
+// ── Render Knowledge List ──
+function klistGoBack() {
+  klSelectMode = false;
+  klSelectedIds.clear();
+  if (klistFromScreen === 'followupScreen') {
+    showScreen('kbuildScreen');   // KB 빌드 화면으로 복귀 (사진/카드 상태 유지)
+  } else {
+    goHome();
+  }
+}
+
+/* ── KB 리스트 선택 모드 ─────────────────────────── */
+function toggleKlSelectMode() {
+  klSelectMode = !klSelectMode;
+  klSelectedIds.clear();
+  const btn = document.getElementById('klSelectToggle');
+  if (btn) {
+    btn.textContent = klSelectMode ? '✕ Cancel' : '☑ Select';
+    btn.style.color = klSelectMode ? 'var(--gold)' : 'var(--text2)';
+    btn.style.borderColor = klSelectMode ? 'var(--gold)' : 'var(--border)';
+  }
+  updateKlActionBar();
+  renderKbList();
+}
+
+function klItemClick(id) {
+  if (klSelectMode) { toggleKlItem(id); return; }
+  const entry = getKbList().find(e => e.id === id);
+  if (entry && entry.type === 'file') {
+    openKbFileEntry(id);
+  } else {
+    openKbReport(id);
+  }
+}
+
+// file entry 열기 - PDF는 뷰어, 다른 건 다운로드
+function openKbFileEntry(id) {
+  const entry = getKbList().find(e => e.id === id);
+  if (!entry || !entry.fileInfo) return;
+  const fi = entry.fileInfo;
+  const url = nasGetFileUrl(KB_FILES_CTX, 'kb', fi.filename);
+  if (fi.ext === 'pdf') {
+    openPdfViewer(url, entry.cards?.[0]?.title || fi.filename);
+  } else {
+    const a = document.createElement('a');
+    a.href = url; a.download = fi.filename; a.target = '_blank';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  }
+}
+
+function toggleKlItem(id, checkbox) {
+  if (klSelectedIds.has(id)) {
+    klSelectedIds.delete(id);
+  } else {
+    klSelectedIds.add(id);
+  }
+  // DOM 직접 업데이트 (전체 리렌더 없이)
+  const items = document.querySelectorAll('#klistContainer .kl-item');
+  items.forEach(el => {
+    const chk = el.querySelector('.kl-check');
+    if (!chk) return;
+    // entry id를 onclick에서 추출
+    const onclick = el.getAttribute('onclick') || '';
+    const m = onclick.match(/'([^']+)'/);
+    if (!m) return;
+    const entryId = m[1];
+    const selected = klSelectedIds.has(entryId);
+    chk.checked = selected;
+    el.classList.toggle('kl-selected', selected);
+  });
+  updateKlActionBar();
+}
+
+function clearKlSelection() {
+  klSelectedIds.clear();
+  klSelectMode = false;
+  const btn = document.getElementById('klSelectToggle');
+  if (btn) { btn.textContent = '☑ Select'; btn.style.color='var(--text2)'; btn.style.borderColor='var(--border)'; }
+  updateKlActionBar();
+  renderKbList();
+}
+
+function updateKlActionBar() {
+  const bar = document.getElementById('klActionBar');
+  const cnt = document.getElementById('klActionCount');
+  if (!bar) return;
+  const n = klSelectedIds.size;
+  if (klSelectMode && n > 0) {
+    bar.classList.add('active');
+    if (cnt) cnt.textContent = n + ' selected';
+  } else {
+    bar.classList.remove('active');
+  }
+}
+
+/* ── KB 선택 삭제 ─────────────────────────────────── */
+async function deleteKbSelected() {
+  const n = klSelectedIds.size;
+  if (!n) return;
+  if (!confirm(`Delete ${n} selected knowledge item(s)? This cannot be undone.`)) return;
+  showLoading(true, 'Deleting...');
+  let list = getKbList();
+  for (const id of klSelectedIds) {
+    const entry = list.find(e => e.id === id);
+    if (entry) {
+      // file entry — NAS 파일 삭제
+      if (entry.type === 'file' && entry.fileInfo) {
+        await nasDeleteFile(KB_FILES_CTX, 'kb', entry.fileInfo.filename).catch(()=>{});
+      }
+      // 사진 IndexedDB 정리
+      for (const it of (entry.items || [])) {
+        if (it.bKey) await dbDel(it.bKey).catch(()=>{});
+        if (it.aKey) await dbDel(it.aKey).catch(()=>{});
+      }
+    }
+    // NAS entry JSON도 삭제 시도 (선택)
+    try { await fetch(API_URL + '?action=delete_kb&id=' + encodeURIComponent(id), {method:'DELETE'}); } catch(e){}
+  }
+  list = list.filter(e => !klSelectedIds.has(e.id));
+  setKbList(list);
+  kbList = list;
+  klSelectedIds.clear();
+  klSelectMode = false;
+  showLoading(false);
+  showToast('✅ Deleted.');
+  const btn = document.getElementById('klSelectToggle');
+  if (btn) { btn.textContent = '☑ Select'; btn.style.color='var(--text2)'; btn.style.borderColor='var(--border)'; }
+  updateKlActionBar();
+  renderKbList();
+}
+
+/* ── KB 선택 항목만 내보내기 ─────────────────────── */
+async function getSelectedEntries() {
+  const list = getKbList().filter(e => klSelectedIds.has(e.id));
+  const hydrated = [];
+  for (const e of list) hydrated.push(await hydrateKbEntry(e));
+  return hydrated;
+}
+
+async function exportKbSelectedPDF() {
+  if (!klSelectedIds.size) return;
+  showLoading(true, 'Loading photos...');
+  const list = await getSelectedEntries();
+  showLoading(false);
+  await _exportKbPDFFromList(list);
+}
+
+async function exportKbSelectedPPT() {
+  if (!klSelectedIds.size) return;
+  if (typeof PptxGenJS === 'undefined') { alert('PPT library loading. Please try again.'); return; }
+  showLoading(true, 'Loading photos...');
+  const list = await getSelectedEntries();
+  showLoading(false);
+  await _exportKbPPTFromList(list);
+}
+
+async function exportKbSelectedExcel() {
+  if (!klSelectedIds.size) return;
+  const list = getKbList().filter(e => klSelectedIds.has(e.id));
+  _exportKbExcelFromList(list);
+}
+
+function renderKbList() {
+  // Back 버튼 라벨을 컨텍스트에 맞게 갱신
+  const backBtn = document.getElementById('klistBackBtn');
+  if (backBtn) {
+    backBtn.textContent = klistFromScreen === 'followupScreen' ? '← Back to Follow-up' : '← Home';
+  }
+  const list = getKbList();
+  const cardEl  = document.getElementById('klistContainer');
+  const tableEl = document.getElementById('klTableWrap');
+  if (!cardEl || !tableEl) return;
+
+  renderKlFilterChips(list);
+
+  if (!list.length) {
+    cardEl.style.display = '';
+    tableEl.style.display = 'none';
+    cardEl.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);font-size:13px">No knowledge items yet.<br>Complete Follow-up items and send them to the Knowledge Base.</div>';
+    return;
+  }
+
+  const filtered = applyKlFilterToList(list);
+
+  if (klView === 'table') {
+    cardEl.style.display = 'none';
+    tableEl.style.display = '';
+    renderKlTable(filtered);
+  } else {
+    cardEl.style.display = '';
+    tableEl.style.display = 'none';
+    renderKlCards(filtered);
+  }
+}
+
+function renderKlCards(filtered) {
+  const el = document.getElementById('klistContainer');
+  if (!el) return;
+  if (!filtered.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">No items match the current filters.</div>';
+    return;
+  }
+  const sorted = filtered.slice().sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+  el.innerHTML = sorted.map(entry => {
+    const firstCard = entry.cards?.[0] || {};
+    const isSelected = klSelectedIds.has(entry.id);
+    const selClass = isSelected ? ' kl-selected' : '';
+    const chk = klSelectMode
+      ? `<input type="checkbox" class="kl-check" ${isSelected?'checked':''} onclick="event.stopPropagation();toggleKlItem('${entry.id}',this)">`
+      : '';
+    const disc = entry.discipline || '';
+    const cat  = entry.category || '';
+    const discBadge = disc ? `<span class="kl-disc-badge ${discBadgeClass(disc)}">${esc(disc)}</span>` : '';
+    const catBadge  = cat  ? `<span class="kl-disc-badge ${catBadgeClass(cat)}">${esc(cat)}</span>` : '';
+
+    // File entry — 다른 아이콘과 메타
+    if (entry.type === 'file') {
+      const fi = entry.fileInfo || {};
+      return `<div class="kl-item${selClass}" onclick="klItemClick('${entry.id}')">
+        ${chk}
+        <div class="kl-title">${attIcon(fi.ext)} ${esc(firstCard.title || fi.filename || '(File)')}</div>
+        <div class="kl-meta">
+          <span>🏗 ${esc(entry.projName || '—')}</span>
+          ${discBadge ? '<span>' + discBadge + '</span>' : ''}
+        ${catBadge  ? '<span>' + catBadge  + '</span>' : ''}
+          <span>📅 ${entry.savedAt?.slice(0,10) || '—'}</span>
+          <span>👤 ${esc(entry.savedBy || '—')}</span>
+          <span>${attIcon(fi.ext)} ${(fi.ext||'').toUpperCase()} · ${attSize(fi.size||0)}</span>
+        </div>
+      </div>`;
+    }
+
+    // Photo entry (default)
+    const thumbs = entry.items?.slice(0, 3).map((item, i) =>
+      (item.bSrc || item.bKey) ? `<img class="kl-thumb" data-klidx="${entry.id}_${i}_b">` : ''
+    ).join('');
+    return `<div class="kl-item${selClass}" onclick="klItemClick('${entry.id}')">
+      ${chk}
+      <div class="kl-title">${esc(firstCard.title || '(No title)')}</div>
+      <div class="kl-meta">
+        <span>🏗 ${esc(entry.projName || '—')}</span>
+        ${discBadge ? '<span>' + discBadge + '</span>' : ''}
+        ${catBadge  ? '<span>' + catBadge  + '</span>' : ''}
+        <span>📅 ${entry.projDate || entry.savedAt?.slice(0,10) || '—'}</span>
+        <span>👤 ${esc(entry.savedBy || '—')}</span>
+        <span>📷 ${entry.items?.length || 0} photos</span>
+      </div>
+      ${firstCard.body ? `<div class="kl-preview">${esc(firstCard.body)}</div>` : ''}
+      <div class="kl-thumb-row">${thumbs}</div>
+    </div>`;
+  }).join('');
+  setTimeout(async () => {
+    const imgs = el.querySelectorAll('img[data-klidx]');
+    for (const img of imgs) {
+      const ds = img.dataset.klidx;
+      const mm = ds.match(/^(.+)_(\d+)_([ba])$/);
+      if (!mm) continue;
+      const id = mm[1], itemIdx = parseInt(mm[2]), type = mm[3];
+      const entry = filtered.find(e => e.id === id);
+      const item  = entry?.items?.[itemIdx];
+      if (!item) continue;
+      const src = await loadKbPhoto(item, type);
+      if (src) img.src = src;
+    }
+  }, 10);
+}
+
+function renderKlTable(filtered) {
+  const el = document.getElementById('klTableWrap');
+  if (!el) return;
+  if (!filtered.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text3);font-size:12px">No items match the current filters.</div>';
+    return;
+  }
+  const sorted = filtered.slice().sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+
+  function eff(entry, field) {
+    if (klEditMap[entry.id] && field in klEditMap[entry.id]) return klEditMap[entry.id][field];
+    if (field === 'title') return entry.cards?.[0]?.title || '';
+    return entry[field] || '';
+  }
+
+  let html = `<table class="kl-table">
+    <thead><tr>
+      <th style="width:30px"></th>
+      <th>Site</th>
+      <th>Discipline</th>
+      <th>Category</th>
+      <th>Title</th>
+      <th style="width:90px">Date</th>
+      <th style="width:90px">Author</th>
+      <th style="width:60px">Photos</th>
+      <th style="width:90px"></th>
+    </tr></thead>
+    <tbody>`;
+  sorted.forEach((entry, rowIdx) => {
+    const isSelected = klSelectedIds.has(entry.id);
+    const site = eff(entry, 'projName');
+    const disc = eff(entry, 'discipline');
+    const title = eff(entry, 'title');
+    const discClass = discBadgeClass(disc);
+    const chk = klSelectMode
+      ? `<input type="checkbox" ${isSelected?'checked':''} onclick="event.stopPropagation();toggleKlItem('${entry.id}',this)">`
+      : '';
+    const isFile = entry.type === 'file';
+    const fi = entry.fileInfo || {};
+    const photoCol = isFile
+      ? `<td style="text-align:center;font-size:11px;color:var(--text3)">${attIcon(fi.ext)} ${(fi.ext||'').toUpperCase()}</td>`
+      : `<td style="text-align:center">${entry.items?.length || 0}</td>`;
+    const titleCell = isFile
+      ? `<td class="kl-cell-edit kl-cell-title" data-field="title" data-id="${entry.id}" onclick="startKlCellEdit(this)">${attIcon(fi.ext)} ${esc(title || fi.filename || '(File)')}</td>`
+      : `<td class="kl-cell-edit kl-cell-title" data-field="title" data-id="${entry.id}" onclick="startKlCellEdit(this)">${esc(title || '(No title)')}</td>`;
+    const openBtn = isFile
+      ? `<button class="kl-row-btn" onclick="event.stopPropagation();openKbFileEntry('${entry.id}')">${fi.ext==='pdf'?'👁 View':'⬇ Download'}</button>`
+      : `<button class="kl-row-btn" onclick="event.stopPropagation();openKbReport('${entry.id}')">Open</button>`;
+    const cat = eff(entry, 'category');
+    const catClass = catBadgeClass(cat);
+    html += `<tr class="${isSelected?'kl-tr-selected':''}" data-row-id="${entry.id}" data-row-idx="${rowIdx}">
+      <td>${chk}</td>
+      <td class="kl-cell-edit kl-cell-site" data-field="projName" data-id="${entry.id}" onclick="startKlCellEdit(this)">${esc(site || '—')}</td>
+      <td class="kl-cell-edit" data-field="discipline" data-id="${entry.id}" onclick="startKlCellEdit(this)"><span class="kl-disc-badge ${discClass}">${esc(disc || '—')}</span></td>
+      <td class="kl-cell-edit" data-field="category" data-id="${entry.id}" onclick="startKlCellEdit(this)"><span class="kl-disc-badge ${catClass}">${esc(cat || '—')}</span></td>
+      ${titleCell}
+      <td>${entry.projDate || entry.savedAt?.slice(0,10) || '—'}</td>
+      <td>${esc(entry.savedBy || '—')}</td>
+      ${photoCol}
+      <td><div class="kl-row-action">${openBtn}</div></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function applyKlFilterToList(list) {
+  return list.filter(e => {
+    if (klFilters.sites.size && !klFilters.sites.has(e.projName || '—')) return false;
+    if (klFilters.discs.size && !klFilters.discs.has(e.discipline || '—')) return false;
+    if (klFilters.cats.size  && !klFilters.cats.has(e.category || '—'))   return false;
+    if (klFilters.search) {
+      const q = klFilters.search.toLowerCase();
+      const t = (e.cards?.[0]?.title || '') + ' ' + (e.cards?.[0]?.body || '');
+      if (!t.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderKlFilterChips(list) {
+  const sites = Array.from(new Set(list.map(e => e.projName || '—'))).sort();
+  const siteEl = document.getElementById('klSiteChips');
+  if (siteEl) {
+    siteEl.innerHTML = sites.map(s =>
+      `<button class="kl-chip ${klFilters.sites.has(s)?'active':''}" onclick="toggleKlChip('site', this.dataset.v)" data-v="${esc(s)}">${esc(s)}</button>`
+    ).join('') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+  }
+  const usedDiscs = new Set(list.map(e => e.discipline || '—'));
+  const allDiscs = [...KB_DISCIPLINES, '—'].filter(d => usedDiscs.has(d));
+  const discEl = document.getElementById('klDiscChips');
+  if (discEl) {
+    discEl.innerHTML = allDiscs.map(d => {
+      const label = d === '—' ? '(none)' : d;
+      return `<button class="kl-chip ${klFilters.discs.has(d)?'active':''}" onclick="toggleKlChip('disc', this.dataset.v)" data-v="${esc(d)}">${esc(label)}</button>`;
+    }).join('') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+  }
+  const usedCats = new Set(list.map(e => e.category || '—'));
+  const allCats = [...KB_CATEGORIES, '—'].filter(c => usedCats.has(c));
+  const catEl = document.getElementById('klCatChips');
+  if (catEl) {
+    catEl.innerHTML = allCats.map(c => {
+      const label = c === '—' ? '(none)' : c;
+      return `<button class="kl-chip ${klFilters.cats.has(c)?'active':''}" onclick="toggleKlChip('cat', this.dataset.v)" data-v="${esc(c)}">${esc(label)}</button>`;
+    }).join('') || '<span style="font-size:11px;color:var(--text3)">—</span>';
+  }
+}
+
+function toggleKlChip(type, val) {
+  const set = type === 'site' ? klFilters.sites
+            : type === 'disc' ? klFilters.discs
+            : klFilters.cats;
+  if (set.has(val)) set.delete(val); else set.add(val);
+  renderKbList();
+}
+function applyKlFilters() {
+  klFilters.search = document.getElementById('klSearchInp')?.value.trim() || '';
+  renderKbList();
+}
+function clearKlFilters() {
+  klFilters = { search: '', sites: new Set(), discs: new Set(), cats: new Set() };
+  const s = document.getElementById('klSearchInp'); if (s) s.value = '';
+  renderKbList();
+}
+function setKlView(v) {
+  klView = v;
+  document.getElementById('klViewCards')?.classList.toggle('active', v === 'cards');
+  document.getElementById('klViewTable')?.classList.toggle('active', v === 'table');
+  renderKbList();
+}
+
+function startKlCellEdit(td) {
+  document.querySelectorAll('.kl-cell-active').forEach(el => {
+    if (el !== td) el.classList.remove('kl-cell-active');
+  });
+  if (td.classList.contains('kl-cell-active')) return;
+  td.classList.add('kl-cell-active');
+
+  const field = td.dataset.field;
+  const id    = td.dataset.id;
+  const entry = getKbList().find(e => e.id === id);
+  if (!entry) return;
+  const currentVal = (klEditMap[id] && field in klEditMap[id])
+    ? klEditMap[id][field]
+    : (field === 'title' ? (entry.cards?.[0]?.title || '') : (entry[field] || ''));
+
+  let editor;
+  if (field === 'discipline' || field === 'category') {
+    const opts = field === 'discipline' ? KB_DISCIPLINES : KB_CATEGORIES;
+    editor = document.createElement('select');
+    editor.className = 'kl-cell-sel';
+    editor.innerHTML = '<option value="">(none)</option>' + opts.map(d =>
+      `<option value="${esc(d)}" ${d===currentVal?'selected':''}>${esc(d)}</option>`
+    ).join('');
+    editor.addEventListener('change', () => commitKlCell(td, editor.value));
+    editor.addEventListener('blur',   () => commitKlCell(td, editor.value));
+  } else {
+    editor = document.createElement('input');
+    editor.type = 'text';
+    editor.className = 'kl-cell-inp';
+    editor.value = currentVal;
+    editor.addEventListener('blur', () => commitKlCell(td, editor.value));
+    editor.addEventListener('keydown', e => {
+      if (e.key === 'Enter') editor.blur();
+      if (e.key === 'Escape') { td.classList.remove('kl-cell-active'); td.innerHTML = renderCellDisplay(field, currentVal); }
+    });
+  }
+  td.innerHTML = '';
+  td.appendChild(editor);
+  const fh = document.createElement('div');
+  fh.className = 'kl-fill-handle';
+  fh.title = 'Drag down to fill';
+  fh.addEventListener('mousedown', e => startKlFill(e, td));
+  td.appendChild(fh);
+  editor.focus();
+  if (editor.select) editor.select();
+}
+
+function renderCellDisplay(field, val) {
+  if (field === 'discipline') {
+    return `<span class="kl-disc-badge ${discBadgeClass(val)}">${esc(val || '—')}</span>`;
+  }
+  if (field === 'category') {
+    return `<span class="kl-disc-badge ${catBadgeClass(val)}">${esc(val || '—')}</span>`;
+  }
+  return esc(val || (field === 'title' ? '(No title)' : '—'));
+}
+
+function commitKlCell(td, val) {
+  const field = td.dataset.field;
+  const id    = td.dataset.id;
+  const entry = getKbList().find(e => e.id === id);
+  if (!entry) return;
+  const orig = field === 'title' ? (entry.cards?.[0]?.title || '') : (entry[field] || '');
+  if (val === orig) {
+    if (klEditMap[id]) { delete klEditMap[id][field]; if (!Object.keys(klEditMap[id]).length) delete klEditMap[id]; }
+  } else {
+    if (!klEditMap[id]) klEditMap[id] = {};
+    klEditMap[id][field] = val;
+  }
+  td.classList.remove('kl-cell-active');
+  td.innerHTML = renderCellDisplay(field, val);
+  updateKlPendingBar();
+}
+
+function updateKlPendingBar() {
+  const n = Object.keys(klEditMap).length;
+  const bar = document.getElementById('klPendingSave');
+  const cnt = document.getElementById('klPendingCount');
+  if (!bar) return;
+  if (cnt) cnt.textContent = n;
+  bar.classList.toggle('active', n > 0);
+}
+
+async function saveKlEdits() {
+  if (!Object.keys(klEditMap).length) return;
+  showLoading(true, 'Saving changes...');
+  const list = getKbList();
+  for (const id of Object.keys(klEditMap)) {
+    const entry = list.find(e => e.id === id);
+    if (!entry) continue;
+    const edits = klEditMap[id];
+    if ('projName' in edits) entry.projName = edits.projName;
+    if ('discipline' in edits) entry.discipline = edits.discipline;
+    if ('category' in edits) entry.category = edits.category;
+    if ('title' in edits) {
+      if (!entry.cards) entry.cards = [{}];
+      if (!entry.cards[0]) entry.cards[0] = {};
+      entry.cards[0].title = edits.title;
+    }
+    nasSaveKb(entry);
+  }
+  setKbList(list);
+  kbList = list;
+  klEditMap = {};
+  showLoading(false);
+  updateKlPendingBar();
+  renderKbList();
+  showToast('✅ Changes saved!');
+}
+
+function discardKlEdits() {
+  if (!Object.keys(klEditMap).length) return;
+  if (!confirm('Discard all unsaved changes?')) return;
+  klEditMap = {};
+  updateKlPendingBar();
+  renderKbList();
+}
+
+function startKlFill(e, sourceTd) {
+  e.preventDefault();
+  e.stopPropagation();
+  const field = sourceTd.dataset.field;
+  const editor = sourceTd.querySelector('.kl-cell-inp, .kl-cell-sel');
+  const sourceVal = editor ? editor.value : '';
+
+  const tr = sourceTd.closest('tr');
+  const startIdx = parseInt(tr.dataset.rowIdx);
+  const tbody = tr.parentNode;
+  const allRows = Array.from(tbody.querySelectorAll('tr'));
+
+  const wrap = document.getElementById('klTableWrap');
+  const marker = document.createElement('div');
+  marker.className = 'kl-fill-marker';
+  wrap.appendChild(marker);
+
+  function updateMarker(targetTr) {
+    const sRect = sourceTd.getBoundingClientRect();
+    const tRect = targetTr.getBoundingClientRect();
+    const wRect = wrap.getBoundingClientRect();
+    const top    = sRect.top    - wRect.top + wrap.scrollTop;
+    const left   = sRect.left   - wRect.left + wrap.scrollLeft;
+    const bottom = tRect.bottom - wRect.top + wrap.scrollTop;
+    marker.style.top    = top + 'px';
+    marker.style.left   = left + 'px';
+    marker.style.width  = sRect.width  + 'px';
+    marker.style.height = (bottom - top) + 'px';
+  }
+
+  let lastTr = tr;
+  function onMove(ev) {
+    const t = ev.target.closest('tr');
+    if (t && t.parentNode === tbody) {
+      lastTr = t;
+      updateMarker(t);
+    }
+  }
+  function onUp(ev) {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    marker.remove();
+    const endIdx = parseInt(lastTr.dataset.rowIdx);
+    if (endIdx <= startIdx) return;
+    if (editor) commitKlCell(sourceTd, sourceVal);
+    for (let i = startIdx + 1; i <= endIdx; i++) {
+      const targetTr = allRows[i];
+      if (!targetTr) continue;
+      const targetTd = targetTr.querySelector('td.kl-cell-edit[data-field="' + field + '"]');
+      if (!targetTd) continue;
+      const id = targetTd.dataset.id;
+      const entry = getKbList().find(e => e.id === id);
+      if (!entry) continue;
+      const orig = field === 'title' ? (entry.cards?.[0]?.title || '') : (entry[field] || '');
+      if (sourceVal === orig) {
+        if (klEditMap[id]) { delete klEditMap[id][field]; if (!Object.keys(klEditMap[id]).length) delete klEditMap[id]; }
+      } else {
+        if (!klEditMap[id]) klEditMap[id] = {};
+        klEditMap[id][field] = sourceVal;
+      }
+      targetTd.innerHTML = renderCellDisplay(field, sourceVal);
+    }
+    updateKlPendingBar();
+    showToast('Filled ' + (endIdx - startIdx) + ' cell(s) with "' + (sourceVal || '(empty)') + '"');
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  updateMarker(tr);
+}
+
+// ── Open Knowledge Report ──
+async function openKbReport(id) {
+  const list = getKbList();
+  const entry = list.find(e => e.id === id);
+  if (!entry) return;
+  showLoading(true, 'Loading...');
+  currentKbReport = await hydrateKbEntry(entry);
+  showLoading(false);
+  renderKbReport();
+  showScreen('kreportScreen');
+}
+
+function renderKbReport() {
+  const el = document.getElementById('kreportContent');
+  if (!el || !currentKbReport) return;
+  const r = currentKbReport;
+
+  // Header
+  let html = `<div class="kr-header">
+    <div class="kr-title">${esc(r.cards?.[0]?.title || 'Knowledge Report')}</div>
+    <div class="kr-meta">
+      <span>🏗 ${esc(r.projName || '—')}</span>
+      <span>📅 ${r.projDate || '—'}</span>
+      <span>👤 ${esc(r.savedBy || '—')}</span>
+      <span>📅 Saved: ${r.savedAt?.slice(0,10) || '—'}</span>
+    </div>
+  </div>`;
+
+  // Knowledge content (per-card entry: usually 1 card)
+  if (r.cards?.length) {
+    html += '<div class="kr-section"><h3>Lesson / Feedback</h3>';
+    r.cards.forEach(card => {
+      html += `<div style="margin-bottom:14px">
+        <div class="kr-lesson-title">${esc(card.title || '(No title)')}</div>
+        ${card.body ? `<div class="kr-lesson-body">${esc(card.body)}</div>` : ''}
+      </div>`;
+    });
+    html += '</div>';
+  }
+
+  // Photo pairs
+  if (r.items?.length) {
+    html += '<div class="kr-section"><h3>Before / After Photos</h3><div class="kr-photo-grid">';
+    r.items.forEach((item, idx) => {
+      // 사진별 현장 정보 (entry 단위와 다를 수 있음 - 일반적으론 같지만 표시해줌)
+      const itemProj = item.projName || r.projName || '';
+      const itemDate = item.projDate || r.projDate || '';
+      const projLine = itemProj ? `<div class="kr-photo-proj">📍 ${esc(itemProj)}${itemDate?' · '+itemDate:''}</div>` : '';
+      html += `<div class="kr-photo-pair">
+        ${projLine}
+        <div class="kr-photo-pair-grid">
+          ${item.bSrc ? `<img class="kr-photo-img" data-krsrc="${idx}_b">` : `<div class="kr-photo-img" style="background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center"><span style="font-size:10px;color:var(--text3)">No photo</span></div>`}
+          ${item.aSrc ? `<img class="kr-photo-img" data-krsrc="${idx}_a">` : `<div class="kr-photo-img" style="background:var(--bg);border-radius:6px;display:flex;align-items:center;justify-content:center"><span style="font-size:10px;color:var(--text3)">No photo</span></div>`}
+        </div>
+        ${item.desc ? `<div class="kr-desc">${esc(item.desc)}</div>` : ''}
+        ${item.bCaption ? `<div class="kr-assignee">Before: ${esc(item.bCaption)}</div>` : ''}
+        ${item.aCaption ? `<div class="kr-assignee">After: ${esc(item.aCaption)}</div>` : ''}
+        ${item.assignee ? `<div class="kr-assignee">👤 ${esc(item.assignee)}</div>` : ''}
+      </div>`;
+    });
+    html += '</div></div>';
+  }
+
+  el.innerHTML = html;
+
+  // Set img srcs
+  setTimeout(() => {
+    el.querySelectorAll('img[data-krsrc]').forEach(img => {
+      const [idx, type] = img.dataset.krsrc.split('_');
+      const item = r.items?.[parseInt(idx)];
+      if (item) img.src = type === 'b' ? item.bSrc : item.aSrc;
+    });
+  }, 10);
+}
+
+async function deleteKbItem() {
+  if (!currentKbReport) return;
+  if (!confirm('Delete this knowledge item?')) return;
+  if (currentKbReport.type === 'file' && currentKbReport.fileInfo) {
+    await nasDeleteFile(KB_FILES_CTX, 'kb', currentKbReport.fileInfo.filename).catch(()=>{});
+  }
+  for (const it of (currentKbReport.items || [])) {
+    if (it.bKey) await dbDel(it.bKey).catch(()=>{});
+    if (it.aKey) await dbDel(it.aKey).catch(()=>{});
+  }
+  try { await fetch(API_URL + '?action=delete_kb&id=' + encodeURIComponent(currentKbReport.id), {method:'DELETE'}); } catch(e){}
+  const list = getKbList().filter(e => e.id !== currentKbReport.id);
+  setKbList(list);
+  showToast('Knowledge item deleted.');
+  kbList = list;
+  renderKbList();
+  showScreen('klistScreen');
+}
+
+// ── Knowledge Export — PDF ──
+async function exportSingleKbPDF() {
+  if (!currentKbReport) return;
+  showLoading(true, 'Generating PDF...');
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297, M = 14, pW = W - M * 2;
+    const r = currentKbReport;
+    let y = M, pNum = 1;
+
+    function hdr() {
+      doc.setFillColor(13, 33, 55); doc.rect(0, 0, W, 22, 'F');
+      doc.setFontSize(14); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+      doc.text('KNOWLEDGE REPORT', M, 13);
+      doc.setFontSize(8); doc.setTextColor(155, 184, 212); doc.setFont(undefined, 'normal');
+      doc.text((r.projName || '') + '  ' + (r.projDate || '') + '  p.' + pNum, W - M, 18, { align: 'right' });
+      y = 28;
+    }
+    function chk(n) { if (y + n > H - M) { doc.addPage(); pNum++; hdr(); } }
+    hdr();
+
+    // Cards
+    (r.cards || []).forEach(card => {
+      if (!card.title) return;
+      chk(20);
+      doc.setFillColor(240, 244, 248); doc.roundedRect(M, y, pW, 7, 1, 1, 'F');
+      doc.setFontSize(10); doc.setTextColor(26, 43, 60); doc.setFont(undefined, 'bold');
+      doc.text(card.title.slice(0, 80), M + 3, y + 4.8);
+      y += 10;
+      if (card.body) {
+        const lines = doc.splitTextToSize(card.body, pW - 4);
+        chk(lines.length * 5 + 4);
+        doc.setFontSize(8.5); doc.setTextColor(74, 104, 130); doc.setFont(undefined, 'normal');
+        doc.text(lines, M + 2, y);
+        y += lines.length * 5 + 4;
+      }
+    });
+
+    // Photos
+    const cW = (pW - 4) / 2, cH = cW * 0.72;
+    (r.items || []).forEach((item, idx) => {
+      chk(cH + 24);
+      // Photo header line (with site info)
+      doc.setFontSize(7.5); doc.setTextColor(90, 122, 150); doc.setFont(undefined, 'bold');
+      doc.text('Photo ' + (idx + 1) + (item.desc ? '  ' + item.desc.slice(0, 50) : ''), M, y + 4);
+      y += 5.5;
+      // Site label
+      const siteName = item.projName || r.projName || '';
+      const siteDate = item.projDate || r.projDate || '';
+      if (siteName || siteDate) {
+        doc.setFontSize(6.5); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+        doc.text('SITE: ' + siteName + (siteDate ? '  (' + siteDate + ')' : ''), M, y + 3);
+        y += 4.5;
+      }
+      [[item.bSrc, 'Before'], [item.aSrc, 'After']].forEach(([src, lbl], ci) => {
+        const cx = M + ci * (cW + 4);
+        doc.setFillColor(248, 250, 252); doc.setDrawColor(209, 220, 232); doc.setLineWidth(0.25);
+        doc.roundedRect(cx, y, cW, cH, 0.8, 0.8, 'FD');
+        if (src) { try { doc.addImage(src, 'JPEG', cx + 0.4, y + 0.4, cW - 0.8, cH - 0.8); } catch(e) {} }
+        else { doc.setFontSize(6); doc.setTextColor(200); doc.text('—', cx + cW / 2, y + cH / 2, { align: 'center' }); }
+        doc.setFillColor(13, 33, 55); doc.setDrawColor(13, 33, 55);
+        doc.roundedRect(cx + 2, y + 2, lbl === 'Before' ? 14 : 10, 5, 1, 1, 'F');
+        doc.setFontSize(6); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+        doc.text(lbl, cx + 4, y + 5.5);
+      });
+      y += cH + 6;
+    });
+
+    const fn = 'KB_' + (r.projName || 'Knowledge') + '_' + (r.projDate || today()) + '.pdf';
+    const uri = doc.output('datauristring');
+    const w = window.open('');
+    if (w) w.document.write('<html><body style="margin:0"><a href="' + uri + '" download="' + fn + '" style="display:block;padding:12px 20px;background:#0D2137;color:#F5A623;border-radius:8px;text-align:center;font-family:sans-serif;font-weight:bold;text-decoration:none;margin:16px">Save PDF</a><iframe src="' + uri + '" style="width:100%;height:90vh;border:none"></iframe></body></html>');
+    else { const a = document.createElement('a'); a.href = uri; a.download = fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+  } catch(e) { alert('PDF error: ' + e.message); }
+  showLoading(false);
+}
+
+// ── Knowledge Export — Excel ──
+// ── 내부 공통: list를 받아서 Excel 생성
+function _exportKbExcelFromList(list, suffix) {
+  showLoading(true, 'Generating Excel...');
+  try {
+    const wb = XLSX.utils.book_new();
+    const data = [['Knowledge Base Export'], [], ['Title', 'Content', 'Project', 'Date', 'Author', 'Photos']];
+    list.forEach(entry => {
+      (entry.cards || []).forEach(card => {
+        data.push([card.title || '', card.body || '', entry.projName || '', entry.projDate || '', entry.savedBy || '', entry.items?.length || 0]);
+      });
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws['!cols'] = [{ wch: 30 }, { wch: 50 }, { wch: 20 }, { wch: 12 }, { wch: 15 }, { wch: 8 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Knowledge');
+    const out = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([out], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'KnowledgeBase' + (suffix||'') + '_' + today() + '.xlsx';
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
+  } catch(e) { alert('Excel error: ' + e.message); }
+  showLoading(false);
+}
+
+function exportKbExcel() {
+  const list = getKbList();
+  if (!list.length) { alert('No knowledge items.'); return; }
+  _exportKbExcelFromList(list, '');
+}
+
+// ── 내부 공통: hydrated list를 받아서 PPT 생성
+async function _exportKbPPTFromList(list, suffix) {
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    const pres = new PptxGenJS();
+    pres.defineLayout({ name: 'A4P', width: 7.5, height: 10.83 }); pres.layout = 'A4P';
+    const SW = 7.5, SH = 10.83, NAVY = '0D2137', GOLD = 'F5A623', LGRAY = 'F0F4F8';
+
+    // Title slide
+    const ts = pres.addSlide(); ts.background = { color: NAVY };
+    ts.addShape(pres.shapes.RECTANGLE, { x: .4, y: SH * .3, w: .07, h: 2, fill: { color: GOLD }, line: { color: GOLD } });
+    ts.addText('KNOWLEDGE BASE', { x: .6, y: SH * .28, w: 6.5, h: 1.1, fontSize: 36, bold: true, color: GOLD, fontFace: 'Calibri' });
+    ts.addText('Lessons Learned Report', { x: .6, y: SH * .28 + 1.1, w: 6.5, h: .7, fontSize: 18, color: 'CADCFC', fontFace: 'Calibri' });
+    ts.addText(today(), { x: .6, y: SH * .65, w: 6.3, h: .6, fontSize: 13, color: '7A9BBF', fontFace: 'Calibri' });
+
+    for (const entry of list) {
+      for (const card of (entry.cards || [])) {
+        if (!card.title) continue;
+        const linkedItems = (card.linkedItems || []).map(idx => entry.items?.[idx]).filter(Boolean);
+        const slide = pres.addSlide(); slide.background = { color: LGRAY };
+        // Header
+        slide.addShape(pres.shapes.RECTANGLE, { x: 0, y: 0, w: SW, h: .52, fill: { color: NAVY }, line: { color: NAVY } });
+        slide.addText(card.title.slice(0, 50), { x: .22, y: 0, w: 5.6, h: .52, fontSize: 12, bold: true, color: GOLD, fontFace: 'Calibri', valign: 'middle' });
+        slide.addText((entry.projName || '') + '  ' + (entry.projDate || ''), { x: 5.5, y: 0, w: 1.78, h: .52, fontSize: 8, color: '7A9BBF', align: 'right', valign: 'middle', fontFace: 'Calibri' });
+        // Content
+        let y = .62;
+        if (card.body) {
+          slide.addText(card.body.slice(0, 300), { x: .22, y, w: SW - .44, h: 1.4, fontSize: 10, color: '4A6882', fontFace: 'Calibri', lineSpacingMultiple: 1.3 });
+          y += 1.5;
+        }
+        // Photos
+        const cW = (SW - .44 - .1) / 2, cH = cW * .72;
+        linkedItems.slice(0, 4).forEach((item, i) => {
+          const col = i % 2, row2 = Math.floor(i / 2);
+          const x = .22 + col * (cW + .1), yp = y + row2 * (cH + .1 + .3);
+          slide.addShape(pres.shapes.RECTANGLE, { x, y: yp, w: cW, h: cH, fill: { color: 'FFFFFF' }, line: { color: 'D1DCE8', pt: .8 } });
+          if (item.bSrc) {
+            try { slide.addImage({ data: item.bSrc.replace(/^data:image\/\w+;base64,/, 'image/jpeg;base64,'), x: x + .03, y: yp + .03, w: (cW - .06) / 2 - .03, h: cH - .06, sizing: { type: 'contain', w: (cW - .06) / 2 - .03, h: cH - .06 } }); } catch(e) {}
+          }
+          if (item.aSrc) {
+            try { slide.addImage({ data: item.aSrc.replace(/^data:image\/\w+;base64,/, 'image/jpeg;base64,'), x: x + cW / 2, y: yp + .03, w: (cW - .06) / 2 - .03, h: cH - .06, sizing: { type: 'contain', w: (cW - .06) / 2 - .03, h: cH - .06 } }); } catch(e) {}
+          }
+          slide.addText((item.desc || '').slice(0, 20), { x, y: yp + cH, w: cW, h: .28, fontSize: 7, color: '5A7A96', align: 'center', valign: 'middle', fontFace: 'Calibri' });
+        });
+      }
+    }
+    pres.writeFile({ fileName: 'KnowledgeBase' + (suffix||'') + '_' + today() + '.pptx' });
+  } catch(e) { alert('PPT error: ' + e.message); console.error(e); }
+  showLoading(false);
+}
+
+async function exportKbPPT() {
+  const rawList = getKbList();
+  if (!rawList.length) { alert('No knowledge items.'); return; }
+  if (typeof PptxGenJS === 'undefined') { alert('PPT library loading. Please try again.'); return; }
+  showLoading(true, 'Loading photos...');
+  const list = [];
+  for (const e of rawList) list.push(await hydrateKbEntry(e));
+  showLoading(false);
+  await _exportKbPPTFromList(list, '');
+}
+
+// ── 내부 공통: hydrated list를 받아서 PDF 생성 (단일 KB와 동일 레이아웃)
+async function _exportKbPDFFromList(list, suffix) {
+  showLoading(true, 'Generating PDF...');
+  await new Promise(r => setTimeout(r, 80));
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210, H = 297, M = 14, pW = W - M * 2;
+    let y = M, pNum = 1;
+    // 사진 크기 — 단일 KB PDF와 동일
+    const cW = (pW - 4) / 2, cH = cW * 0.72;
+
+    function hdr(entry) {
+      doc.setFillColor(13, 33, 55); doc.rect(0, 0, W, 22, 'F');
+      doc.setFontSize(13); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+      doc.text('KNOWLEDGE BASE', M, 13);
+      doc.setFontSize(7.5); doc.setTextColor(155, 184, 212); doc.setFont(undefined, 'normal');
+      const meta = (entry ? (entry.projName||'') + '  ' + (entry.projDate||'') + '  ' : '') + 'p.' + pNum;
+      doc.text(meta, W - M, 18, { align: 'right' });
+      y = 28;
+    }
+    function chk(n, entry) { if (y + n > H - M) { doc.addPage(); pNum++; hdr(entry); } }
+
+    let first = true;
+    for (const entry of list) {
+      for (const card of (entry.cards || [])) {
+        if (!card.title) continue;
+
+        // 지식 카드마다 새 페이지 시작 (첫 번째는 표지 페이지)
+        if (first) { hdr(entry); first = false; }
+        else { doc.addPage(); pNum++; hdr(entry); }
+
+        // ── 카드 헤더 블록 ──
+        doc.setFillColor(240, 244, 248); doc.roundedRect(M, y, pW, 7, 1, 1, 'F');
+        doc.setFontSize(10); doc.setTextColor(26, 43, 60); doc.setFont(undefined, 'bold');
+        doc.text(card.title.slice(0, 80), M + 3, y + 4.8);
+        y += 10;
+
+        // ── 본문 ──
+        if (card.body) {
+          const lines = doc.splitTextToSize(card.body, pW - 4);
+          chk(lines.length * 5 + 6, entry);
+          doc.setFontSize(8.5); doc.setTextColor(74, 104, 130); doc.setFont(undefined, 'normal');
+          doc.text(lines, M + 2, y);
+          y += lines.length * 5 + 6;
+        }
+
+        // ── 사진 — 단일 KB PDF와 완전히 동일한 구조 ──
+        const items = entry.items || [];
+        items.forEach((item, idx) => {
+          chk(cH + 24, entry);
+
+          // Photo N 헤더
+          doc.setFontSize(7.5); doc.setTextColor(90, 122, 150); doc.setFont(undefined, 'bold');
+          doc.text('Photo ' + (idx + 1) + (item.desc ? '  ' + item.desc.slice(0, 50) : ''), M, y + 4);
+          y += 5.5;
+
+          // SITE 라벨
+          const siteName = item.projName || entry.projName || '';
+          const siteDate = item.projDate || entry.projDate || '';
+          if (siteName || siteDate) {
+            doc.setFontSize(6.5); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+            doc.text('SITE: ' + siteName + (siteDate ? '  (' + siteDate + ')' : ''), M, y + 3);
+            y += 4.5;
+          }
+
+          // Before / After 사진 (크게, 전체 너비 반반)
+          [[item.bSrc, 'Before'], [item.aSrc, 'After']].forEach(([src, lbl], ci) => {
+            const cx = M + ci * (cW + 4);
+            doc.setFillColor(248, 250, 252); doc.setDrawColor(209, 220, 232); doc.setLineWidth(0.25);
+            doc.roundedRect(cx, y, cW, cH, 0.8, 0.8, 'FD');
+            if (src) { try { doc.addImage(src, 'JPEG', cx + 0.4, y + 0.4, cW - 0.8, cH - 0.8); } catch(e) {} }
+            else { doc.setFontSize(6); doc.setTextColor(200); doc.text('—', cx + cW / 2, y + cH / 2, { align: 'center' }); }
+            // 라벨: 사진 위에 배경 + 텍스트
+            doc.setFillColor(13, 33, 55); doc.setDrawColor(13, 33, 55);
+            doc.roundedRect(cx + 2, y + 2, lbl === 'Before' ? 14 : 10, 5, 1, 1, 'F');
+            doc.setFontSize(6); doc.setTextColor(245, 166, 35); doc.setFont(undefined, 'bold');
+            doc.text(lbl, cx + 4, y + 5.5);
+          });
+          y += cH + 6;
+        });
+
+        // 구분선
+        doc.setDrawColor(220, 228, 238); doc.setLineWidth(0.2);
+        if (y < H - M - 4) { doc.line(M, y, W - M, y); y += 4; }
+      }
+    }
+
+    const fn = 'KnowledgeBase' + (suffix||'') + '_' + today() + '.pdf';
+    const uri = doc.output('datauristring');
+    const w = window.open('');
+    if (w) w.document.write('<html><body style="margin:0"><a href="' + uri + '" download="' + fn + '" style="display:block;padding:12px 20px;background:#0D2137;color:#F5A623;border-radius:8px;text-align:center;font-family:sans-serif;font-weight:bold;text-decoration:none;margin:16px">Save PDF</a><iframe src="' + uri + '" style="width:100%;height:90vh;border:none"></iframe></body></html>');
+    else { const a = document.createElement('a'); a.href = uri; a.download = fn; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+  } catch(e) { alert('PDF error: ' + e.message); console.error(e); }
+  showLoading(false);
+}
+
+async function exportKbPDF() {
+  const rawList = getKbList();
+  if (!rawList.length) { alert('No knowledge items.'); return; }
+  showLoading(true, 'Loading photos...');
+  const list = [];
+  for (const e of rawList) list.push(await hydrateKbEntry(e));
+  showLoading(false);
+  await _exportKbPDFFromList(list, '');
+}
+
+
+</script>
+<script>try{ if(window.parent&&window.parent.__hdBootOK) window.parent.__hdBootOK(); if(window.__hdBootOK) window.__hdBootOK(); }catch(e){}</script>
+</body>
+</html>
