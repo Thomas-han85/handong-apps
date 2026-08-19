@@ -210,6 +210,10 @@ tr.dragging{opacity:.35}
 .bf-bar i.ok{background:var(--green)} .bf-bar i.low{background:var(--red)}
 .bf-bwrap b{font-size:10.5px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
 .bf-empty{padding:16px 18px;color:var(--text3);font-size:12px}
+.bf-tbl tr.d0 td{background:#F6FAFE;font-weight:600}
+.bf-tbl tr.d1 td{background:#FCFDFE}
+.bf-tick{display:inline-block;width:9px;height:1px;background:var(--border);
+  vertical-align:middle;margin:0 6px 3px -13px}
 .bf-w2{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border-light)}
 .bf-w2>div{background:var(--surface);padding:12px 18px 14px}
 @media(max-width:860px){.bf-w2{grid-template-columns:1fr}}
@@ -258,7 +262,7 @@ tr.dragging{opacity:.35}
 }
 
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-5";</script>
 </head>
 <body>
 
@@ -11668,22 +11672,38 @@ function bfStat(s){
 
 /* ── 화면에 그릴 행 고르기 ───────────────────────────────────────── */
 
-/* 팀 항목이 매달린 상위 Objective 를 거슬러 찾는다.
-   TO(팀 목표) 행이 없는 팀이 많아서(21개 팀만 보유) 그대로 두면
-   Objective 칸이 비어 버린다. 전사 O 를 끌어올려 "우리 팀이 무엇에
-   기여하는가" 를 카드 맨 위에 세운다. */
-function bfAncestorO(rows){
-  var byId = {}, seen = {}, out = [];
-  (DATA || []).forEach(function(r){ byId[r.id] = r; });
+/* 넘어온 행들을 부모-자식 순서로 편다.
+   DATA 가 아니라 넘어온 행만 보고 잇는다 — 저장된 카드(snapshot)도
+   똑같이 그려져야 하기 때문이다. 각 행에 depth 를 매겨 돌려준다.
+     전사 :  O  →  그 O 의 KR
+     팀   :  TK →  그 TK 의 IN     (TO 는 아무 데도 안 묶여 있어 따로 낸다)  */
+var BF_LV_ORDER = {O:0, KR:1, TO:2, TK:3, IN:4, TD:5};
+function bfTree(rows){
+  var byId = {}, kids = {}, roots = [];
+  rows.forEach(function(r){ byId[r.id] = r; });
+  function up(r){
+    return (r.pid && byId[r.pid]) ? byId[r.pid] : null;
+  }
   rows.forEach(function(r){
-    var cur = byId[r.pid], guard = 0;
-    while(cur && guard++ < 12){
-      if(cur.lv === 'O' && !seen[cur.id]){ seen[cur.id] = 1; out.push(cur); break; }
-      if(cur.lv === 'O') break;
-      cur = byId[cur.pid];
-    }
+    var p = up(r);
+    if(p) (kids[p.id] = kids[p.id] || []).push(r);
+    else roots.push(r);
   });
-  return out.sort(function(a, b){ return a.id - b.id; });
+  function order(a, b){
+    var la = BF_LV_ORDER[a.lv], lb = BF_LV_ORDER[b.lv];
+    if(la !== lb) return (la === undefined ? 9 : la) - (lb === undefined ? 9 : lb);
+    if(a.kr !== b.kr) return String(a.kr).localeCompare(String(b.kr));
+    return a.id - b.id;
+  }
+  var out = [], guard = 0;
+  function walk(r, d){
+    if(guard++ > 5000) return;
+    r.depth = d;
+    out.push(r);
+    (kids[r.id] || []).sort(order).forEach(function(c){ walk(c, d + 1); });
+  }
+  roots.sort(order).forEach(function(r){ walk(r, 0); });
+  return out;
 }
 
 function bfPick(){
@@ -11699,7 +11719,6 @@ function bfPick(){
     if(!pr) return true;                       // 상시·해석불가 = 항상
     return cum ? pr.s <= R.e : (pr.s <= R.e && pr.e >= R.s);
   });
-  if(BF.scope === 'team') rows = bfAncestorO(rows).concat(rows);
 
   return rows.map(function(r){
     var o = {id:r.id, pid:r.pid, lv:r.lv, kr:r.kr || '', label:r.label || '', team:r.team || '',
@@ -11753,9 +11772,12 @@ function bfTable(rows, cols){
         + '<th style="width:66px;text-align:right">목표</th><th style="width:66px;text-align:right">실적</th>'
         + '<th style="width:76px">달성률</th><th style="width:62px">상태</th></tr></thead><tbody>';
   rows.forEach(function(r){
-    h += '<tr>'
+    var d = r.depth || 0;
+    h += '<tr class="d'+Math.min(d, 4)+'">'
       + '<td><span class="bf-lv '+bfEsc(r.lv)+'">'+bfEsc(r.lv)+'</span></td>'
-      + '<td>'+(r.kr ? '<span style="color:var(--text3);font-size:11px">'+bfEsc(r.kr)+'</span> ' : '')
+      + '<td style="padding-left:'+(10 + d * 18)+'px">'
+             + (d ? '<span class="bf-tick"></span>' : '')
+             + (r.kr ? '<span style="color:var(--text3);font-size:11px">'+bfEsc(r.kr)+'</span> ' : '')
              + bfEsc(r.label)
              + (r.rollup && r.rollup.length ? '<div style="margin-top:3px">'+bfRollHtml(r.rollup)+'</div>' : '')
       + '</td>'
@@ -11852,14 +11874,22 @@ function bfRender(){
   var krs  = rows.filter(function(r){ return r.lv === 'KR' || r.lv === 'TK'; });
   var ins  = rows.filter(function(r){ return r.lv === 'IN'; });
 
-  // 회의에서 먼저 볼 순서: 실적이 찍힌 것 → 달성률 낮은(=문제) 순 → 아직 안 찍힌 것
-  ins.sort(function(a, b){
-    var pa = bfPct(a.target, a.actual), pb = bfPct(b.target, b.actual);
-    if(pa === null && pb === null) return 0;
-    if(pa === null) return 1;
-    if(pb === null) return -1;
-    return pa - pb;
-  });
+  // Initiative 가 40건 넘는 팀이 있다. 회의에서 실제로 보는 것은 위쪽 몇 줄이라
+  // 달성률 낮은(=문제) 순으로 앞의 몇 건만 남기고 접는다.
+  var CUT = 12, hidden = 0;
+  if(ins.length > CUT && !BF.insAll){
+    var rank = ins.slice().sort(function(a, b){
+      var pa = bfPct(a.target, a.actual), pb = bfPct(b.target, b.actual);
+      if(pa === null && pb === null) return 0;
+      if(pa === null) return 1;
+      if(pb === null) return -1;
+      return pa - pb;
+    });
+    var keep = {};
+    rank.slice(0, CUT).forEach(function(r){ keep[r.id] = 1; });
+    hidden = ins.length - CUT;
+    rows = rows.filter(function(r){ return r.lv !== 'IN' || keep[r.id]; });
+  }
 
   var done = rows.filter(function(r){ return /done|완료/i.test(r.status); }).length;
   var pcts = rows.map(function(r){ return bfPct(r.target, r.actual); }).filter(function(p){ return p !== null; });
@@ -11884,26 +11914,38 @@ function bfRender(){
      +   (card && card.updatedAt ? '최종 수정 ' + bfEsc(card.updatedAt) + ' · ' + bfEsc(card.updatedBy || '') : '아직 작성 전')
      + '</span></div>';
 
-  h += '<div class="bf-sec"><h4>Objective <span class="n">' + objs.length + '</span></h4>'
-     + bfTable(objs, {team: BF.scope === 'team' ? false : true}) + '</div>';
-  h += '<div class="bf-sec"><h4>Key Results · 결과 <span class="n">' + krs.length + '</span>'
-     + (avg === null ? '' : '<span style="margin-left:auto;font-weight:600;color:var(--text2);letter-spacing:0;text-transform:none">'
-        + '평균 달성률 <b style="color:var(--navy)">' + avg + '%</b> · 완료 ' + done + '/' + rows.length + '</span>')
-     + '</h4>' + bfTable(krs, {team: BF.scope === 'team' ? false : true}) + '</div>';
-  if(BF.scope === 'team'){
-    // 40건씩 나오는 팀이 있다. 회의에서 실제로 보는 것은 위쪽 몇 줄이라 기본은 접어 둔다.
-    var CUT = 12, few = ins.length > CUT && !BF.insAll;
-    h += '<div class="bf-sec"><h4>Initiative <span class="n">' + ins.length + '</span>'
-       + (ins.length > CUT
-          ? '<span style="margin-left:auto;letter-spacing:0;text-transform:none;font-weight:600">'
-            + '<a href="javascript:bfToggleIns()" style="color:var(--blue);text-decoration:none">'
-            + (few ? '전체 ' + ins.length + '건 보기 ▾' : '접기 ▴') + '</a></span>'
-          : '')
-       + '</h4>'
-       + bfTable(few ? ins.slice(0, CUT) : ins, {team: false})
-       + (few ? '<div style="padding:7px 18px 10px;font-size:11px;color:var(--text3)">'
-                + '달성률이 낮은 순으로 ' + CUT + '건만 보이는 중 · 나머지 ' + (ins.length - CUT) + '건 숨김</div>'
-              : '')
+  var stat = (avg === null ? ''
+    : '<span style="margin-left:auto;font-weight:600;color:var(--text2);letter-spacing:0;text-transform:none">'
+      + '평균 달성률 <b style="color:var(--navy)">' + avg + '%</b> · 완료 ' + done + '/' + rows.length + '</span>');
+  var insToggle = (ins.length > CUT
+    ? '<span style="letter-spacing:0;text-transform:none;font-weight:600">'
+      + '<a href="javascript:bfToggleIns()" style="color:var(--blue);text-decoration:none">'
+      + (hidden ? '전체 ' + ins.length + '건 보기 ▾' : '접기 ▴') + '</a></span>'
+    : '');
+  var insNote = (hidden ? '<div style="padding:7px 18px 10px;font-size:11px;color:var(--text3)">'
+                          + 'Initiative 는 달성률이 낮은 순으로 ' + CUT + '건만 보이는 중 · 나머지 '
+                          + hidden + '건 숨김</div>' : '');
+
+  if(BF.scope === 'company'){
+    // 전사는 O 밑에 그 O 의 KR 이 붙는다
+    h += '<div class="bf-sec"><h4>Objective → Key Result'
+       + '<span class="n">O ' + objs.length + ' · KR ' + krs.length + '</span>'
+       + stat + '</h4>'
+       + bfTable(bfTree(rows), {team: true})
+       + '</div>';
+  } else {
+    // 팀 Objective 는 KR·Initiative 와 이어져 있지 않다. 그래서 따로 낸다.
+    h += '<div class="bf-sec"><h4>Team Objective<span class="n">' + objs.length + '</span></h4>'
+       + (objs.length
+          ? bfTable(objs, {team: false})
+          : '<div class="bf-empty">이 팀은 팀 Objective(TO)가 등록돼 있지 않습니다.</div>')
+       + '</div>';
+    // 팀 KR 과 Initiative 는 묶여 있으므로 묶어서 낸다.
+    h += '<div class="bf-sec"><h4>Team KR → Initiative'
+       + '<span class="n">KR ' + krs.length + ' · IN ' + ins.length + '</span>'
+       + insToggle + stat + '</h4>'
+       + bfTable(bfTree(rows.filter(function(r){ return r.lv !== 'TO'; })), {team: false})
+       + insNote
        + '</div>';
   }
 
