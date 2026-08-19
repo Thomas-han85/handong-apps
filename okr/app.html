@@ -269,8 +269,14 @@ tr.dragging{opacity:.35}
 .lang-sw .lang-btn:hover{background:rgba(255,255,255,.08);color:#fff}
 .lang-sw .lang-btn.on{background:var(--gold);color:var(--navy)}
 @media(max-width:760px){.lang-sw .lang-btn{padding:3px 6px;font-size:10px}}
+/* 내용 번역 상태 */
+.tr-chip{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:10px;cursor:pointer;
+  white-space:nowrap;user-select:none;border:1px solid transparent}
+.tr-chip.busy{background:rgba(155,184,212,.18);color:#9BB8D4}
+.tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
+.tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-2";</script>
 </head>
 <body>
 
@@ -293,6 +299,7 @@ tr.dragging{opacity:.35}
       <button class="lang-btn"    data-lang="ko" onclick="setLang('ko')">한국어</button>
       <button class="lang-btn"    data-lang="vi" onclick="setLang('vi')">Tiếng Việt</button>
     </div>
+    <span id="trChip" class="tr-chip" style="display:none" onclick="trChipClick()"></span>
     <span class="save-ind" id="saveInd">Saved</span>
     <span id="nas-status" style="font-size:11px;color:#9BB8D4;cursor:default" title="NAS connecting...">🔄 NAS</span>
     <button id="secBtn" onclick="openUserMenu()" title="Account" style="background:none;border:1.5px solid #2A4F78;border-radius:6px;color:#9BB8D4;font-size:13px;cursor:pointer;padding:3px 8px;transition:all .15s" onmouseover="this.style.borderColor='#F5A623';this.style.color='#F5A623'" onmouseout="if(!secUnlocked){this.style.borderColor='#2A4F78';this.style.color='#9BB8D4';}">🔑</button>
@@ -11527,6 +11534,10 @@ const I18N = {
     trOn:'Translating content…', trDone:'Translated {n} lines',
     trNoKey:'A Gemini API key is needed to translate content. Set it in the account menu (admin can set a shared key for everyone).',
     trFail:'Translation failed — showing original text',
+    trOldApi:'The server is still on the old api.php, so item text cannot be translated. Upload api.php once (menu labels work either way).',
+    trChipBusy:'Translating…', trChipLeft:'{n} lines not translated — click to retry',
+    trChipErr:'Content translation unavailable — click for details',
+    trAllDone:'All content translated',
     trKeyAsk:'Paste a Gemini API key to share with everyone (leave empty to remove).',
     trKeySet:'Currently: a shared key is set.', trKeyNone:'Currently: no shared key.',
     trKeyCached:'Cached lines:', trKeyClear:'Remove the shared key?',
@@ -11657,6 +11668,10 @@ const I18N = {
     trOn:'내용을 번역하는 중…', trDone:'{n}줄 번역 완료',
     trNoKey:'내용을 번역하려면 Gemini API 키가 필요합니다. 계정 메뉴에서 등록하세요 (관리자가 공용 키를 넣어 두면 전원 사용 가능).',
     trFail:'번역 실패 — 원문 그대로 보여줍니다',
+    trOldApi:'서버의 api.php 가 아직 옛 것이라 항목 내용은 번역할 수 없습니다. api.php 를 한 번 올려 주세요 (화면 낱말은 지금도 바뀝니다).',
+    trChipBusy:'번역 중…', trChipLeft:'{n}줄 번역 안 됨 — 눌러서 다시 시도',
+    trChipErr:'내용 번역을 쓸 수 없음 — 눌러서 확인',
+    trAllDone:'내용까지 모두 번역됨',
     trKeyAsk:'전 직원이 함께 쓸 Gemini API 키를 붙여넣으세요 (비우면 해제).',
     trKeySet:'지금: 공용 키가 등록돼 있습니다.', trKeyNone:'지금: 공용 키가 없습니다.',
     trKeyCached:'번역해 둔 줄 수:', trKeyClear:'공용 키를 지울까요?',
@@ -11787,6 +11802,10 @@ const I18N = {
     trOn:'Đang dịch nội dung…', trDone:'Đã dịch {n} dòng',
     trNoKey:'Cần khóa Gemini API để dịch nội dung. Hãy đăng ký trong menu tài khoản (quản trị viên đặt khóa dùng chung thì mọi người đều dùng được).',
     trFail:'Dịch thất bại — hiển thị nguyên văn',
+    trOldApi:'Máy chủ vẫn dùng api.php cũ nên không dịch được nội dung mục. Hãy tải api.php lên một lần (chữ giao diện vẫn đổi bình thường).',
+    trChipBusy:'Đang dịch…', trChipLeft:'Còn {n} dòng chưa dịch — nhấn để thử lại',
+    trChipErr:'Không dùng được dịch nội dung — nhấn để xem',
+    trAllDone:'Đã dịch toàn bộ nội dung',
     trKeyAsk:'Dán khóa Gemini API dùng chung cho mọi người (để trống để gỡ).',
     trKeySet:'Hiện tại: đã có khóa dùng chung.', trKeyNone:'Hiện tại: chưa có khóa dùng chung.',
     trKeyCached:'Số dòng đã dịch:', trKeyClear:'Gỡ khóa dùng chung?',
@@ -11812,7 +11831,35 @@ function t(key){ return (I18N[currentLang]||I18N.en)[key] || (I18N.en[key]) || k
    번역문으로 저장해 버리면 원문이 날아가기 때문이다.
    ═══════════════════════════════════════════════════════════════════ */
 
-var TR = { lang: '', map: {}, busy: false, missing: 0 };
+var TR = { lang: '', map: {}, busy: false, missing: 0, err: '' };
+
+/* 언어 토글 옆 상태 표시.
+   내용 번역은 서버가 하는 일이라 조용히 실패하면 사용자는 이유를 모른다.
+   그래서 상태를 늘 보이게 두고, 눌러서 다시 시도하게 한다. */
+function trChip(){
+  var el = document.getElementById('trChip');
+  if(!el) return;
+  if(TR.busy){
+    el.style.display = ''; el.className = 'tr-chip busy';
+    el.textContent = '🌐 …'; el.title = t('trChipBusy'); return;
+  }
+  // 오류가 나도 "몇 줄이 안 됐는지" 는 알려 준다 — 색으로 문제 여부를 구분한다
+  if(TR.err || TR.missing > 0){
+    el.style.display = ''; el.className = 'tr-chip ' + (TR.err ? 'err' : 'warn');
+    el.textContent = '🌐 ' + (TR.missing > 0 ? TR.missing : '!');
+    el.title = (TR.err ? t('trChipErr') + ' · ' : '')
+             + (TR.missing > 0 ? t('trChipLeft').replace('{n}', TR.missing) : '');
+    return;
+  }
+  el.style.display = 'none';
+}
+function trChipClick(){
+  if(TR.busy) return;
+  if(TR.err === 'oldapi'){ alert(t('trOldApi')); return; }
+  if(TR.err === 'nokey'){  alert(t('trNoKey'));  return; }
+  if(TR.err){ alert(t('trFail')); }
+  trSync(true);
+}
 
 /* 내용 번역 꺼내기. 없으면 원문 그대로. */
 function TL(s){
@@ -11850,7 +11897,7 @@ async function trSync(fill){
   if(TR.busy) return;
   var lang = currentLang, texts = trCollect();
   if(!texts.length){ TR.lang = lang; TR.map = {}; return; }
-  TR.busy = true;
+  TR.busy = true; TR.err = ''; trChip();
   try{
     var got = await okrApi('tr_get', {lang: lang, texts: texts});
     TR.lang = lang;
@@ -11867,8 +11914,11 @@ async function trSync(fill){
         try{
           res = await okrApi('tr_make', {lang: lang, texts: chunk});
         }catch(e){
-          if(e && e.data && e.data.code === 'no_key'){ toast(t('trNoKey'), 'error'); break; }
-          toast(t('trFail'), 'error'); break;
+          if(e && e.data && e.data.code === 'no_key'){ TR.err = 'nokey'; toast(t('trNoKey'), 'error'); break; }
+          if(e && e.data && String(e.data.error || '').indexOf('Unknown action') >= 0){
+            TR.err = 'oldapi'; toast(t('trOldApi'), 'error'); break;
+          }
+          TR.err = 'other'; toast(t('trFail'), 'error'); break;
         }
         if(currentLang !== lang) break;              // 도중에 언어를 또 바꿨다
         Object.keys(res.map || {}).forEach(function(k){ TR.map[k] = res.map[k]; n++; });
@@ -11876,12 +11926,22 @@ async function trSync(fill){
       }
       TR.missing = texts.filter(function(x){ return !TR.map[x]; }).length;
       if(n)          toast(t('trDone').replace('{n}', n));
-      if(TR.missing) toast(t('trPartial').replace('{n}', TR.missing));
+      if(TR.missing && !TR.err) toast(t('trPartial').replace('{n}', TR.missing));
     }
   }catch(e){
+    // 여기서 조용히 넘어가면 "표 안 글자만 안 바뀐다" 로만 겪게 된다.
     dbg('trSync fail', e);
+    var msg = (e && e.data && e.data.error) || '';
+    if(msg.indexOf('Unknown action') >= 0){       // api.php 가 아직 옛 것
+      TR.err = 'oldapi';
+      if(fill) toast(t('trOldApi'), 'error');
+    }else{
+      TR.err = 'other';
+      if(fill) toast(t('trFail'), 'error');
+    }
   }
   TR.busy = false;
+  trChip();
   trApply();
 }
 
@@ -11913,7 +11973,8 @@ function setLang(lang){
   });
 
   // 캐시에 이미 있는 만큼 즉시 반영하고, 모자란 것은 뒤에서 채운다
-  if(TR.lang !== lang){ TR.lang = ''; TR.map = {}; }
+  if(TR.lang !== lang){ TR.lang = ''; TR.map = {}; TR.missing = 0; TR.err = ''; }
+  trChip();
   trApply();
   if(AUTH && AUTH.token) trSync(true);
 }
