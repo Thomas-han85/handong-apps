@@ -280,7 +280,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-7";</script>
 </head>
 <body>
 
@@ -450,13 +450,13 @@ tr.dragging{opacity:.35}
           <th style="width:68px" data-i18n="thPic">Assignee</th>
           <th style="width:64px" data-i18n="thReviewer">Reviewer</th>
           <th style="width:136px" data-i18n="thPeriod">Period</th>
-          <th style="width:66px;text-align:right" data-i18n="thTarget">Target</th>
+          <th style="width:80px;text-align:right" data-i18n="thTarget">Target</th>
           <th style="width:132px" data-i18n="thActual">Actual</th>
           <th style="width:88px" data-i18n="thAttain">Attainment</th>
-          <th id="th-imp" style="width:58px;text-align:center" data-i18n="thImp">Priority</th>
+          <th id="th-imp" style="width:52px;text-align:center" data-i18n="thImp">Priority</th>
           <th id="th-urg" style="width:58px;text-align:center" data-i18n="thUrg">Urgency</th>
           <th id="th-rev" style="width:60px;text-align:center" data-i18n="thRev">Review</th>
-          <th style="width:80px;text-align:center" data-i18n="thStatus">Status</th>
+          <th style="width:92px;text-align:center" data-i18n="thStatus">Status</th>
           <th style="width:40px;text-align:center">FB</th>
           <th style="width:36px;text-align:center" title="Security">🔒</th>
           <th style="width:28px"></th>
@@ -9829,7 +9829,7 @@ function reviewCell(d){
 }
 
 function statusCell(d){
-  if(d.lv!=='TD'&&d.lv!=='IN'&&d.lv!=='TK'&&d.lv!=='KR') return `<span class="status-badge ${d.status==='Done'?'st-done':d.status==='Not Started'?'st-ns':'st-ip'}">${d.status}</span>`;
+  if(d.lv!=='TD'&&d.lv!=='IN'&&d.lv!=='TK'&&d.lv!=='KR') return `<span class="status-badge ${d.status==='Done'?'st-done':d.status==='Not Started'?'st-ns':'st-ip'}">${d.status==='Done'?t('stDone'):d.status==='Not Started'?t('stNotStarted'):t('stInProgress')}</span>`;
   const s = d.status;
   const next = s==='Not Started'?'In Progress':s==='In Progress'?'Done':'Not Started';
   const label = s==='Done'?t('stDone'):s==='Not Started'?t('stNotStarted'):t('stInProgress');
@@ -11686,15 +11686,15 @@ const I18N = {
   vi: {
     new:'+ Thêm mới', expand:'▼ Mở rộng', collapse:'▶ Thu gọn',
     search:'🔍 Tìm kiếm...', level:'Cấp', allTeam:'Tất cả nhóm',
-    inProgress:'Đang thực hiện', notStarted:'Chưa bắt đầu', done:'Hoàn thành',
+    inProgress:'Đang làm', notStarted:'Chưa bắt đầu', done:'Hoàn thành',
     all:'Tất cả', important:'Quan trọng', urgent:'Khẩn cấp', review:'👁 Xem xét',
     hideDone:'✓ Ẩn mục hoàn thành', hideDoneOn:'✓ Hiện mục hoàn thành', hideDoneOff:'✓ Ẩn mục hoàn thành',
     save:'💾 Lưu', load:'📂 Tải lên', reset:'Đặt lại',
-    thLevel:'Cấp', thContent:'Mục tiêu / Nội dung', thPic:'Ph.trách', thReviewer:'Duyệt',
+    thLevel:'Cấp', thContent:'Nội dung', thPic:'Ph.trách', thReviewer:'Duyệt',
     thPeriod:'Thời gian', thTarget:'Chỉ tiêu', thActual:'Thực tế', thAttain:'Tỷ lệ đạt',
     thImp:'Ưu tiên', thUrg:'Khẩn', thRev:'Xem xét', thStatus:'Trạng thái',
     saveInd:'Đã lưu',
-    stDone:'Hoàn thành', stInProgress:'Đang thực hiện', stNotStarted:'Chưa bắt đầu',
+    stDone:'Hoàn thành', stInProgress:'Đang làm', stNotStarted:'Chưa bắt đầu',
     clickTo:'Nhấn: đổi thành ', changeToSuffix:'',
     imp:'Quan trọng', lessImp:'Ít quan trọng', urg:'Khẩn cấp', lessUrg:'Ít khẩn cấp', setLabel:'Đặt',
     reviewLabel:'Xem xét', reviewTitle:'Đánh dấu là mục cần xem xét',
@@ -11710,7 +11710,7 @@ const I18N = {
     btnReview:'👁 Xem xét', btnUnreview:'👁 Bỏ xem xét', btnDone:'✓ Hoàn thành',
     impUp:'↑Q.trọng', impDown:'↓Q.trọng', urgUp:'↑K.cấp', urgDown:'↓K.cấp',
     reviewEmpty:'Chưa có mục xem xét. Nhấn <b>👁 Xem xét</b> trong OKR List.',
-    doneCount:'Hoàn thành', ipCount:'Đang thực hiện',
+    doneCount:'Hoàn thành', ipCount:'Đang làm',
     lg1:'Q.trọng+K.cấp', lg2:'Q.trọng+Ít k.cấp', lg3:'Ít q.trọng+K.cấp', lg4:'Ít q.trọng+Ít k.cấp',
     toastSaved:'Đã lưu', toastDeleted:'Đã xóa',
     toastCSV:'Đã tải CSV',
