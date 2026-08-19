@@ -42,16 +42,16 @@ body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--
 .sum-card .sub{font-size:10px;color:var(--text3);margin-top:3px}
 
 /* TABLE */
-.table-wrap{padding:14px 20px 40px}
-.okr-table{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
-.okr-table thead th{background:var(--navy);color:var(--gold);padding:9px 10px;font-size:11px;font-weight:500;text-align:left;white-space:nowrap;position:sticky;top:var(--th-top,97px);z-index:100;box-shadow:0 1px 0 var(--border)}
+.table-wrap{padding:14px 20px 40px;overflow-x:auto}
+.okr-table{width:100%;table-layout:fixed;min-width:1300px;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--border);border-radius:10px}
+.okr-table thead th{background:var(--navy);color:var(--gold);padding:9px 7px;font-size:11px;font-weight:500;text-align:left;white-space:nowrap;position:sticky;top:var(--th-top,97px);z-index:100;box-shadow:0 1px 0 var(--border)}
 .okr-table thead th:first-child{border-radius:0}
 .okr-table thead th:last-child{border-radius:0}
 .inline-actual{width:70px;padding:3px 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:'IBM Plex Mono',monospace;background:#fff;color:var(--text);text-align:right}
 .inline-actual:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 2px rgba(21,101,192,.15)}
 .save-row-btn{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:600;border:none;background:var(--navy);color:var(--gold);cursor:pointer;white-space:nowrap}
 .save-row-btn:hover{background:var(--navy-mid)}
-.okr-table tbody td{padding:7px 10px;border-bottom:1px solid var(--border-light);vertical-align:middle}
+.okr-table tbody td{padding:7px 7px;border-bottom:1px solid var(--border-light);vertical-align:middle}
 .okr-table tbody tr:last-child td{border-bottom:none}
 .okr-table tbody tr{cursor:pointer;transition:filter .1s}
 .row-O td{background:#0D2137!important}.row-O td{color:#E0EAF5!important;font-weight:500}
@@ -60,6 +60,10 @@ body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--
 .row-TK td{background:#FAFBFC!important}
 .row-IN td{background:#fff!important}
 .row-IN .cell-lbl{color:var(--text2)!important}
+/* 칸을 넘는 글자는 잘라 버리지 말고 말줄임으로 — 어떤 폭을 줘도
+   '팀 다섯 개' 같은 값은 안 들어간다. 넘치는 것을 곱게 보이게 한다. */
+.okr-table thead th{overflow:hidden;text-overflow:ellipsis}
+.okr-table tbody td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .row-O:hover td{background:#142D47!important}.row-KR:hover td{background:#1F4570!important}
 .row-TO:hover td{background:#E0EDFF!important}.row-TK:hover td{background:#F3F7FB!important}.row-IN:hover td{background:#F8FAFC!important}
 
@@ -276,7 +280,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-4";</script>
 </head>
 <body>
 
@@ -438,21 +442,21 @@ tr.dragging{opacity:.35}
     <table class="okr-table">
       <thead>
         <tr>
-          <th style="width:30px"></th>
-          <th style="width:72px" data-i18n="thLevel">Level</th>
+          <th style="width:56px"></th>
+          <th style="width:90px" data-i18n="thLevel">Level</th>
           <th style="width:0;display:none">KR Code</th>
           <th data-i18n="thContent">Goal / Content</th>
-          <th style="width:80px">Team</th>
-          <th style="width:80px" data-i18n="thPic">Assignee</th>
-          <th style="width:70px" data-i18n="thReviewer">Reviewer</th>
-          <th style="width:78px" data-i18n="thPeriod">Period</th>
-          <th style="width:58px;text-align:right" data-i18n="thTarget">Target</th>
-          <th style="width:100px" data-i18n="thActual">Actual</th>
-          <th style="width:66px" data-i18n="thAttain">Attainment</th>
-          <th id="th-imp" style="width:72px;text-align:center" data-i18n="thImp">Priority</th>
-          <th id="th-urg" style="width:72px;text-align:center" data-i18n="thUrg">Urgency</th>
+          <th style="width:60px">Team</th>
+          <th style="width:68px" data-i18n="thPic">Assignee</th>
+          <th style="width:58px" data-i18n="thReviewer">Reviewer</th>
+          <th style="width:136px" data-i18n="thPeriod">Period</th>
+          <th style="width:66px;text-align:right" data-i18n="thTarget">Target</th>
+          <th style="width:132px" data-i18n="thActual">Actual</th>
+          <th style="width:88px" data-i18n="thAttain">Attainment</th>
+          <th id="th-imp" style="width:58px;text-align:center" data-i18n="thImp">Priority</th>
+          <th id="th-urg" style="width:58px;text-align:center" data-i18n="thUrg">Urgency</th>
           <th id="th-rev" style="width:60px;text-align:center" data-i18n="thRev">Review</th>
-          <th style="width:88px;text-align:center" data-i18n="thStatus">Status</th>
+          <th style="width:80px;text-align:center" data-i18n="thStatus">Status</th>
           <th style="width:40px;text-align:center">FB</th>
           <th style="width:36px;text-align:center" title="Security">🔒</th>
           <th style="width:28px"></th>
@@ -11686,9 +11690,9 @@ const I18N = {
     all:'Tất cả', important:'Quan trọng', urgent:'Khẩn cấp', review:'👁 Xem xét',
     hideDone:'✓ Ẩn mục hoàn thành', hideDoneOn:'✓ Hiện mục hoàn thành', hideDoneOff:'✓ Ẩn mục hoàn thành',
     save:'💾 Lưu', load:'📂 Tải lên', reset:'Đặt lại',
-    thLevel:'Cấp', thContent:'Mục tiêu / Nội dung', thPic:'Phụ trách', thReviewer:'Người xem xét',
+    thLevel:'Cấp', thContent:'Mục tiêu / Nội dung', thPic:'Ph.trách', thReviewer:'Duyệt',
     thPeriod:'Thời gian', thTarget:'Chỉ tiêu', thActual:'Thực tế', thAttain:'Tỷ lệ đạt',
-    thImp:'Ưu tiên', thUrg:'Khẩn cấp', thRev:'Xem xét', thStatus:'Trạng thái',
+    thImp:'Ưu tiên', thUrg:'Khẩn', thRev:'Xem xét', thStatus:'Trạng thái',
     saveInd:'Đã lưu',
     stDone:'Hoàn thành', stInProgress:'Đang thực hiện', stNotStarted:'Chưa bắt đầu',
     clickTo:'Nhấn: đổi thành ', changeToSuffix:'',
