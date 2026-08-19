@@ -276,7 +276,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-3";</script>
 </head>
 <body>
 
@@ -9113,7 +9113,7 @@ function buildAuthUI(){
   + '<div id="userMenu" style="display:none;position:fixed;top:46px;right:16px;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);z-index:2500;min-width:190px;padding:8px">'
   +   '<div id="umWho" style="font-size:12px;color:#5A7A96;padding:6px 8px;border-bottom:1px solid #EEF2F6;margin-bottom:4px"></div>'
   +   '<button id="umAdmin" onclick="openAdminPanel()" style="'+MENU_BTN+'">👥 User Management</button>'
-  +   '<button id="umTrKey" onclick="openTrKey()" style="'+MENU_BTN+'" data-i18n="trKeyMenu">🌐 Shared translation key</button>'
+  +   '<button id="umTrKey" onclick="openTrKey()" style="'+MENU_BTN+'" data-i18n="trKeyMenu">🌐 Gemini key for translation</button>'
   +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 비밀번호 변경</button>'
   +   '<button onclick="doLogout()" style="'+MENU_BTN+'">🚪 Logout</button>'
   + '</div>'
@@ -11532,17 +11532,17 @@ const I18N = {
 
     /* Content translation */
     trOn:'Translating content…', trDone:'Translated {n} lines',
-    trNoKey:'A Gemini API key is needed to translate content. Set it in the account menu (admin can set a shared key for everyone).',
+    trNoKey:'A Gemini API key is needed to translate content. Admin: account menu → Gemini key for translation. Your own personal key is fine.',
     trFail:'Translation failed — showing original text',
     trOldApi:'The server is still on the old api.php, so item text cannot be translated. Upload api.php once (menu labels work either way).',
     trChipBusy:'Translating…', trChipLeft:'{n} lines not translated — click to retry',
     trChipErr:'Content translation unavailable — click for details',
     trAllDone:'All content translated',
-    trKeyAsk:'Paste a Gemini API key to share with everyone (leave empty to remove).',
-    trKeySet:'Currently: a shared key is set.', trKeyNone:'Currently: no shared key.',
-    trKeyCached:'Cached lines:', trKeyClear:'Remove the shared key?',
-    trKeySaved:'Shared key saved', trKeyCleared:'Shared key removed',
-    trKeyMenu:'🌐 Shared translation key',
+    trKeyAsk:'Paste your own Gemini API key — no separate key needed. Once it is in, everyone shares the translations it produces. Leave empty to remove.',
+    trKeySet:'Currently: a key is set.', trKeyNone:'Currently: no key.',
+    trKeyCached:'Cached lines:', trKeyClear:'Remove the key?',
+    trKeySaved:'Key saved', trKeyCleared:'Key removed',
+    trKeyMenu:'🌐 Gemini key for translation',
     trPartial:'{n} lines not translated yet — press ↻ to retry',
   },
   ko: {
@@ -11666,17 +11666,17 @@ const I18N = {
 
     /* 내용 자동 번역 */
     trOn:'내용을 번역하는 중…', trDone:'{n}줄 번역 완료',
-    trNoKey:'내용을 번역하려면 Gemini API 키가 필요합니다. 계정 메뉴에서 등록하세요 (관리자가 공용 키를 넣어 두면 전원 사용 가능).',
+    trNoKey:'내용을 번역하려면 Gemini API 키가 필요합니다. 계정 메뉴 → 번역용 Gemini 키 에 본인 키를 넣으면 됩니다 (관리자).',
     trFail:'번역 실패 — 원문 그대로 보여줍니다',
     trOldApi:'서버의 api.php 가 아직 옛 것이라 항목 내용은 번역할 수 없습니다. api.php 를 한 번 올려 주세요 (화면 낱말은 지금도 바뀝니다).',
     trChipBusy:'번역 중…', trChipLeft:'{n}줄 번역 안 됨 — 눌러서 다시 시도',
     trChipErr:'내용 번역을 쓸 수 없음 — 눌러서 확인',
     trAllDone:'내용까지 모두 번역됨',
-    trKeyAsk:'전 직원이 함께 쓸 Gemini API 키를 붙여넣으세요 (비우면 해제).',
-    trKeySet:'지금: 공용 키가 등록돼 있습니다.', trKeyNone:'지금: 공용 키가 없습니다.',
-    trKeyCached:'번역해 둔 줄 수:', trKeyClear:'공용 키를 지울까요?',
-    trKeySaved:'공용 키를 저장했습니다', trKeyCleared:'공용 키를 지웠습니다',
-    trKeyMenu:'🌐 공용 번역 키',
+    trKeyAsk:'본인 Gemini API 키를 그대로 붙여넣으세요 — 따로 발급받을 필요 없습니다. 한 번 넣어 두면 여기서 만들어진 번역을 전 직원이 같이 씁니다. 비우면 해제.',
+    trKeySet:'지금: 키가 등록돼 있습니다.', trKeyNone:'지금: 키가 없습니다.',
+    trKeyCached:'번역해 둔 줄 수:', trKeyClear:'키를 지울까요?',
+    trKeySaved:'키를 저장했습니다', trKeyCleared:'키를 지웠습니다',
+    trKeyMenu:'🌐 번역용 Gemini 키',
     trPartial:'{n}줄은 아직 번역 전입니다 — ↻ 를 눌러 다시 시도하세요',
   },
   vi: {
@@ -11800,17 +11800,17 @@ const I18N = {
 
     /* Dịch nội dung */
     trOn:'Đang dịch nội dung…', trDone:'Đã dịch {n} dòng',
-    trNoKey:'Cần khóa Gemini API để dịch nội dung. Hãy đăng ký trong menu tài khoản (quản trị viên đặt khóa dùng chung thì mọi người đều dùng được).',
+    trNoKey:'Cần khóa Gemini API để dịch nội dung. Menu tài khoản → Khóa Gemini để dịch, dùng khóa cá nhân của bạn là được (quản trị viên).',
     trFail:'Dịch thất bại — hiển thị nguyên văn',
     trOldApi:'Máy chủ vẫn dùng api.php cũ nên không dịch được nội dung mục. Hãy tải api.php lên một lần (chữ giao diện vẫn đổi bình thường).',
     trChipBusy:'Đang dịch…', trChipLeft:'Còn {n} dòng chưa dịch — nhấn để thử lại',
     trChipErr:'Không dùng được dịch nội dung — nhấn để xem',
     trAllDone:'Đã dịch toàn bộ nội dung',
-    trKeyAsk:'Dán khóa Gemini API dùng chung cho mọi người (để trống để gỡ).',
-    trKeySet:'Hiện tại: đã có khóa dùng chung.', trKeyNone:'Hiện tại: chưa có khóa dùng chung.',
-    trKeyCached:'Số dòng đã dịch:', trKeyClear:'Gỡ khóa dùng chung?',
-    trKeySaved:'Đã lưu khóa dùng chung', trKeyCleared:'Đã gỡ khóa dùng chung',
-    trKeyMenu:'🌐 Khóa dịch dùng chung',
+    trKeyAsk:'Dán khóa Gemini API của chính bạn — không cần xin khóa riêng. Đặt một lần là mọi người dùng chung bản dịch. Để trống để gỡ.',
+    trKeySet:'Hiện tại: đã có khóa.', trKeyNone:'Hiện tại: chưa có khóa.',
+    trKeyCached:'Số dòng đã dịch:', trKeyClear:'Gỡ khóa?',
+    trKeySaved:'Đã lưu khóa', trKeyCleared:'Đã gỡ khóa',
+    trKeyMenu:'🌐 Khóa Gemini để dịch',
     trPartial:'Còn {n} dòng chưa dịch — nhấn ↻ để thử lại',
   }
 
@@ -11979,7 +11979,8 @@ function setLang(lang){
   if(AUTH && AUTH.token) trSync(true);
 }
 
-/* 공용 번역 키 (관리자) — 넣어 두면 전 직원이 본인 키 없이 번역을 쓴다.
+/* 번역용 Gemini 키 (관리자) — 본인 키를 그대로 넣으면 된다.
+   따로 발급받을 필요 없고, 넣어 두면 전 직원이 키 없이 번역을 쓴다.
    키는 서버에 저장되고 화면으로 다시 내려오지 않는다. */
 async function openTrKey(){
   var st = null;
