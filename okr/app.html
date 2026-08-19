@@ -9106,6 +9106,7 @@ function buildAuthUI(){
   + '<div id="userMenu" style="display:none;position:fixed;top:46px;right:16px;background:#fff;border:1px solid #E2E8F0;border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.18);z-index:2500;min-width:190px;padding:8px">'
   +   '<div id="umWho" style="font-size:12px;color:#5A7A96;padding:6px 8px;border-bottom:1px solid #EEF2F6;margin-bottom:4px"></div>'
   +   '<button id="umAdmin" onclick="openAdminPanel()" style="'+MENU_BTN+'">👥 User Management</button>'
+  +   '<button id="umTrKey" onclick="openTrKey()" style="'+MENU_BTN+'" data-i18n="trKeyMenu">🌐 Shared translation key</button>'
   +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 비밀번호 변경</button>'
   +   '<button onclick="doLogout()" style="'+MENU_BTN+'">🚪 Logout</button>'
   + '</div>'
@@ -9164,6 +9165,7 @@ function openUserMenu(){
   const m=document.getElementById('userMenu');
   document.getElementById('umWho').textContent = AUTH.user.username+' · '+AUTH.user.role+' · Teams: '+((AUTH.user.teams||[]).join(', ')||'-');
   document.getElementById('umAdmin').style.display = AUTH.isAdmin()?'block':'none';
+  document.getElementById('umTrKey').style.display = AUTH.isAdmin()?'block':'none';
   m.style.display = (m.style.display==='block')?'none':'block';
 }
 async function doLogout(){
@@ -11525,6 +11527,11 @@ const I18N = {
     trOn:'Translating content…', trDone:'Translated {n} lines',
     trNoKey:'A Gemini API key is needed to translate content. Set it in the account menu (admin can set a shared key for everyone).',
     trFail:'Translation failed — showing original text',
+    trKeyAsk:'Paste a Gemini API key to share with everyone (leave empty to remove).',
+    trKeySet:'Currently: a shared key is set.', trKeyNone:'Currently: no shared key.',
+    trKeyCached:'Cached lines:', trKeyClear:'Remove the shared key?',
+    trKeySaved:'Shared key saved', trKeyCleared:'Shared key removed',
+    trKeyMenu:'🌐 Shared translation key',
     trPartial:'{n} lines not translated yet — press ↻ to retry',
   },
   ko: {
@@ -11650,6 +11657,11 @@ const I18N = {
     trOn:'내용을 번역하는 중…', trDone:'{n}줄 번역 완료',
     trNoKey:'내용을 번역하려면 Gemini API 키가 필요합니다. 계정 메뉴에서 등록하세요 (관리자가 공용 키를 넣어 두면 전원 사용 가능).',
     trFail:'번역 실패 — 원문 그대로 보여줍니다',
+    trKeyAsk:'전 직원이 함께 쓸 Gemini API 키를 붙여넣으세요 (비우면 해제).',
+    trKeySet:'지금: 공용 키가 등록돼 있습니다.', trKeyNone:'지금: 공용 키가 없습니다.',
+    trKeyCached:'번역해 둔 줄 수:', trKeyClear:'공용 키를 지울까요?',
+    trKeySaved:'공용 키를 저장했습니다', trKeyCleared:'공용 키를 지웠습니다',
+    trKeyMenu:'🌐 공용 번역 키',
     trPartial:'{n}줄은 아직 번역 전입니다 — ↻ 를 눌러 다시 시도하세요',
   },
   vi: {
@@ -11775,6 +11787,11 @@ const I18N = {
     trOn:'Đang dịch nội dung…', trDone:'Đã dịch {n} dòng',
     trNoKey:'Cần khóa Gemini API để dịch nội dung. Hãy đăng ký trong menu tài khoản (quản trị viên đặt khóa dùng chung thì mọi người đều dùng được).',
     trFail:'Dịch thất bại — hiển thị nguyên văn',
+    trKeyAsk:'Dán khóa Gemini API dùng chung cho mọi người (để trống để gỡ).',
+    trKeySet:'Hiện tại: đã có khóa dùng chung.', trKeyNone:'Hiện tại: chưa có khóa dùng chung.',
+    trKeyCached:'Số dòng đã dịch:', trKeyClear:'Gỡ khóa dùng chung?',
+    trKeySaved:'Đã lưu khóa dùng chung', trKeyCleared:'Đã gỡ khóa dùng chung',
+    trKeyMenu:'🌐 Khóa dịch dùng chung',
     trPartial:'Còn {n} dòng chưa dịch — nhấn ↻ để thử lại',
   }
 
@@ -11899,6 +11916,25 @@ function setLang(lang){
   if(TR.lang !== lang){ TR.lang = ''; TR.map = {}; }
   trApply();
   if(AUTH && AUTH.token) trSync(true);
+}
+
+/* 공용 번역 키 (관리자) — 넣어 두면 전 직원이 본인 키 없이 번역을 쓴다.
+   키는 서버에 저장되고 화면으로 다시 내려오지 않는다. */
+async function openTrKey(){
+  var st = null;
+  try{ st = await okrApi('tr_status', {}); }catch(e){}
+  var now = st ? (st.shared_key ? t('trKeySet') : t('trKeyNone')) : '';
+  var cached = st ? ('EN ' + st.cached.en + ' · KO ' + st.cached.ko + ' · VI ' + st.cached.vi) : '';
+  var k = prompt(t('trKeyAsk') + '\n\n' + now + '\n' + t('trKeyCached') + ' ' + cached, '');
+  if(k === null) return;                       // 취소
+  k = k.trim();
+  if(k === '' && !confirm(t('trKeyClear'))) return;
+  try{
+    var r = await okrApi('set_tr_key', {key: k});
+    toast(r.has_key ? t('trKeySaved') : t('trKeyCleared'));
+  }catch(e){
+    toast((e && e.data && e.data.error) || t('bfSaveFail'), 'error');
+  }
 }
 
 
