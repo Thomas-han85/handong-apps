@@ -261,8 +261,16 @@ tr.dragging{opacity:.35}
   body{background:#fff}
 }
 
+
+/* 언어 토글 */
+.lang-sw{display:inline-flex;border:1px solid #2A4F78;border-radius:6px;overflow:hidden}
+.lang-sw .lang-btn{padding:3px 9px;border:none;background:none;font-family:inherit;font-size:11px;
+  font-weight:600;color:#9BB8D4;cursor:pointer;white-space:nowrap;transition:all .15s}
+.lang-sw .lang-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.lang-sw .lang-btn.on{background:var(--gold);color:var(--navy)}
+@media(max-width:760px){.lang-sw .lang-btn{padding:3px 6px;font-size:10px}}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.18-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-1";</script>
 </head>
 <body>
 
@@ -276,10 +284,15 @@ tr.dragging{opacity:.35}
     <div class="nav-item active" onclick="setTab('list',this)">OKR List</div>
     <div class="nav-item" onclick="setTab('gantt',this)">OKR Gantt Chart</div>
     <div class="nav-item" onclick="setTab('matrix',this)">My Tasks</div>
-    <div class="nav-item" onclick="setTab('boost',this)">부스팅 피드백</div>
-    <div class="nav-item" onclick="setTab('sched',this)">미팅 일정</div>
+    <div class="nav-item" onclick="setTab('boost',this)" data-i18n="navBoost">Boosting Feedback</div>
+    <div class="nav-item" onclick="setTab('sched',this)" data-i18n="navSched">Meeting Slots</div>
   </div>
   <div class="nav-right">
+    <div class="lang-sw">
+      <button class="lang-btn on" data-lang="en" onclick="setLang('en')">EN</button>
+      <button class="lang-btn"    data-lang="ko" onclick="setLang('ko')">한국어</button>
+      <button class="lang-btn"    data-lang="vi" onclick="setLang('vi')">Tiếng Việt</button>
+    </div>
     <span class="save-ind" id="saveInd">Saved</span>
     <span id="nas-status" style="font-size:11px;color:#9BB8D4;cursor:default" title="NAS connecting...">🔄 NAS</span>
     <button id="secBtn" onclick="openUserMenu()" title="Account" style="background:none;border:1.5px solid #2A4F78;border-radius:6px;color:#9BB8D4;font-size:13px;cursor:pointer;padding:3px 8px;transition:all .15s" onmouseover="this.style.borderColor='#F5A623';this.style.color='#F5A623'" onmouseout="if(!secUnlocked){this.style.borderColor='#2A4F78';this.style.color='#9BB8D4';}">🔑</button>
@@ -370,24 +383,24 @@ tr.dragging{opacity:.35}
 <!-- BOOSTING TOOLBAR -->
 <div class="toolbar" id="tbBoost" style="display:none">
   <div class="bf-seg" id="bfScopeSeg">
-    <button id="bfScopeC" class="on" onclick="bfSetScope('company')">전사 피드백</button>
-    <button id="bfScopeT" onclick="bfSetScope('team')">팀별 피드백</button>
+    <button id="bfScopeC" class="on" onclick="bfSetScope('company')" data-i18n="bfScopeCo">Company Feedback</button>
+    <button id="bfScopeT" onclick="bfSetScope('team')" data-i18n="bfScopeTeam">Team Feedback</button>
   </div>
   <select class="filter-sel" id="bfTeam" onchange="bfRender()" style="width:150px;display:none"></select>
   <div class="divider"></div>
-  <select class="filter-sel" id="bfPType" onchange="bfTypeChanged()" style="width:92px">
-    <option value="year">연별</option>
-    <option value="quarter">분기별</option>
-    <option value="month" selected>월별</option>
+  <select class="filter-sel" id="bfPType" onchange="bfTypeChanged()" style="width:110px">
+    <option value="year"  data-i18n="bfYear">By year</option>
+    <option value="quarter" data-i18n="bfQuarter">By quarter</option>
+    <option value="month" selected data-i18n="bfMonth">By month</option>
   </select>
   <select class="filter-sel" id="bfPKey" onchange="bfRender()" style="width:132px"></select>
   <label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
     white-space:nowrap;cursor:pointer;margin-left:4px">
-    <input type="checkbox" id="bfCum" onchange="bfRender()"> 누계로 보기
+    <input type="checkbox" id="bfCum" onchange="bfRender()"><span data-i18n="bfCum">Cumulative</span>
   </label>
   <div style="margin-left:auto;display:flex;gap:5px">
-    <button class="btn" onclick="bfReload()">↻ 새로고침</button>
-    <button class="btn" onclick="window.print()">🖨 인쇄</button>
+    <button class="btn" onclick="bfReload()" data-i18n="bfReload">↻ Reload</button>
+    <button class="btn" onclick="window.print()" data-i18n="bfPrint">🖨 Print</button>
   </div>
 </div>
 <!-- BOOSTING VIEW -->
@@ -397,14 +410,14 @@ tr.dragging{opacity:.35}
 
 <!-- SCHEDULE TOOLBAR -->
 <div class="toolbar" id="tbSched" style="display:none">
-  <span style="font-size:12px;font-weight:600;color:var(--text2)">부스팅 미팅 일정</span>
-  <span style="font-size:11px;color:var(--text3)">경영자가 올린 시간 중에서 팀이 하나를 고릅니다</span>
-  <div style="margin-left:auto;display:flex;gap:5px">
+  <span style="font-size:12px;font-weight:600;color:var(--text2)" data-i18n="scTitle">Boosting Meeting Slots</span>
+  <span style="font-size:11px;color:var(--text3)" data-i18n="scSub">Teams pick one of the times leadership opened</span>
+  <div style="margin-left:auto;display:flex;gap:5px;align-items:center">
     <label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
       white-space:nowrap;cursor:pointer">
-      <input type="checkbox" id="scPast" onchange="scRender()"> 지난 일정도 보기
+      <input type="checkbox" id="scPast" onchange="scRender()"><span data-i18n="scPast">Include past slots</span>
     </label>
-    <button class="btn" onclick="scReload()">↻ 새로고침</button>
+    <button class="btn" onclick="scReload()" data-i18n="bfReload">↻ Reload</button>
   </div>
 </div>
 <!-- SCHEDULE VIEW -->
@@ -9328,7 +9341,7 @@ function aiParentSelect(i, selPid, lv, team){
   for(var j=0;j<DATA.length;j++){ var d=DATA[j];
     if((d.lv||'')!==pl) continue;
     if(!aiTeamMatch(d.team, team)) continue;
-    var lab=((d.kr?d.kr+' ':'')+String(d.label||'')).slice(0,50);
+    var lab=((d.kr?d.kr+' ':'')+TL(String(d.label||''))).slice(0,50);
     var sel=(selPid!=null && Number(d.id)===Number(selPid))?' selected':'';
     opts+='<option value="'+d.id+'"'+sel+'>'+aiEsc(d.lv)+' #'+d.id+' '+aiEsc(lab)+'</option>';
     cnt++;
@@ -9985,7 +9998,7 @@ function getRows(){
         if(!collapsed.has(d.id)) walk(d.id, depth);
         return;
       }
-      const matchSearch=(!q||(d.label+d.kr+(d.team||'')+(d.pic||'')).toLowerCase().includes(q));
+      const matchSearch=(!q||(d.label+TL(d.label)+d.kr+(d.team||'')+(d.pic||'')).toLowerCase().includes(q));
       const matchLv=(!fLv||d.lv===fLv);
       const matchSt=(stFilters.size===0||stFilters.has(d.status));
       const matchTm=(!fTm||(d.team||'')===fTm);
@@ -10044,7 +10057,7 @@ function renderTOSection(){
   let tos = DATA.filter(d=>d.lv==='TO');
   if(fTm) tos = tos.filter(d=>(d.team||'Other')===fTm);
   if(fSt) tos = tos.filter(d=>d.status===fSt);
-  if(q)   tos = tos.filter(d=>(d.label+d.kr+(d.team||'')+(d.pic||'')).toLowerCase().includes(q));
+  if(q)   tos = tos.filter(d=>(d.label+TL(d.label)+d.kr+(d.team||'')+(d.pic||'')).toLowerCase().includes(q));
 
   if(!showTO || tos.length===0){ el.innerHTML=''; return; }
 
@@ -10073,7 +10086,7 @@ function renderTOSection(){
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px">
         <div style="flex:1;overflow:hidden">
           <div style="font-size:10px;font-weight:600;color:${col};margin-bottom:2px">${to.team||'—'}</div>
-          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${to.label}</div>
+          <div style="font-size:12px;font-weight:500;color:var(--text);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${TL(to.label)}</div>
         </div>
         <span class="status-badge ${stC}" style="margin-left:8px;flex-shrink:0">${stLabel}</span>
       </div>
@@ -10128,7 +10141,7 @@ function renderTable(){
         ${hasK?`<button class="expand-btn" onclick="event.stopPropagation();toggle(${d.id})">${isC?'▶':'▼'}</button>`:''}</td>
       <td><span class="lv-badge lv-${d.lv}">${lvN[d.lv]}</span></td>
       <td style="display:none"><span class="kr-code">${d.kr||''}</span></td>
-      <td class="cell-lbl" title="${(d.label||'').replace(/"/g,'&quot;')}" style="padding-left:${((lvIndent[d.lv]!==undefined?lvIndent[d.lv]:Math.min(d.depth,4))*24)+12}px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.label}</td>
+      <td class="cell-lbl" title="${(d.label||'').replace(/"/g,'&quot;')}" style="padding-left:${((lvIndent[d.lv]!==undefined?lvIndent[d.lv]:Math.min(d.depth,4))*24)+12}px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${TL(d.label)}</td>
       <td style="font-size:11px;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.team||''}</td>
       <td style="font-size:11px;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.pic||'<span style="color:var(--text3)">—</span>'}</td>
       <td style="font-size:11px;color:#6D28D9;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.reviewer?'👁 '+d.reviewer:''}</td>
@@ -10336,7 +10349,7 @@ function renderGantt(){
         const krNode = DATA.find(x=>x.id===to.pid);
         const krTag  = krNode&&krNode.kr ? `<span style="background:${col}15;color:${col};font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;font-family:'IBM Plex Mono',monospace">${krNode.kr}</span>` : '';
 
-        const toLabel = to.label.replace(/^\s+/,'');
+        const toLabel = TL(to.label).replace(/^\s+/,'');
 
         cardsHtml += `
         <div onclick="openEdit(${to.id})" style="background:#fff;border:1px solid var(--border);border-radius:10px;border-top:3px solid ${col};overflow:hidden;cursor:pointer"
@@ -10433,7 +10446,7 @@ function renderGantt(){
 
     const TK_BG = '#0D2137';
     const tkCollapsed = tk ? ganttCollapsedTK.has(tk.id) : false;
-    const tkLabel = tk ? tk.label.replace(/^\s+/,'') : 'Other Initiative';
+    const tkLabel = tk ? TL(tk.label).replace(/^\s+/,'') : 'Other Initiative';
     const tkS = tk ? parseDate(tk.period, false) : null;
     const tkE = tk ? parseDate(tk.period, true)  : null;
     const tkTri = tk ? `<span onclick="event.stopPropagation();ganttToggleTK(${tk.id})" style="cursor:pointer;color:#9BB8D4;font-size:9px;width:12px;text-align:center;flex-shrink:0">${tkCollapsed?'▶':'▼'}</span>` : `<span style="width:12px;flex-shrink:0"></span>`;
@@ -10464,12 +10477,12 @@ function renderGantt(){
         const dueTag = ds==='overdue'?' <span style="color:#B91C1C;font-weight:700">⚠ Overdue</span>':ds==='today'?' <span style="color:#B91C1C;font-weight:700">⏰ Today</span>':'';
         const doneTag = (isDone && !ds)?' <span style="color:#16A34A;font-weight:700">✓ Done</span>':'';
         html+=`<div onclick="openEdit(${d.id})" style="background:${rowBg};padding:4px 14px 4px 48px;font-size:11px;border-bottom:1px solid var(--border-light);position:sticky;left:0;z-index:10;cursor:pointer;display:flex;align-items:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
-          <span style="overflow:hidden;text-overflow:ellipsis;color:${lblColor};${ds?'font-weight:700':''}">${d.label}${dueTag}${doneTag}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;color:${lblColor};${ds?'font-weight:700':''}">${TL(d.label)}${dueTag}${doneTag}</span>
         </div>`;
         html+=`<div style="background:${rowBg};padding:4px 10px;font-size:11px;border-bottom:1px solid var(--border-light);color:${lblColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.pic||'—'}</div>`;
         const barColor = ds ? '#DC2626' : (isDone?'#86C99A':'#94A3B8');
         const barInner=`top:50%;transform:translateY(-50%);height:12px;border-radius:6px;background:${barColor};opacity:${ds?'0.95':'0.85'};box-sizing:border-box`;
-        html+=`<div style="grid-column:3 / span 12;position:relative;background:${rowBg};border-bottom:1px solid var(--border-light);border-left:1px solid var(--border-light);height:26px">${gMonthLines()}${gBar(s,e,barInner,'',d.label)}${gToday()}</div>`;
+        html+=`<div style="grid-column:3 / span 12;position:relative;background:${rowBg};border-bottom:1px solid var(--border-light);border-left:1px solid var(--border-light);height:26px">${gMonthLines()}${gBar(s,e,barInner,'',TL(d.label))}${gToday()}</div>`;
       };
       const renderIN = (d, childTDs)=>{
         const s=parseDate(d.period,false), e=parseDate(d.period,true);
@@ -10484,12 +10497,12 @@ function renderGantt(){
         html+=`<div onclick="openEdit(${d.id})" style="background:${rowBg};padding:5px 14px 5px 24px;font-size:11px;font-weight:500;border-bottom:1px solid var(--border-light);position:sticky;left:0;z-index:10;cursor:pointer;display:flex;align-items:center;gap:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">
           ${inTri}
           <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:${ds?'#B91C1C':'#3A5A78'};flex-shrink:0">IN</span>
-          <span style="overflow:hidden;text-overflow:ellipsis;color:${lblColor};${ds?'font-weight:700':''}">${d.label}${dueTag}${doneTag}</span>
+          <span style="overflow:hidden;text-overflow:ellipsis;color:${lblColor};${ds?'font-weight:700':''}">${TL(d.label)}${dueTag}${doneTag}</span>
         </div>`;
         html+=`<div style="background:${rowBg};padding:5px 10px;font-size:11px;border-bottom:1px solid var(--border-light);color:${lblColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${d.pic||'—'}</div>`;
         const barColor = ds ? '#DC2626' : (isDone?'#86C99A':'#7E9BB8');
         const barInner=`top:50%;transform:translateY(-50%);height:16px;border-radius:8px;background:${barColor};opacity:${ds?'0.95':'0.85'};display:flex;align-items:center;padding:0 5px;font-size:9px;font-weight:600;color:#fff;overflow:hidden;white-space:nowrap;box-sizing:border-box;cursor:pointer`;
-        html+=`<div style="grid-column:3 / span 12;position:relative;background:${rowBg};border-bottom:1px solid var(--border-light);border-left:1px solid var(--border-light);height:30px">${gMonthLines()}${gBar(s,e,barInner,pctStr,d.label+pctStr)}${gToday()}</div>`;
+        html+=`<div style="grid-column:3 / span 12;position:relative;background:${rowBg};border-bottom:1px solid var(--border-light);border-left:1px solid var(--border-light);height:30px">${gMonthLines()}${gBar(s,e,barInner,pctStr,TL(d.label)+pctStr)}${gToday()}</div>`;
       };
       groupINs.forEach(inItem=>{
         const childTDs = groupTDs.filter(td=>Number(td.pid)===Number(inItem.id));
@@ -10599,7 +10612,7 @@ function renderMatrix(){
         onmouseover="this.querySelector('.mt-actions').style.display='flex';this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'"
         onmouseout="this.querySelector('.mt-actions').style.display='none';this.style.boxShadow='none'">
         <div onclick="openEdit(${d.id})" style="cursor:pointer">
-          <div style="font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};line-height:1.4;margin-bottom:6px">${d.label}${dueTag}</div>
+          <div style="font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};line-height:1.4;margin-bottom:6px">${TL(d.label)}${dueTag}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
             <span style="font-size:10px;color:var(--text2)">${d.team||'—'} · ${d.period||'—'}</span>
             <div style="display:flex;align-items:center;gap:5px">
@@ -10664,7 +10677,7 @@ function renderMatrix(){
     <div style="margin-top:12px;background:#fff;border:1px dashed var(--border);border-radius:8px;padding:12px 16px">
       <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:8px">⚠ ${t('thImp')}/${t('thUrg')} unset (${Q.unset.length})</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px">
-        ${Q.unset.map(d=>{const ds=dueStatus(d);const bg=ds==='overdue'?'#FEE2E2':ds==='today'?'#FEF2F2':'var(--gray-bg)';const bd=ds?'#EF4444':'var(--border)';const cl=ds?'#B91C1C':'var(--text2)';return `<span onclick="openEdit(${d.id})" style="cursor:pointer;background:${bg};border:1px solid ${bd};border-radius:6px;padding:4px 10px;font-size:11px;color:${cl};${ds?'font-weight:700':''}">${d.label}</span>`;}).join('')}
+        ${Q.unset.map(d=>{const ds=dueStatus(d);const bg=ds==='overdue'?'#FEE2E2':ds==='today'?'#FEF2F2':'var(--gray-bg)';const bd=ds?'#EF4444':'var(--border)';const cl=ds?'#B91C1C':'var(--text2)';return `<span onclick="openEdit(${d.id})" style="cursor:pointer;background:${bg};border:1px solid ${bd};border-radius:6px;padding:4px 10px;font-size:11px;color:${cl};${ds?'font-weight:700':''}">${TL(d.label)}</span>`;}).join('')}
       </div>
     </div>`:''}
 
@@ -10691,7 +10704,7 @@ function renderMatrix(){
           onmouseout="this.querySelector('.mt-rev-actions').style.display='none';this.style.boxShadow='none'">
           <span style="font-size:14px;flex-shrink:0;margin-top:1px">👁</span>
           <div style="flex:1;min-width:0">
-            <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">${d.label}${dueTag}</div>
+            <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">${TL(d.label)}${dueTag}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span style="font-size:10px;color:var(--text2)">${d.team||'—'} · ${d.period||'—'}</span>
               ${impLabel?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEE2E2;color:#991B1B">${impLabel}</span>`:''}
@@ -10730,7 +10743,7 @@ function renderMatrix(){
           onmouseout="this.querySelector('.mt-done-actions').style.display='none';this.style.opacity='.8';this.style.boxShadow='none'">
           <span style="font-size:13px;flex-shrink:0">✅</span>
           <div style="flex:1;min-width:0">
-            <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through;cursor:pointer">${d.label}</div>
+            <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through;cursor:pointer">${TL(d.label)}</div>
             <div style="font-size:10px;color:var(--text3);margin-top:2px">${d.team||'—'} · ${d.period||'—'} ${pct!==null?'· '+pct+'%':''}</div>
           </div>
           <div class="mt-done-actions" style="display:none;gap:4px;flex-shrink:0">
@@ -10777,7 +10790,7 @@ function parentOptions(lv, currentPid){
   if(!candidates.length) return '';
   const opts = candidates.map(d=>{
     const sel = d.id===currentPid ? ' selected':'';
-    const label = (d.kr?d.kr+' ':'')+d.label.slice(0,40);
+    const label = (d.kr?d.kr+' ':'')+TL(d.label).slice(0,40);
     return `<option value="${d.id}"${sel}>${label}</option>`;
   }).join('');
   const parentLabel = {TD:t('parentInit'), IN:t('parentTeamKR'), TK:t('parentCompKR'), KR:t('parentObj')}[lv]||t('parentItem');
@@ -10818,7 +10831,7 @@ function openEdit(id){
     <div class="p-sec"><div class="p-sec-title">${t('panelBasic')}</div>
       <div class="field-row"><div class="field-group"><div class="field-lbl">${t('fldLevel')}</div><select class="field-sel" id="f-lv" onchange="onEditLevelChange()">${lvO}</select></div><div class="field-group"><div class="field-lbl">${t('fldKR')} <span style="font-size:10px;color:var(--text3)">${t('fldKRAuto')}</span></div><input class="field-input" id="f-kr" value="${d.kr||''}" style="background:var(--gray-bg);color:var(--text2)" readonly></div></div>
       <div id="edit-parent-wrap">${parentSel}</div>
-      <div class="field-group"><div class="field-lbl">${t('fldContent')}</div><input class="field-input" id="f-label" value="${d.label}"></div>
+      <div class="field-group"><div class="field-lbl">${t('fldContent')}</div><input class="field-input" id="f-label" value="${d.label}">${TL(d.label)!==d.label?`<div style="font-size:11px;color:var(--text2);margin-top:4px;padding:5px 8px;background:var(--gray-bg);border-radius:5px">🌐 ${TL(d.label)}</div>`:''}</div>
       <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" value="${d.team||''}" ></div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" value="${d.pic||''}" ></div></div>
       ${(d.lv==='TD'||d.lv==='IN')?`<div class="field-group"><div class="field-lbl">${t('fldReviewer')} <span style="font-size:10px;color:var(--text3)">${t('fldReviewerHint')}</span></div><input class="field-input" id="f-reviewer" value="${d.reviewer||''}" placeholder="${t('fldReviewerPh')}"></div>`:''}
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml(d)}</div>
@@ -10985,7 +10998,7 @@ function selectNewLv(lv){
       if(teamFilterRow) teamFilterRow.style.display='none';
       const candidates = DATA.filter(d=>d.lv===parentLv && d.id!==editId);
       pidSel.innerHTML = '<option value="0">-- Select --</option>' +
-        candidates.map(c=>`<option value="${c.id}">${(c.kr?c.kr+' ':'')}${c.label.slice(0,45)}</option>`).join('');
+        candidates.map(c=>`<option value="${c.id}">${(c.kr?c.kr+' ':'')}${TL(c.label).slice(0,45)}</option>`).join('');
     }
   } else if(parentRow){
     parentRow.style.display='none';
@@ -11048,7 +11061,7 @@ function onTeamFilterChange(){
       return;
     }
     pidSel.innerHTML = '<option value="0">-- Select Initiative --</option>' +
-      ins.map(c=>`<option value="${c.id}">${c.label.slice(0,55)}</option>`).join('');
+      ins.map(c=>`<option value="${c.id}">${TL(c.label).slice(0,55)}</option>`).join('');
   } else {
     // IN: 선택한 팀의 Team KR(TK)만 표시
     const tks = DATA.filter(d=>d.lv==='TK' && d.team===selectedTeam);
@@ -11057,7 +11070,7 @@ function onTeamFilterChange(){
       return;
     }
     pidSel.innerHTML = '<option value="0">-- Select Team KR --</option>' +
-      tks.map(c=>`<option value="${c.id}">${(c.kr?'['+c.kr+'] ':'')}${c.label.slice(0,50)}</option>`).join('');
+      tks.map(c=>`<option value="${c.id}">${(c.kr?'['+c.kr+'] ':'')}${TL(c.label).slice(0,50)}</option>`).join('');
   }
 }
 
@@ -11447,13 +11460,447 @@ const I18N = {
     selectTeam:'-- Select Team --', selectItem:'-- Select --', selectFirst:'← Select a team first',
     btnSave:'Save', btnCancel:'Cancel', btnDelete:'Delete',
     fbCount:'{n} items',
+
+    pY:'{y}', pQ:'{y} Q{q}', pM:'{mn} {y}',
+    monNames:'Jan,Feb,Mar,Apr,May,Jun,Jul,Aug,Sep,Oct,Nov,Dec',
+
+    /* Boosting meeting */
+    navBoost:'Boosting Feedback', navSched:'Meeting Slots',
+    bfScopeCo:'Company Feedback', bfScopeTeam:'Team Feedback',
+    bfYear:'By year', bfQuarter:'By quarter', bfMonth:'By month',
+    bfCum:'Cumulative', bfReload:'↻ Reload', bfPrint:'🖨 Print',
+    bfNoteTitle:'Boosting Meeting Feedback Card',
+    bfNoteCum:'cumulative (everything up to the end of the period)', bfNoteRange:'items falling in this period',
+    bfNoteBody:'OKR data keeps no point-in-time record. <b>Saving freezes the targets and actuals as they are now into this card</b> — reopen it later and you still see the numbers from the meeting.',
+    bfCompany:'Company', bfTeamSuffix:'',
+    bfFrozen:'🔒 Frozen figures',
+    bfUpdatedAt:'Last edited', bfNotWritten:'Not written yet',
+    bfSecCo:'Objective → Key Result',
+    bfSecTO:'Team Objective', bfSecTK:'Team KR → Initiative',
+    bfAvg:'Avg. attainment', bfDoneOf:'Done',
+    bfShowAll:'Show all {n} ▾', bfFold:'Collapse ▴',
+    bfHiddenNote:'Showing the {c} Initiatives with the lowest attainment · {h} hidden',
+    bfNoTO:'This team has no Team Objective (TO) registered.',
+    bfNoRows:'No items fall in this period.',
+    bfThLv:'Level', bfThLabel:'Content', bfThTeam:'Team',
+    bfFb:'Feedback', bfFbHint:'Challenges that mattered & what we learned',
+    bfFf:'Feedforward', bfFfHint:'Goals to take on & key ideas (= what comes next)',
+    bfAsk:'Questions & Requests', bfAskHint:'What to ask leadership, support needed',
+    bfExec:'Leadership Feedback', bfExecOnly:'(leadership/admin only)', bfExecNone:'None yet',
+    bfExecSave:'Save leadership feedback',
+    bfSave:'💾 Save', bfLive:'↻ Reload from current data', bfDel:'Delete',
+    bfWillSave:'{n} items will be saved with this card',
+    bfCoOnly:'Company feedback is written by leadership/admin only',
+    bfTeamOnly:'You can only write your own team\'s card (viewing is open)',
+    bfPickTeam:'Select a team.', bfLoading:'Loading…',
+    bfLoadFail:'Could not load feedback', bfNeedLogin:' (login required)',
+    bfLoaded:'Loaded', bfSaved:'Saved', bfSaveFail:'Save failed',
+    bfExecSaved:'Leadership feedback saved',
+    bfDeleted:'Deleted', bfDelFail:'Delete failed',
+    bfConfirmDel:'Delete this card? All feedback written on it will be lost.',
+
+    /* Meeting slots */
+    scTitle:'Boosting Meeting Slots', scSub:'Teams pick one of the times leadership opened',
+    scPast:'Include past slots',
+    scDate:'Date', scStart:'Start', scEnd:'End', scCap:'Teams',
+    scDur:'Length', scD30:'30 min', scD60:'1 hr', scD90:'1 hr 30', scD120:'2 hr',
+    scNote:'Note (venue etc.)', scNotePh:'e.g. HQ 3F meeting room',
+    scAdd:'＋ Open a slot',
+    scHelp:'Pick one of the times leadership opened — <b>one slot per team per day</b>. If you picked wrong, you can cancel your own booking.',
+    scMine:'My team\'s booking',
+    scEmptyAdmin:'No slots opened yet. Add one above.',
+    scEmptyUser:'No slots open yet. They appear here once leadership adds them.',
+    scLeft:'{n}/{c} left', scFull:'Full',
+    scBook:'Book', scDel:'Delete', scCancel:'Cancel booking',
+    scDow:'Sun,Mon,Tue,Wed,Thu,Fri,Sat',
+    scNeedTime:'Fill in the date and time',
+    scAdded:'Slot opened', scAddFail:'Could not open slot',
+    scConfirmDel:'Delete this slot? Its bookings will be removed too.',
+    scDeleted:'Deleted', scDelFail:'Delete failed',
+    scBooked:'{t} booked', scBookFail:'Booking failed',
+    scUnbooked:'Booking cancelled', scUnbookFail:'Cancel failed',
+    scLoadFail:'Could not load slots', scLoaded:'Loaded',
+
+    /* Content translation */
+    trOn:'Translating content…', trDone:'Translated {n} lines',
+    trNoKey:'A Gemini API key is needed to translate content. Set it in the account menu (admin can set a shared key for everyone).',
+    trFail:'Translation failed — showing original text',
+    trPartial:'{n} lines not translated yet — press ↻ to retry',
+  },
+  ko: {
+    new:'+ 새로 만들기', expand:'▼ 펼치기', collapse:'▶ 접기',
+    search:'🔍 검색...', level:'레벨', allTeam:'전체 팀',
+    inProgress:'진행 중', notStarted:'미착수', done:'완료',
+    all:'전체', important:'중요', urgent:'긴급', review:'👁 검토',
+    hideDone:'✓ 완료 숨기기', hideDoneOn:'✓ 완료 보기', hideDoneOff:'✓ 완료 숨기기',
+    save:'💾 저장', load:'📂 불러오기', reset:'초기화',
+    thLevel:'레벨', thContent:'목표 / 내용', thPic:'담당', thReviewer:'검토자',
+    thPeriod:'기간', thTarget:'목표', thActual:'실적', thAttain:'달성률',
+    thImp:'중요도', thUrg:'긴급도', thRev:'검토', thStatus:'상태',
+    saveInd:'저장됨',
+    stDone:'완료', stInProgress:'진행 중', stNotStarted:'미착수',
+    clickTo:'클릭: 바꾸기 → ', changeToSuffix:'',
+    imp:'중요', lessImp:'덜 중요', urg:'긴급', lessUrg:'덜 긴급', setLabel:'설정',
+    reviewLabel:'검토', reviewTitle:'검토 항목으로 표시',
+    subObj:'전사 목표', subKR:'전사 KR', subTK:'팀 KR',
+    subIN:'팀 실행과제', subTD:'개인 할 일',
+    lblKRRate:'KR 달성률', subKRAvg:'전사 KR 평균', cardDone:'완료',
+    q1Title:'먼저 하기', q1Sub:'중요 + 긴급',
+    q2Title:'일정 잡기', q2Sub:'중요 + 덜 긴급',
+    q3Title:'위임하기', q3Sub:'덜 중요 + 긴급',
+    q4Title:'나중에', q4Sub:'덜 중요 + 덜 긴급',
+    q1Empty:'없음 — 좋습니다!', qEmpty:'없음',
+    impAxis:'중요도', urgAxisHigh:'긴급 →', urgAxisLow:'← 덜 긴급',
+    btnReview:'👁 검토', btnUnreview:'👁 검토 해제', btnDone:'✓ 완료',
+    impUp:'↑중요', impDown:'↓중요', urgUp:'↑긴급', urgDown:'↓긴급',
+    reviewEmpty:'검토 항목이 없습니다. OKR List 에서 <b>👁 검토</b> 를 누르세요.',
+    doneCount:'완료', ipCount:'진행 중',
+    lg1:'중요+긴급', lg2:'중요+덜 긴급', lg3:'덜 중요+긴급', lg4:'덜 중요+덜 긴급',
+    toastSaved:'저장했습니다', toastDeleted:'삭제했습니다',
+    toastCSV:'CSV 를 내려받았습니다',
+    toastExport:'데이터를 저장했습니다 — JSON 파일을 잘 보관하세요',
+    toastImportOk:'불러왔습니다 — {n}건',
+    toastImportFail:'불러오지 못했습니다 — JSON 파일이 맞는지 확인하세요',
+    toastReset:'초기화했습니다',
+    toastNasOk:'NAS 연결됨 — 실시간 공유 중',
+    toastNasFail:'NAS 연결 실패 — 로컬 모드',
+    toastNasSync:'다른 사용자의 변경을 반영했습니다',
+    toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
+    confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
+    confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    confirmDelete:'이 항목을 지울까요?\n하위 항목도 함께 지워집니다.',
+    panelEdit:'수정', panelNew:'새 항목 추가',
+    panelBasic:'기본 정보', panelGoal:'목표 / 실적 / 상태', panelGoalNew:'목표 / 상태',
+    fldLevel:'레벨', fldLevelSel:'레벨 선택', fldKR:'KR 코드', fldKRAuto:'(자동)',
+    fldContent:'내용', fldContentPh:'내용을 입력하세요',
+    fldPeriod:'기간', fldAllYear:'연중',
+    fldTarget:'목표', fldActual:'실적', fldStatus:'상태',
+    fldImp:'중요도', fldUrg:'긴급도', fldUnset:'미설정',
+    fldFbNew:'피드백 추가', fldFbPh:'내용을 입력하세요...', fldFbNone:'아직 피드백이 없습니다',
+    fldReviewer:'검토자', fldReviewerHint:'— My Tasks 의 검토 칸에 표시됩니다',
+    fldReviewerPh:'검토자 이름 (없으면 비워 두세요)', fldReviewerPhNew:'검토자 이름',
+    parentInit:'상위 실행과제', parentTeamKR:'상위 팀 KR',
+    parentCompKR:'상위 전사 KR', parentCompKRSel:'상위 전사 KR 선택',
+    parentObj:'상위 Objective 선택', parentItem:'상위 항목',
+    selectTeam:'-- 팀 선택 --', selectItem:'-- 선택 --', selectFirst:'← 팀을 먼저 고르세요',
+    btnSave:'저장', btnCancel:'취소', btnDelete:'삭제',
+    fbCount:'{n}건',
+
+    pY:'{y}년', pQ:'{y}년 {q}분기', pM:'{y}년 {m}월',
+    monNames:'1월,2월,3월,4월,5월,6월,7월,8월,9월,10월,11월,12월',
+
+    /* 부스팅 미팅 */
+    navBoost:'부스팅 피드백', navSched:'미팅 일정',
+    bfScopeCo:'전사 피드백', bfScopeTeam:'팀별 피드백',
+    bfYear:'연별', bfQuarter:'분기별', bfMonth:'월별',
+    bfCum:'누계로 보기', bfReload:'↻ 새로고침', bfPrint:'🖨 인쇄',
+    bfNoteTitle:'부스팅 미팅 피드백 카드',
+    bfNoteCum:'누계(기간 종료일까지 전체)', bfNoteRange:'해당 기간에 걸친 항목',
+    bfNoteBody:'OKR 데이터에는 시점별 기록이 없습니다. <b>저장하면 그때의 목표·실적이 카드에 함께 굳습니다</b> — 나중에 이 카드를 다시 열면 회의 당시 숫자가 그대로 보입니다.',
+    bfCompany:'전사', bfTeamSuffix:' 팀',
+    bfFrozen:'🔒 저장된 시점의 값',
+    bfUpdatedAt:'최종 수정', bfNotWritten:'아직 작성 전',
+    bfSecCo:'Objective → Key Result',
+    bfSecTO:'Team Objective', bfSecTK:'Team KR → Initiative',
+    bfAvg:'평균 달성률', bfDoneOf:'완료',
+    bfShowAll:'전체 {n}건 보기 ▾', bfFold:'접기 ▴',
+    bfHiddenNote:'Initiative 는 달성률이 낮은 순으로 {c}건만 보이는 중 · 나머지 {h}건 숨김',
+    bfNoTO:'이 팀은 팀 Objective(TO)가 등록돼 있지 않습니다.',
+    bfNoRows:'해당 기간에 해당하는 항목이 없습니다.',
+    bfThLv:'구분', bfThLabel:'내용', bfThTeam:'팀',
+    bfFb:'Feedback', bfFbHint:'의미 있었던 도전 & 배운 점',
+    bfFf:'Feedforward', bfFfHint:'앞으로 도전할 목표 & 핵심 아이디어 (= 앞으로 할 일)',
+    bfAsk:'질문 & 요청사항', bfAskHint:'경영진에게 묻고 싶은 것, 필요한 지원',
+    bfExec:'경영자 피드백', bfExecOnly:'(경영진·관리자만 작성)', bfExecNone:'아직 없음',
+    bfExecSave:'경영자 피드백 저장',
+    bfSave:'💾 저장', bfLive:'↻ 현재 데이터로 새로 불러오기', bfDel:'삭제',
+    bfWillSave:'항목 {n}건이 이 카드에 함께 저장됩니다',
+    bfCoOnly:'전사 피드백은 경영진·관리자만 작성합니다',
+    bfTeamOnly:'본인 팀 카드만 작성할 수 있습니다 (보기는 가능)',
+    bfPickTeam:'팀을 선택하세요.', bfLoading:'불러오는 중…',
+    bfLoadFail:'피드백을 불러오지 못했습니다', bfNeedLogin:' (로그인 필요)',
+    bfLoaded:'불러왔습니다', bfSaved:'저장했습니다', bfSaveFail:'저장 실패',
+    bfExecSaved:'경영자 피드백을 저장했습니다',
+    bfDeleted:'삭제했습니다', bfDelFail:'삭제 실패',
+    bfConfirmDel:'이 카드를 삭제할까요? 작성한 피드백이 모두 지워집니다.',
+
+    /* 미팅 일정 */
+    scTitle:'부스팅 미팅 일정', scSub:'경영자가 올린 시간 중에서 팀이 하나를 고릅니다',
+    scPast:'지난 일정도 보기',
+    scDate:'날짜', scStart:'시작', scEnd:'종료', scCap:'정원(팀)',
+    scDur:'길이', scD30:'30분', scD60:'1시간', scD90:'1시간 30분', scD120:'2시간',
+    scNote:'메모 (장소 등)', scNotePh:'예: 본사 3층 회의실',
+    scAdd:'＋ 가능 시간 등록',
+    scHelp:'경영자가 올린 가능한 시간 중 <b>팀당 하루에 하나</b>를 고를 수 있습니다. 잘못 골랐으면 본인이 예약한 것은 직접 취소할 수 있습니다.',
+    scMine:'내 팀 예약',
+    scEmptyAdmin:'아직 등록한 시간이 없습니다. 위에서 추가하세요.',
+    scEmptyUser:'아직 열린 시간이 없습니다. 경영자가 등록하면 여기 뜹니다.',
+    scLeft:'남은 자리 {n}/{c}', scFull:'마감',
+    scBook:'예약', scDel:'삭제', scCancel:'예약 취소',
+    scDow:'일,월,화,수,목,금,토',
+    scNeedTime:'날짜와 시간을 채우세요',
+    scAdded:'등록했습니다', scAddFail:'등록 실패',
+    scConfirmDel:'이 시간을 삭제할까요? 예약도 함께 지워집니다.',
+    scDeleted:'삭제했습니다', scDelFail:'삭제 실패',
+    scBooked:'{t} 예약 완료', scBookFail:'예약 실패',
+    scUnbooked:'예약을 취소했습니다', scUnbookFail:'취소 실패',
+    scLoadFail:'일정을 불러오지 못했습니다', scLoaded:'불러왔습니다',
+
+    /* 내용 자동 번역 */
+    trOn:'내용을 번역하는 중…', trDone:'{n}줄 번역 완료',
+    trNoKey:'내용을 번역하려면 Gemini API 키가 필요합니다. 계정 메뉴에서 등록하세요 (관리자가 공용 키를 넣어 두면 전원 사용 가능).',
+    trFail:'번역 실패 — 원문 그대로 보여줍니다',
+    trPartial:'{n}줄은 아직 번역 전입니다 — ↻ 를 눌러 다시 시도하세요',
+  },
+  vi: {
+    new:'+ Thêm mới', expand:'▼ Mở rộng', collapse:'▶ Thu gọn',
+    search:'🔍 Tìm kiếm...', level:'Cấp', allTeam:'Tất cả nhóm',
+    inProgress:'Đang thực hiện', notStarted:'Chưa bắt đầu', done:'Hoàn thành',
+    all:'Tất cả', important:'Quan trọng', urgent:'Khẩn cấp', review:'👁 Xem xét',
+    hideDone:'✓ Ẩn mục hoàn thành', hideDoneOn:'✓ Hiện mục hoàn thành', hideDoneOff:'✓ Ẩn mục hoàn thành',
+    save:'💾 Lưu', load:'📂 Tải lên', reset:'Đặt lại',
+    thLevel:'Cấp', thContent:'Mục tiêu / Nội dung', thPic:'Phụ trách', thReviewer:'Người xem xét',
+    thPeriod:'Thời gian', thTarget:'Chỉ tiêu', thActual:'Thực tế', thAttain:'Tỷ lệ đạt',
+    thImp:'Ưu tiên', thUrg:'Khẩn cấp', thRev:'Xem xét', thStatus:'Trạng thái',
+    saveInd:'Đã lưu',
+    stDone:'Hoàn thành', stInProgress:'Đang thực hiện', stNotStarted:'Chưa bắt đầu',
+    clickTo:'Nhấn: đổi thành ', changeToSuffix:'',
+    imp:'Quan trọng', lessImp:'Ít quan trọng', urg:'Khẩn cấp', lessUrg:'Ít khẩn cấp', setLabel:'Đặt',
+    reviewLabel:'Xem xét', reviewTitle:'Đánh dấu là mục cần xem xét',
+    subObj:'Mục tiêu công ty', subKR:'KR công ty', subTK:'KR nhóm',
+    subIN:'Công việc nhóm', subTD:'Việc cá nhân',
+    lblKRRate:'Tỷ lệ KR', subKRAvg:'TB KR công ty', cardDone:'Hoàn thành',
+    q1Title:'Làm ngay', q1Sub:'Quan trọng + Khẩn cấp',
+    q2Title:'Lên lịch', q2Sub:'Quan trọng + Ít khẩn cấp',
+    q3Title:'Giao việc', q3Sub:'Ít quan trọng + Khẩn cấp',
+    q4Title:'Để sau', q4Sub:'Ít quan trọng + Ít khẩn cấp',
+    q1Empty:'Không có — Tốt lắm!', qEmpty:'Không có',
+    impAxis:'Mức ưu tiên', urgAxisHigh:'Khẩn cấp →', urgAxisLow:'← Ít khẩn cấp',
+    btnReview:'👁 Xem xét', btnUnreview:'👁 Bỏ xem xét', btnDone:'✓ Hoàn thành',
+    impUp:'↑Q.trọng', impDown:'↓Q.trọng', urgUp:'↑K.cấp', urgDown:'↓K.cấp',
+    reviewEmpty:'Chưa có mục xem xét. Nhấn <b>👁 Xem xét</b> trong OKR List.',
+    doneCount:'Hoàn thành', ipCount:'Đang thực hiện',
+    lg1:'Q.trọng+K.cấp', lg2:'Q.trọng+Ít k.cấp', lg3:'Ít q.trọng+K.cấp', lg4:'Ít q.trọng+Ít k.cấp',
+    toastSaved:'Đã lưu', toastDeleted:'Đã xóa',
+    toastCSV:'Đã tải CSV',
+    toastExport:'Đã lưu dữ liệu — Hãy giữ kỹ tệp JSON',
+    toastImportOk:'Đã tải — {n} mục',
+    toastImportFail:'Tải thất bại — Kiểm tra tệp có phải JSON hợp lệ',
+    toastReset:'Đã đặt lại',
+    toastNasOk:'Đã kết nối NAS — Chia sẻ thời gian thực',
+    toastNasFail:'Kết nối NAS thất bại — Chế độ cục bộ',
+    toastNasSync:'Đã áp dụng thay đổi từ người khác',
+    toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
+    confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
+    confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    confirmDelete:'Xóa mục này?\nCác mục con cũng sẽ bị xóa.',
+    panelEdit:'Sửa', panelNew:'Thêm mục mới',
+    panelBasic:'Thông tin cơ bản', panelGoal:'Chỉ tiêu / Thực tế / Trạng thái', panelGoalNew:'Chỉ tiêu / Trạng thái',
+    fldLevel:'Cấp', fldLevelSel:'Chọn cấp', fldKR:'Mã KR', fldKRAuto:'(tự động)',
+    fldContent:'Nội dung', fldContentPh:'Nhập nội dung',
+    fldPeriod:'Thời gian', fldAllYear:'Cả năm',
+    fldTarget:'Chỉ tiêu', fldActual:'Thực tế', fldStatus:'Trạng thái',
+    fldImp:'Mức ưu tiên', fldUrg:'Mức khẩn cấp', fldUnset:'Chưa đặt',
+    fldFbNew:'Thêm phản hồi', fldFbPh:'Nhập nội dung...', fldFbNone:'Chưa có phản hồi',
+    fldReviewer:'Người xem xét', fldReviewerHint:'— hiển thị ở mục Xem xét trong My Tasks',
+    fldReviewerPh:'Tên người xem xét (để trống nếu không có)', fldReviewerPhNew:'Tên người xem xét',
+    parentInit:'Initiative cấp trên', parentTeamKR:'KR nhóm cấp trên',
+    parentCompKR:'KR công ty cấp trên', parentCompKRSel:'Chọn KR công ty cấp trên',
+    parentObj:'Chọn Objective cấp trên', parentItem:'Mục cấp trên',
+    selectTeam:'-- Chọn nhóm --', selectItem:'-- Chọn --', selectFirst:'← Hãy chọn nhóm trước',
+    btnSave:'Lưu', btnCancel:'Hủy', btnDelete:'Xóa',
+    fbCount:'{n} mục',
+
+    pY:'Năm {y}', pQ:'Q{q}/{y}', pM:'Th{m}/{y}',
+    monNames:'Th1,Th2,Th3,Th4,Th5,Th6,Th7,Th8,Th9,Th10,Th11,Th12',
+
+    /* Họp Boosting */
+    navBoost:'Phản hồi Boosting', navSched:'Lịch họp',
+    bfScopeCo:'Phản hồi toàn công ty', bfScopeTeam:'Phản hồi theo nhóm',
+    bfYear:'Theo năm', bfQuarter:'Theo quý', bfMonth:'Theo tháng',
+    bfCum:'Xem lũy kế', bfReload:'↻ Tải lại', bfPrint:'🖨 In',
+    bfNoteTitle:'Thẻ phản hồi họp Boosting',
+    bfNoteCum:'lũy kế (toàn bộ đến hết kỳ)', bfNoteRange:'các mục thuộc kỳ này',
+    bfNoteBody:'Dữ liệu OKR không lưu theo mốc thời gian. <b>Khi lưu, chỉ tiêu và thực tế tại thời điểm đó được đóng băng vào thẻ</b> — mở lại sau này vẫn thấy đúng con số của buổi họp.',
+    bfCompany:'Toàn công ty', bfTeamSuffix:'',
+    bfFrozen:'🔒 Số liệu đã đóng băng',
+    bfUpdatedAt:'Sửa lần cuối', bfNotWritten:'Chưa viết',
+    bfSecCo:'Objective → Key Result',
+    bfSecTO:'Team Objective', bfSecTK:'Team KR → Initiative',
+    bfAvg:'Tỷ lệ đạt trung bình', bfDoneOf:'Hoàn thành',
+    bfShowAll:'Xem tất cả {n} mục ▾', bfFold:'Thu gọn ▴',
+    bfHiddenNote:'Initiative đang hiện {c} mục có tỷ lệ đạt thấp nhất · ẩn {h} mục còn lại',
+    bfNoTO:'Nhóm này chưa đăng ký Team Objective (TO).',
+    bfNoRows:'Không có mục nào thuộc kỳ này.',
+    bfThLv:'Cấp', bfThLabel:'Nội dung', bfThTeam:'Nhóm',
+    bfFb:'Feedback', bfFbHint:'Thử thách có ý nghĩa & bài học rút ra',
+    bfFf:'Feedforward', bfFfHint:'Mục tiêu sẽ thử thách & ý tưởng cốt lõi (= việc sắp làm)',
+    bfAsk:'Câu hỏi & Đề nghị', bfAskHint:'Điều muốn hỏi ban lãnh đạo, hỗ trợ cần thiết',
+    bfExec:'Phản hồi của lãnh đạo', bfExecOnly:'(chỉ lãnh đạo·quản trị viên)', bfExecNone:'Chưa có',
+    bfExecSave:'Lưu phản hồi lãnh đạo',
+    bfSave:'💾 Lưu', bfLive:'↻ Tải lại theo dữ liệu hiện tại', bfDel:'Xóa',
+    bfWillSave:'{n} mục sẽ được lưu kèm thẻ này',
+    bfCoOnly:'Phản hồi toàn công ty chỉ lãnh đạo·quản trị viên được viết',
+    bfTeamOnly:'Chỉ viết được thẻ của nhóm mình (vẫn xem được nhóm khác)',
+    bfPickTeam:'Hãy chọn nhóm.', bfLoading:'Đang tải…',
+    bfLoadFail:'Không tải được phản hồi', bfNeedLogin:' (cần đăng nhập)',
+    bfLoaded:'Đã tải', bfSaved:'Đã lưu', bfSaveFail:'Lưu thất bại',
+    bfExecSaved:'Đã lưu phản hồi của lãnh đạo',
+    bfDeleted:'Đã xóa', bfDelFail:'Xóa thất bại',
+    bfConfirmDel:'Xóa thẻ này? Toàn bộ phản hồi đã viết sẽ mất.',
+
+    /* Lịch họp */
+    scTitle:'Lịch họp Boosting', scSub:'Nhóm chọn một trong các khung giờ lãnh đạo đã mở',
+    scPast:'Xem cả lịch đã qua',
+    scDate:'Ngày', scStart:'Bắt đầu', scEnd:'Kết thúc', scCap:'Số nhóm',
+    scDur:'Thời lượng', scD30:'30 phút', scD60:'1 giờ', scD90:'1 giờ 30', scD120:'2 giờ',
+    scNote:'Ghi chú (địa điểm…)', scNotePh:'VD: Phòng họp tầng 3 trụ sở',
+    scAdd:'＋ Mở khung giờ',
+    scHelp:'Chọn một khung giờ lãnh đạo đã mở — <b>mỗi nhóm một khung mỗi ngày</b>. Nếu chọn nhầm, bạn có thể tự hủy đặt chỗ của mình.',
+    scMine:'Đặt chỗ của nhóm tôi',
+    scEmptyAdmin:'Chưa mở khung giờ nào. Hãy thêm ở trên.',
+    scEmptyUser:'Chưa có khung giờ nào. Sẽ hiện ở đây khi lãnh đạo mở.',
+    scLeft:'Còn {n}/{c} chỗ', scFull:'Đã đầy',
+    scBook:'Đặt chỗ', scDel:'Xóa', scCancel:'Hủy đặt chỗ',
+    scDow:'CN,T2,T3,T4,T5,T6,T7',
+    scNeedTime:'Hãy điền ngày và giờ',
+    scAdded:'Đã mở khung giờ', scAddFail:'Mở thất bại',
+    scConfirmDel:'Xóa khung giờ này? Các đặt chỗ cũng sẽ mất.',
+    scDeleted:'Đã xóa', scDelFail:'Xóa thất bại',
+    scBooked:'Đã đặt chỗ cho {t}', scBookFail:'Đặt chỗ thất bại',
+    scUnbooked:'Đã hủy đặt chỗ', scUnbookFail:'Hủy thất bại',
+    scLoadFail:'Không tải được lịch', scLoaded:'Đã tải',
+
+    /* Dịch nội dung */
+    trOn:'Đang dịch nội dung…', trDone:'Đã dịch {n} dòng',
+    trNoKey:'Cần khóa Gemini API để dịch nội dung. Hãy đăng ký trong menu tài khoản (quản trị viên đặt khóa dùng chung thì mọi người đều dùng được).',
+    trFail:'Dịch thất bại — hiển thị nguyên văn',
+    trPartial:'Còn {n} dòng chưa dịch — nhấn ↻ để thử lại',
   }
+
 };
 
-let currentLang = 'en';
+let currentLang = (function(){ try{ return localStorage.getItem('hd_okr_lang') || 'en'; }catch(e){ return 'en'; } })();
 function t(key){ return (I18N[currentLang]||I18N.en)[key] || (I18N.en[key]) || key; }
 
-function setLang(lang){ currentLang='en'; renderTable(); }
+/* ═══════════════════════════════════════════════════════════════════
+   언어
+
+   두 층이 있다.
+     1. 화면 낱말 — I18N 사전(en/ko/vi). t() 로 꺼낸다. 즉시.
+     2. 내용     — 직원이 써 넣은 문장(항목 내용·피드백). 서버가 번역해
+                   캐시에 쌓아 두고, TL() 로 꺼낸다.
+
+   TL 은 "보여줄 때"만 쓴다. 편집칸·저장·CSV 는 반드시 원문을 쓴다.
+   번역문으로 저장해 버리면 원문이 날아가기 때문이다.
+   ═══════════════════════════════════════════════════════════════════ */
+
+var TR = { lang: '', map: {}, busy: false, missing: 0 };
+
+/* 내용 번역 꺼내기. 없으면 원문 그대로. */
+function TL(s){
+  if(s == null || s === '') return s;
+  var k = String(s);
+  return (TR.lang === currentLang && TR.map[k]) || k;
+}
+
+/* 번역이 필요한 문장 모으기 — 항목 내용과 피드백 본문 */
+function trCollect(){
+  var seen = {}, out = [];
+  function add(v){
+    var s = String(v == null ? '' : v).trim();
+    if(!s || s.length > 400 || seen[s]) return;
+    if(!/[A-Za-z가-힣]/.test(s)) return;      // 숫자·기호뿐이면 번역할 게 없다
+    seen[s] = 1; out.push(s);
+  }
+  (DATA || []).forEach(function(r){
+    add(r.label);
+    (r.feedbacks || []).forEach(function(f){ add(f && f.text); });
+  });
+  if(BF && BF.cards) Object.keys(BF.cards).forEach(function(k){
+    var c = BF.cards[k];
+    add(c.feedback); add(c.feedforward); add(c.ask); add(c.exec);
+    (c.snapshot || []).forEach(function(r){ add(r.label); });
+  });
+  return out;
+}
+
+/* 서버 캐시에서 받아온다.
+   fill=true 일 때만 빠진 것을 Gemini 로 채운다 —
+   앱을 열 때마다 번역을 돌리면 남의 API 할당량을 태우게 되므로,
+   사람이 언어를 고른 순간에만 채운다. */
+async function trSync(fill){
+  if(TR.busy) return;
+  var lang = currentLang, texts = trCollect();
+  if(!texts.length){ TR.lang = lang; TR.map = {}; return; }
+  TR.busy = true;
+  try{
+    var got = await okrApi('tr_get', {lang: lang, texts: texts});
+    TR.lang = lang;
+    TR.map  = got.map || {};
+
+    var missing = texts.filter(function(x){ return !TR.map[x]; });
+    TR.missing = missing.length;
+    if(missing.length && fill){
+      toast(t('trOn'));
+      var n = 0;
+      for(var i = 0; i < missing.length; i += 40){
+        var chunk = missing.slice(i, i + 40);
+        var res;
+        try{
+          res = await okrApi('tr_make', {lang: lang, texts: chunk});
+        }catch(e){
+          if(e && e.data && e.data.code === 'no_key'){ toast(t('trNoKey'), 'error'); break; }
+          toast(t('trFail'), 'error'); break;
+        }
+        if(currentLang !== lang) break;              // 도중에 언어를 또 바꿨다
+        Object.keys(res.map || {}).forEach(function(k){ TR.map[k] = res.map[k]; n++; });
+        trApply();                                   // 받는 대로 화면에 반영
+      }
+      TR.missing = texts.filter(function(x){ return !TR.map[x]; }).length;
+      if(n)          toast(t('trDone').replace('{n}', n));
+      if(TR.missing) toast(t('trPartial').replace('{n}', TR.missing));
+    }
+  }catch(e){
+    dbg('trSync fail', e);
+  }
+  TR.busy = false;
+  trApply();
+}
+
+/* 지금 열려 있는 화면만 다시 그린다 */
+function trApply(){
+  function vis(id){ var e = document.getElementById(id); return e && e.style.display !== 'none'; }
+  try{ renderTable(); }catch(e){}
+  try{ if(vis('ganttView'))  renderGantt();  }catch(e){}
+  try{ if(vis('matrixView')) renderMatrix(); }catch(e){}
+  try{ if(vis('boostView'))  bfRender();     }catch(e){}
+  try{ if(vis('schedView'))  scRender();     }catch(e){}
+}
+
+function setLang(lang){
+  if(!I18N[lang]) lang = 'en';
+  currentLang = lang;
+  try{ localStorage.setItem('hd_okr_lang', lang); }catch(e){}
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('[data-i18n]').forEach(function(el){
+    var v = t(el.getAttribute('data-i18n'));
+    if(v.indexOf('<') >= 0) el.innerHTML = v; else el.textContent = v;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(function(el){
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+  document.querySelectorAll('.lang-btn').forEach(function(b){
+    b.className = 'lang-btn' + (b.getAttribute('data-lang') === lang ? ' on' : '');
+  });
+
+  // 캐시에 이미 있는 만큼 즉시 반영하고, 모자란 것은 뒤에서 채운다
+  if(TR.lang !== lang){ TR.lang = ''; TR.map = {}; }
+  trApply();
+  if(AUTH && AUTH.token) trSync(true);
+}
+
 
 // ══ INIT ══
 collapsed=new Set(DATA.filter(d=>DATA.some(x=>x.pid===d.id)&&d.lv!=='O').map(d=>d.id));
@@ -11476,6 +11923,7 @@ async function connectNas(){
     DATA=remote;
     localStorage.setItem('hd_okr_v2', JSON.stringify(DATA));
     refreshTeamFilter(); renderTable();
+    trSync(false);                       // 캐시에 있는 번역만 즉시 반영
     if(!window._dueChecked){ window._dueChecked=true; try{ checkDueNotifications(); }catch(e){ dbg('due check fail', e); } }
     if(statusEl){ statusEl.textContent='\ud83d\udfe2 NAS'; statusEl.title='NAS connected \u2014 '+NAS_API; }
     toast(t('toastNasOk'),'success');
@@ -11580,32 +12028,38 @@ function bfRange(raw){
 }
 
 /* 선택한 기간(연/분기/월) → {s,e,label} */
+function bfMonName(m){ return t('monNames').split(',')[m - 1] || String(m); }
+function bfPLabel(kind, y, v){
+  return t(kind).replace('{y}', y).replace('{q}', v).replace('{m}', v)
+                .replace('{mn}', kind === 'pM' ? bfMonName(v) : '');
+}
 function bfSelRange(){
   var k = BF.pkey || '', m;
   if((m = k.match(/^(\d{4})$/)))
-    return {s:new Date(+m[1],0,1).getTime(), e:new Date(+m[1],11,31,23,59,59).getTime(), label:m[1]+'년'};
+    return {s:new Date(+m[1],0,1).getTime(), e:new Date(+m[1],11,31,23,59,59).getTime(),
+            label:bfPLabel('pY', m[1])};
   if((m = k.match(/^(\d{4})-Q([1-4])$/)))
     return {s:new Date(+m[1],(+m[2]-1)*3,1).getTime(), e:new Date(+m[1],+m[2]*3,0,23,59,59).getTime(),
-            label:m[1]+'년 '+m[2]+'분기'};
+            label:bfPLabel('pQ', m[1], +m[2])};
   if((m = k.match(/^(\d{4})-(\d{2})$/)))
     return {s:new Date(+m[1],+m[2]-1,1).getTime(), e:new Date(+m[1],+m[2],0,23,59,59).getTime(),
-            label:m[1]+'년 '+(+m[2])+'월'};
+            label:bfPLabel('pM', m[1], +m[2])};
   var y = bfBaseYear();
-  return {s:new Date(y,0,1).getTime(), e:new Date(y,11,31,23,59,59).getTime(), label:y+'년'};
+  return {s:new Date(y,0,1).getTime(), e:new Date(y,11,31,23,59,59).getTime(), label:bfPLabel('pY', y)};
 }
 
 /* 기간 선택 목록 채우기 */
 function bfFillPeriods(keep){
   var sel = document.getElementById('bfPKey'), y = bfBaseYear(), out = [], i;
   if(BF.ptype === 'year'){
-    for(i = y + 1; i >= y - 2; i--) out.push([String(i), i + '년']);
+    for(i = y + 1; i >= y - 2; i--) out.push([String(i), bfPLabel('pY', i)]);
   } else if(BF.ptype === 'quarter'){
-    for(i = 4; i >= 1; i--) out.push([y + '-Q' + i, y + '년 ' + i + '분기']);
-    for(i = 4; i >= 1; i--) out.push([(y-1) + '-Q' + i, (y-1) + '년 ' + i + '분기']);
+    for(i = 4; i >= 1; i--) out.push([y + '-Q' + i, bfPLabel('pQ', y, i)]);
+    for(i = 4; i >= 1; i--) out.push([(y-1) + '-Q' + i, bfPLabel('pQ', y - 1, i)]);
   } else {
     for(i = 12; i >= 1; i--){
       var mm = (i < 10 ? '0' : '') + i;
-      out.push([y + '-' + mm, y + '년 ' + i + '월']);
+      out.push([y + '-' + mm, bfPLabel('pM', y, i)]);
     }
   }
   sel.innerHTML = out.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
@@ -11664,10 +12118,10 @@ function bfBar(t, a){
        + '<b style="color:'+col+'">'+p+'%</b></div>';
 }
 function bfStat(s){
-  var t = String(s || '');
-  if(/done|완료/i.test(t))       return '<span class="bf-st done">완료</span>';
-  if(/progress|진행/i.test(t))   return '<span class="bf-st prog">진행</span>';
-  return '<span class="bf-st not">미착수</span>';
+  var x = String(s || '');
+  if(/done|완료/i.test(x))       return '<span class="bf-st done">' + bfEsc(t('stDone')) + '</span>';
+  if(/progress|진행/i.test(x))   return '<span class="bf-st prog">' + bfEsc(t('stInProgress')) + '</span>';
+  return '<span class="bf-st not">' + bfEsc(t('stNotStarted')) + '</span>';
 }
 
 /* ── 화면에 그릴 행 고르기 ───────────────────────────────────────── */
@@ -11763,14 +12217,17 @@ function bfRollHtml(arr){
 }
 
 function bfTable(rows, cols){
-  if(!rows.length) return '<div class="bf-empty">해당 기간에 해당하는 항목이 없습니다.</div>';
+  if(!rows.length) return '<div class="bf-empty">' + t('bfNoRows') + '</div>';
   var showTeam = cols.team !== false;
   var h = '<table class="bf-tbl"><thead><tr>'
-        + '<th style="width:44px">구분</th><th>내용</th>'
-        + (showTeam ? '<th style="width:92px">팀</th>' : '')
-        + '<th style="width:82px">담당</th><th style="width:104px">기간</th>'
-        + '<th style="width:66px;text-align:right">목표</th><th style="width:66px;text-align:right">실적</th>'
-        + '<th style="width:76px">달성률</th><th style="width:62px">상태</th></tr></thead><tbody>';
+        + '<th style="width:44px">' + t('bfThLv') + '</th><th>' + t('bfThLabel') + '</th>'
+        + (showTeam ? '<th style="width:92px">' + t('bfThTeam') + '</th>' : '')
+        + '<th style="width:82px">' + t('thPic') + '</th>'
+        + '<th style="width:104px">' + t('thPeriod') + '</th>'
+        + '<th style="width:66px;text-align:right">' + t('thTarget') + '</th>'
+        + '<th style="width:66px;text-align:right">' + t('thActual') + '</th>'
+        + '<th style="width:76px">' + t('thAttain') + '</th>'
+        + '<th style="width:62px">' + t('thStatus') + '</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var d = r.depth || 0;
     h += '<tr class="d'+Math.min(d, 4)+'">'
@@ -11778,7 +12235,7 @@ function bfTable(rows, cols){
       + '<td style="padding-left:'+(10 + d * 18)+'px">'
              + (d ? '<span class="bf-tick"></span>' : '')
              + (r.kr ? '<span style="color:var(--text3);font-size:11px">'+bfEsc(r.kr)+'</span> ' : '')
-             + bfEsc(r.label)
+             + bfEsc(TL(r.label))
              + (r.rollup && r.rollup.length ? '<div style="margin-top:3px">'+bfRollHtml(r.rollup)+'</div>' : '')
       + '</td>'
       + (showTeam ? '<td style="font-size:11.5px;color:var(--text2)">'+bfEsc(r.team)+'</td>' : '')
@@ -11833,12 +12290,12 @@ async function bfEnsure(){
     (r.cards || []).forEach(function(c){ BF.cards[c.key] = c; });
   }catch(e){
     BF.cards = {};
-    toast('피드백을 불러오지 못했습니다' + (e && e.status === 401 ? ' (로그인 필요)' : ''), 'error');
+    toast(t('bfLoadFail') + (e && e.status === 401 ? t('bfNeedLogin') : ''), 'error');
   }
   BF.loading = false;
 }
 
-async function bfReload(){ BF.cards = null; await bfEnsure(); bfRender(); toast('불러왔습니다'); }
+async function bfReload(){ BF.cards = null; await bfEnsure(); bfRender(); toast(t('bfLoaded')); }
 
 async function bfOpen(){
   bfFillTeams();
@@ -11855,10 +12312,10 @@ function bfRender(){
   BF.ptype = document.getElementById('bfPType').value;
 
   if(BF.scope === 'team' && !BF.team){
-    body.innerHTML = '<div class="bf-empty">팀을 선택하세요.</div>';
+    body.innerHTML = '<div class="bf-empty">' + t('bfPickTeam') + '</div>';
     return;
   }
-  if(!BF.cards){ body.innerHTML = '<div class="bf-empty">불러오는 중…</div>'; return; }
+  if(!BF.cards){ body.innerHTML = '<div class="bf-empty">' + t('bfLoading') + '</div>'; return; }
 
   var key = bfKey(), card = BF.cards[key] || null, R = bfSelRange();
   if(BF._lastKey !== key){ BF.insAll = false; BF._lastKey = key; }
@@ -11867,8 +12324,8 @@ function bfRender(){
   BF.rows = BF.frozen ? card.snapshot : bfPick();
 
   var rows = BF.rows, title, sub;
-  if(BF.scope === 'company'){ title = '전사'; sub = 'Objective · Key Result'; }
-  else { title = BF.team + ' 팀'; sub = 'Team Objective · Key Result · Initiative'; }
+  if(BF.scope === 'company') title = t('bfCompany');
+  else                       title = BF.team + t('bfTeamSuffix');
 
   var objs = rows.filter(function(r){ return r.lv === 'O'  || r.lv === 'TO'; });
   var krs  = rows.filter(function(r){ return r.lv === 'KR' || r.lv === 'TK'; });
@@ -11899,49 +12356,51 @@ function bfRender(){
 
   var h = '';
   h += '<div class="bf-note">'
-     + '<b>부스팅 미팅 피드백 카드</b> — ' + bfEsc(R.label)
-     + (document.getElementById('bfCum').checked ? ' <b>누계</b>(기간 종료일까지 전체)' : ' 해당 기간에 걸친 항목')
-     + '<br>OKR 데이터에는 시점별 기록이 없습니다. <b>저장하면 그때의 목표·실적이 카드에 함께 굳습니다</b> — '
-     + '나중에 이 카드를 다시 열면 회의 당시 숫자가 그대로 보입니다.'
+     + '<b>' + t('bfNoteTitle') + '</b> — ' + bfEsc(R.label) + ' · '
+     + (document.getElementById('bfCum').checked ? t('bfNoteCum') : t('bfNoteRange'))
+     + '<br>' + t('bfNoteBody')
      + '</div>';
 
   h += '<div class="bf-card">';
   h += '<div class="bf-cardhead">'
      + '<span class="t">' + bfEsc(title) + '</span>'
      + '<span class="p">' + bfEsc(R.label) + '</span>'
-     + (BF.frozen ? '<span style="font-size:11px;color:#9BB8D4">🔒 저장된 시점의 값</span>' : '')
+     + (BF.frozen ? '<span style="font-size:11px;color:#9BB8D4">' + t('bfFrozen') + '</span>' : '')
      + '<span class="m">'
-     +   (card && card.updatedAt ? '최종 수정 ' + bfEsc(card.updatedAt) + ' · ' + bfEsc(card.updatedBy || '') : '아직 작성 전')
+     +   (card && card.updatedAt
+          ? t('bfUpdatedAt') + ' ' + bfEsc(card.updatedAt) + ' · ' + bfEsc(card.updatedBy || '')
+          : t('bfNotWritten'))
      + '</span></div>';
 
   var stat = (avg === null ? ''
     : '<span style="margin-left:auto;font-weight:600;color:var(--text2);letter-spacing:0;text-transform:none">'
-      + '평균 달성률 <b style="color:var(--navy)">' + avg + '%</b> · 완료 ' + done + '/' + rows.length + '</span>');
+      + t('bfAvg') + ' <b style="color:var(--navy)">' + avg + '%</b> · '
+      + t('bfDoneOf') + ' ' + done + '/' + rows.length + '</span>');
   var insToggle = (ins.length > CUT
     ? '<span style="letter-spacing:0;text-transform:none;font-weight:600">'
       + '<a href="javascript:bfToggleIns()" style="color:var(--blue);text-decoration:none">'
-      + (hidden ? '전체 ' + ins.length + '건 보기 ▾' : '접기 ▴') + '</a></span>'
+      + (hidden ? t('bfShowAll').replace('{n}', ins.length) : t('bfFold')) + '</a></span>'
     : '');
   var insNote = (hidden ? '<div style="padding:7px 18px 10px;font-size:11px;color:var(--text3)">'
-                          + 'Initiative 는 달성률이 낮은 순으로 ' + CUT + '건만 보이는 중 · 나머지 '
-                          + hidden + '건 숨김</div>' : '');
+                          + t('bfHiddenNote').replace('{c}', CUT).replace('{h}', hidden)
+                          + '</div>' : '');
 
   if(BF.scope === 'company'){
     // 전사는 O 밑에 그 O 의 KR 이 붙는다
-    h += '<div class="bf-sec"><h4>Objective → Key Result'
+    h += '<div class="bf-sec"><h4>' + t('bfSecCo')
        + '<span class="n">O ' + objs.length + ' · KR ' + krs.length + '</span>'
        + stat + '</h4>'
        + bfTable(bfTree(rows), {team: true})
        + '</div>';
   } else {
     // 팀 Objective 는 KR·Initiative 와 이어져 있지 않다. 그래서 따로 낸다.
-    h += '<div class="bf-sec"><h4>Team Objective<span class="n">' + objs.length + '</span></h4>'
+    h += '<div class="bf-sec"><h4>' + t('bfSecTO') + '<span class="n">' + objs.length + '</span></h4>'
        + (objs.length
           ? bfTable(objs, {team: false})
-          : '<div class="bf-empty">이 팀은 팀 Objective(TO)가 등록돼 있지 않습니다.</div>')
+          : '<div class="bf-empty">' + t('bfNoTO') + '</div>')
        + '</div>';
     // 팀 KR 과 Initiative 는 묶여 있으므로 묶어서 낸다.
-    h += '<div class="bf-sec"><h4>Team KR → Initiative'
+    h += '<div class="bf-sec"><h4>' + t('bfSecTK')
        + '<span class="n">KR ' + krs.length + ' · IN ' + ins.length + '</span>'
        + insToggle + stat + '</h4>'
        + bfTable(bfTree(rows.filter(function(r){ return r.lv !== 'TO'; })), {team: false})
@@ -11951,37 +12410,38 @@ function bfRender(){
 
   var dis = canW ? '' : ' disabled';
   h += '<div class="bf-sec"><div class="bf-w2">'
-     + '<div><div class="bf-lbl">Feedback</div>'
-     +   '<div class="bf-hint">의미 있었던 도전 &amp; 배운 점</div>'
+     + '<div><div class="bf-lbl">' + t('bfFb') + '</div>'
+     +   '<div class="bf-hint">' + t('bfFbHint') + '</div>'
      +   '<textarea class="bf-ta" id="bfFb"' + dis + '>' + bfEsc(card ? card.feedback : '') + '</textarea></div>'
-     + '<div><div class="bf-lbl">Feedforward</div>'
-     +   '<div class="bf-hint">앞으로 도전할 목표 &amp; 핵심 아이디어 (= 앞으로 할 일)</div>'
+     + '<div><div class="bf-lbl">' + t('bfFf') + '</div>'
+     +   '<div class="bf-hint">' + t('bfFfHint') + '</div>'
      +   '<textarea class="bf-ta" id="bfFf"' + dis + '>' + bfEsc(card ? card.feedforward : '') + '</textarea></div>'
      + '</div></div>';
 
   h += '<div class="bf-sec" style="padding:12px 18px 14px">'
-     + '<div class="bf-lbl">질문 &amp; 요청사항</div>'
-     + '<div class="bf-hint">경영진에게 묻고 싶은 것, 필요한 지원</div>'
+     + '<div class="bf-lbl">' + t('bfAsk') + '</div>'
+     + '<div class="bf-hint">' + t('bfAskHint') + '</div>'
      + '<textarea class="bf-ta" id="bfAsk" style="min-height:64px"' + dis + '>' + bfEsc(card ? card.ask : '') + '</textarea>'
      + '</div>';
 
   h += '<div class="bf-exec">'
-     + '<div class="bf-lbl" style="color:#92400E">경영자 피드백'
-     +   (priv ? '' : ' <span style="font-weight:400;color:var(--text3)">(경영진·관리자만 작성)</span>') + '</div>'
-     + '<div class="bf-hint">' + (card && card.execAt ? bfEsc(card.execBy || '') + ' · ' + bfEsc(card.execAt) : '아직 없음') + '</div>'
+     + '<div class="bf-lbl" style="color:#92400E">' + t('bfExec')
+     +   (priv ? '' : ' <span style="font-weight:400;color:var(--text3)">' + t('bfExecOnly') + '</span>') + '</div>'
+     + '<div class="bf-hint">'
+     +   (card && card.execAt ? bfEsc(card.execBy || '') + ' · ' + bfEsc(card.execAt) : t('bfExecNone')) + '</div>'
      + '<textarea class="bf-ta" id="bfExec" style="min-height:76px"' + (priv ? '' : ' disabled') + '>'
      + bfEsc(card ? card.exec : '') + '</textarea>'
-     + (priv ? '<div style="margin-top:8px"><button class="btn primary" onclick="bfSaveExec()">경영자 피드백 저장</button></div>' : '')
+     + (priv ? '<div style="margin-top:8px"><button class="btn primary" onclick="bfSaveExec()">'
+               + t('bfExecSave') + '</button></div>' : '')
      + '</div>';
 
   h += '<div class="bf-foot">'
-     + (canW ? '<button class="btn primary" onclick="bfSave()">💾 저장</button>' : '')
-     + (BF.frozen ? '<button class="btn" onclick="bfLive()">↻ 현재 데이터로 새로 불러오기</button>' : '')
-     + (priv && card ? '<button class="btn danger" onclick="bfDelete()">삭제</button>' : '')
+     + (canW ? '<button class="btn primary" onclick="bfSave()">' + t('bfSave') + '</button>' : '')
+     + (BF.frozen ? '<button class="btn" onclick="bfLive()">' + t('bfLive') + '</button>' : '')
+     + (priv && card ? '<button class="btn danger" onclick="bfDelete()">' + t('bfDel') + '</button>' : '')
      + '<span class="sp">'
-     +   (canW ? '항목 ' + rows.length + '건이 이 카드에 함께 저장됩니다'
-             : (BF.scope === 'company' ? '전사 피드백은 경영진·관리자만 작성합니다'
-                                       : '본인 팀 카드만 작성할 수 있습니다 (보기는 가능)'))
+     +   (canW ? t('bfWillSave').replace('{n}', rows.length)
+             : (BF.scope === 'company' ? t('bfCoOnly') : t('bfTeamOnly')))
      + '</span></div>';
   h += '</div>';
 
@@ -12009,10 +12469,10 @@ async function bfSave(){
   try{
     var r = await okrApi('bf_save', payload);
     BF.cards[r.card.key] = r.card;
-    toast('저장했습니다');
+    toast(t('bfSaved'));
     bfRender();
   }catch(e){
-    toast((e && e.data && e.data.error) || '저장 실패', 'error');
+    toast((e && e.data && e.data.error) || t('bfSaveFail'), 'error');
   }
 }
 
@@ -12025,21 +12485,21 @@ async function bfSaveExec(){
       exec: document.getElementById('bfExec').value
     });
     BF.cards[r.card.key] = r.card;
-    toast('경영자 피드백을 저장했습니다');
+    toast(t('bfExecSaved'));
     bfRender();
   }catch(e){
-    toast((e && e.data && e.data.error) || '저장 실패', 'error');
+    toast((e && e.data && e.data.error) || t('bfSaveFail'), 'error');
   }
 }
 
 async function bfDelete(){
-  if(!confirm('이 카드를 삭제할까요? 작성한 피드백이 모두 지워집니다.')) return;
+  if(!confirm(t('bfConfirmDel'))) return;
   try{
     await okrApi('bf_delete', {key: bfKey()});
     delete BF.cards[bfKey()];
-    toast('삭제했습니다');
+    toast(t('bfDeleted'));
     bfRender();
-  }catch(e){ toast((e && e.data && e.data.error) || '삭제 실패', 'error'); }
+  }catch(e){ toast((e && e.data && e.data.error) || t('bfDelFail'), 'error'); }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -12048,7 +12508,7 @@ async function bfDelete(){
 
 function scDow(ds){
   var d = new Date(ds + 'T00:00:00');
-  return ['일','월','화','수','목','금','토'][d.getDay()];
+  return t('scDow').split(',')[d.getDay()];
 }
 
 async function scEnsure(){
@@ -12058,16 +12518,16 @@ async function scEnsure(){
     BF.slots = r.slots || [];
   }catch(e){
     BF.slots = [];
-    toast('일정을 불러오지 못했습니다', 'error');
+    toast(t('scLoadFail'), 'error');
   }
 }
-async function scReload(){ BF.slots = null; await scEnsure(); scRender(); toast('불러왔습니다'); }
+async function scReload(){ BF.slots = null; await scEnsure(); scRender(); toast(t('scLoaded')); }
 async function scOpen(){ await scEnsure(); scRender(); }
 
 function scRender(){
   var body = document.getElementById('scBody');
   if(!body) return;
-  if(!BF.slots){ body.innerHTML = '<div class="bf-empty">불러오는 중…</div>'; return; }
+  if(!BF.slots){ body.innerHTML = '<div class="bf-empty">' + t('bfLoading') + '</div>'; return; }
 
   var priv = AUTH.isPriv(), mine = bfMyTeams();
   var teams = (priv ? bfAllTeams() : (mine.length ? mine : bfAllTeams()));
@@ -12078,16 +12538,24 @@ function scRender(){
   if(priv){
     var d0 = new Date(Date.now() + 86400000).toISOString().slice(0,10);
     h += '<div class="sc-form">'
-      +  '<div class="sc-f"><label>날짜</label><input type="date" id="scDate" value="'+d0+'"></div>'
-      +  '<div class="sc-f"><label>시작</label><input type="time" id="scStart" value="14:00" step="900"></div>'
-      +  '<div class="sc-f"><label>종료</label><input type="time" id="scEnd" value="15:00" step="900"></div>'
-      +  '<div class="sc-f"><label>정원(팀)</label><input type="number" id="scCap" value="1" min="1" max="20" style="width:74px"></div>'
-      +  '<div class="sc-f" style="flex:1;min-width:180px"><label>메모 (장소 등)</label><input type="text" id="scNote" placeholder="예: 본사 3층 회의실"></div>'
-      +  '<button class="btn primary" onclick="scAdd()">＋ 가능 시간 등록</button>'
+      +  '<div class="sc-f"><label>' + t('scDate') + '</label><input type="date" id="scDate" value="'+d0+'"></div>'
+      +  '<div class="sc-f"><label>' + t('scStart') + '</label>'
+      +    '<input type="time" id="scStart" value="14:00" step="900" onchange="scPreview()"></div>'
+      +  '<div class="sc-f"><label>' + t('scDur') + '</label>'
+      +    '<select id="scDur" class="filter-sel" style="width:106px" onchange="scPreview()">'
+      +    [30, 60, 90, 120].map(function(m){
+             return '<option value="' + m + '"' + (m === scLastDur() ? ' selected' : '') + '>'
+                  + t('scD' + m) + '</option>'; }).join('')
+      +    '</select></div>'
+      +  '<div class="sc-f"><label>' + t('scCap') + '</label><input type="number" id="scCap" value="1" min="1" max="20" style="width:74px"></div>'
+      +  '<div class="sc-f" style="flex:1;min-width:180px"><label>' + t('scNote') + '</label>'
+      +    '<input type="text" id="scNote" placeholder="' + bfEsc(t('scNotePh')) + '"></div>'
+      +  '<button class="btn primary" onclick="scAdd()">' + t('scAdd') + '</button>'
+      +  '<span id="scPrev" style="font-size:12px;font-weight:700;color:var(--navy);'
+      +    'align-self:center;font-variant-numeric:tabular-nums"></span>'
       +  '</div>';
   } else {
-    h += '<div class="bf-note">경영자가 올린 가능한 시간 중 <b>팀당 하루에 하나</b>를 고를 수 있습니다. '
-      +  '잘못 골랐으면 본인이 예약한 것은 직접 취소할 수 있습니다.</div>';
+    h += '<div class="bf-note">' + t('scHelp') + '</div>';
   }
 
   var list = BF.slots.filter(function(s){
@@ -12105,12 +12573,12 @@ function scRender(){
   });
   if(myBk.length)
     h += '<div class="bf-note" style="background:var(--green-bg);border-color:#86EFAC;color:#14532D">'
-      +  '<b>내 팀 예약</b> — ' + myBk.map(bfEsc).join(' · ') + '</div>';
+      +  '<b>' + t('scMine') + '</b> — ' + myBk.map(bfEsc).join(' · ') + '</div>';
 
   if(!list.length){
-    h += '<div class="bf-empty">' + (priv ? '아직 등록한 시간이 없습니다. 위에서 추가하세요.'
-                                          : '아직 열린 시간이 없습니다. 경영자가 등록하면 여기 뜹니다.') + '</div>';
+    h += '<div class="bf-empty">' + (priv ? t('scEmptyAdmin') : t('scEmptyUser')) + '</div>';
     body.innerHTML = h;
+    scPreview();
     return;
   }
 
@@ -12129,50 +12597,79 @@ function scRender(){
       bk.forEach(function(b){
         var canX = priv || b.by === (AUTH.user && AUTH.user.username);
         h += '<span class="sc-bk">' + bfEsc(b.team)
-          +  (canX ? '<x onclick="scUnbook(\'' + bfEsc(s.id) + '\',\'' + bfEsc(b.team) + '\')" title="예약 취소">✕</x>' : '<x style="opacity:.3;cursor:default">✕</x>')
+          +  (canX ? '<x onclick="scUnbook(\'' + bfEsc(s.id) + '\',\'' + bfEsc(b.team) + '\')" title="'
+                     + bfEsc(t('scCancel')) + '">✕</x>' : '<x style="opacity:.3;cursor:default">✕</x>')
           +  '</span>';
       });
       h += '<span class="sc-right">'
-        +  '<span class="sc-open">' + (left > 0 ? '남은 자리 ' + left + '/' + cap : '마감') + '</span>';
+        +  '<span class="sc-open">'
+        +    (left > 0 ? t('scLeft').replace('{n}', left).replace('{c}', cap) : t('scFull')) + '</span>';
       if(left > 0){
         var opts = teams.map(function(t){ return '<option value="' + bfEsc(t) + '">' + bfEsc(t) + '</option>'; }).join('');
         h += '<select class="filter-sel" id="bk_' + bfEsc(s.id) + '" style="width:104px">' + opts + '</select>'
-          +  '<button class="btn primary" onclick="scBook(\'' + bfEsc(s.id) + '\')">예약</button>';
+          +  '<button class="btn primary" onclick="scBook(\'' + bfEsc(s.id) + '\')">' + t('scBook') + '</button>';
       }
-      if(priv) h += '<button class="btn danger" onclick="scDel(\'' + bfEsc(s.id) + '\')">삭제</button>';
+      if(priv) h += '<button class="btn danger" onclick="scDel(\'' + bfEsc(s.id) + '\')">' + t('scDel') + '</button>';
       h += '</span></div>';
     });
     h += '</div>';
   });
 
   body.innerHTML = h;
+  scPreview();
+}
+
+/* 시작 시각 + 길이(분) → 끝 시각. 자정을 넘기면 23:59 에서 멈춘다. */
+function scEndOf(start, mins){
+  var m = /^(\d{1,2}):(\d{2})$/.exec(String(start || ''));
+  if(!m) return '';
+  var tot = (+m[1]) * 60 + (+m[2]) + (mins || 60);
+  if(tot > 24 * 60 - 1) tot = 24 * 60 - 1;
+  var hh = Math.floor(tot / 60), mm = tot % 60;
+  return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+}
+/* 지난번에 고른 길이를 기억한다 — 회사마다 회의 길이가 정해져 있기 때문 */
+function scLastDur(){
+  var v = 60;
+  try{ v = parseInt(localStorage.getItem('hd_okr_scdur'), 10) || 60; }catch(e){}
+  return [30, 60, 90, 120].indexOf(v) >= 0 ? v : 60;
+}
+function scPreview(){
+  var el = document.getElementById('scPrev'),
+      st = document.getElementById('scStart'),
+      du = document.getElementById('scDur');
+  if(!el || !st || !du) return;
+  var end = scEndOf(st.value, parseInt(du.value, 10));
+  el.textContent = end ? (st.value + ' – ' + end) : '';
 }
 
 async function scAdd(){
+  var dur = parseInt(document.getElementById('scDur').value, 10) || 60;
+  try{ localStorage.setItem('hd_okr_scdur', String(dur)); }catch(e){}
   var p = {
     date:  document.getElementById('scDate').value,
     start: document.getElementById('scStart').value,
-    end:   document.getElementById('scEnd').value,
     cap:   parseInt(document.getElementById('scCap').value, 10) || 1,
     note:  document.getElementById('scNote').value
   };
-  if(!p.date || !p.start || !p.end){ toast('날짜와 시간을 채우세요', 'error'); return; }
+  p.end = scEndOf(p.start, dur);          // 종료는 사람이 안 적는다
+  if(!p.date || !p.start || !p.end){ toast(t('scNeedTime'), 'error'); return; }
   try{
     var r = await okrApi('sch_add', p);
     BF.slots.push(r.slot);
-    toast('등록했습니다');
+    toast(t('scAdded'));
     scRender();
-  }catch(e){ toast((e && e.data && e.data.error) || '등록 실패', 'error'); }
+  }catch(e){ toast((e && e.data && e.data.error) || t('scAddFail'), 'error'); }
 }
 
 async function scDel(id){
-  if(!confirm('이 시간을 삭제할까요? 예약도 함께 지워집니다.')) return;
+  if(!confirm(t('scConfirmDel'))) return;
   try{
     await okrApi('sch_delete', {id: id});
     BF.slots = BF.slots.filter(function(s){ return s.id !== id; });
-    toast('삭제했습니다');
+    toast(t('scDeleted'));
     scRender();
-  }catch(e){ toast((e && e.data && e.data.error) || '삭제 실패', 'error'); }
+  }catch(e){ toast((e && e.data && e.data.error) || t('scDelFail'), 'error'); }
 }
 
 async function scBook(id){
@@ -12181,18 +12678,18 @@ async function scBook(id){
   try{
     var r = await okrApi('sch_book', {id: id, team: sel.value});
     BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
-    toast(sel.value + ' 예약 완료');
+    toast(t('scBooked').replace('{t}', sel.value));
     scRender();
-  }catch(e){ toast((e && e.data && e.data.error) || '예약 실패', 'error'); }
+  }catch(e){ toast((e && e.data && e.data.error) || t('scBookFail'), 'error'); }
 }
 
 async function scUnbook(id, team){
   try{
     var r = await okrApi('sch_unbook', {id: id, team: team});
     BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
-    toast('예약을 취소했습니다');
+    toast(t('scUnbooked'));
     scRender();
-  }catch(e){ toast((e && e.data && e.data.error) || '취소 실패', 'error'); }
+  }catch(e){ toast((e && e.data && e.data.error) || t('scUnbookFail'), 'error'); }
 }
 
 
