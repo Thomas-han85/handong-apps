@@ -280,7 +280,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-8";</script>
 </head>
 <body>
 
@@ -11298,7 +11298,7 @@ function sumChildren(id){
   // 인라인 입력창도 업데이트
   const inp = document.getElementById('ia-'+id);
   if(inp) inp.value = rounded;
-  saveData(); renderTable();
+  saveData(); nasUpdateItem(d); renderTable();
   toast(`Σ Actual ${rounded} — ${children.length} sub-items summed`, 'success');
 }
 function sumBoth(e, id){
@@ -11318,7 +11318,7 @@ function sumChildrenTarget(id){
   }, 0);
   const rounded = Math.round(sum*100)/100;
   d.target = rounded;
-  saveData(); renderTable();
+  saveData(); nasUpdateItem(d); renderTable();
   toast(`Σ Target ${rounded} — ${children.length} sub-items summed`, 'success');
 }
 function parseNumVal(v){
