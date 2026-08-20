@@ -311,7 +311,7 @@ tr.dragging{opacity:.35}
 .sc-chip .ok{color:#16A34A}
 @media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-3";</script>
 </head>
 <body>
 
@@ -1472,11 +1472,43 @@ function dueStatus(d){
   if(ed.getTime()<t.getTime())  return 'overdue';
   return null;
 }
+/* 담당자 표기 ↔ 로그인 계정.
+   로그인 기능을 나중에 붙여서 둘이 갈렸다. 데이터의 표기는 그대로 두고
+   계정 쪽에 별명을 달아 잇는다. 표기가 새로 생기면 여기에 한 줄 더한다.
+   괄호 안은 2026-08-05 스냅샷에서 그 표기가 붙어 있던 행 수. */
+var PIC_ALIAS = {
+  'ThuyMi':     ['Ms.Mi', 'Ms. Mi'],                    // 49행
+  'Kieunguyen': ['Ms. Kieu', 'Ms Kiều', 'Ms.Kieu'],     // 54행
+  'XuyenVu':    ['Ms. Xuyen', 'Ms.Xuyen'],              // 38행
+  'TramHuynh':  ['Ms. Trâm', 'Ms. Tram', 'Ms.Tram'],    // 26행
+  'nam.mai':    ['Mr.Nam', 'Mr. Nam'],                  //  4행
+  'Phat':       ['Ms.Phat', 'Mr.Phat'],                 //  1행
+  'khang.tran': ['Khang', 'Mr.Khang'],                  //  1행
+  'Thomas':     ['Thomas', 'Tom']                       // 43행
+};
+/* 계정 아이디로 그 사람의 별명 목록을 준다(자기 아이디 포함) */
+function picAliases(uname){
+  var u = String(uname || '').trim();
+  if(!u) return [];
+  var out = [u];
+  Object.keys(PIC_ALIAS).forEach(function(k){
+    if(k.toLowerCase() === u.toLowerCase())
+      PIC_ALIAS[k].forEach(function(a){ if(out.indexOf(a) < 0) out.push(a); });
+  });
+  return out;
+}
 function nameMatch(field, uname){
   if(!field||!uname) return false;
   var f=String(field).toLowerCase().trim(), u=String(uname).toLowerCase().trim();
   if(!f||!u) return false;
-  return f===u || f.indexOf(u)>=0 || u.indexOf(f)>=0;
+  if(f===u || f.indexOf(u)>=0 || u.indexOf(f)>=0) return true;
+  /* 별명으로도 대 본다. 'ThuyMi' 계정과 'Ms.Mi' 표기를 잇는 자리다. */
+  var al = picAliases(uname);
+  for(var i=0;i<al.length;i++){
+    var a = String(al[i]).toLowerCase().trim();
+    if(a && (f===a || f.indexOf(a)>=0 || a.indexOf(f)>=0)) return true;
+  }
+  return false;
 }
 function checkDueNotifications(){
   if(!AUTH.user) return;
