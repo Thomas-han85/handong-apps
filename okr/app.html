@@ -280,7 +280,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-1";</script>
 </head>
 <body>
 
@@ -1331,6 +1331,11 @@ function syncCalFromDropdown(){
   if(deEl && em && ed) deEl.value = `${year}-${em}-${String(ed).padStart(2,'0')}`;
 }
 
+// 패널을 연 직후 피커가 내놓는 값. 저장할 때 이것과 같으면 사람이 안 건드린 것이다.
+let _periodAtOpen = null;
+function snapPeriodAtOpen(){
+  try { _periodAtOpen = periodPickerVal(); } catch(e) { _periodAtOpen = null; }
+}
 function periodPickerVal(){
   const year    = document.getElementById('fp-year')?.value || '2026';
   const allYear = document.getElementById('fp-allYear')?.checked ?? true;
@@ -2420,6 +2425,7 @@ function openEdit(id){
       ${fbH}
       <div class="field-group" style="margin-top:10px"><div class="field-lbl">${t('fldFbNew')}</div><textarea class="field-ta" id="f-fb" placeholder="${t('fldFbPh')}"></textarea></div>
     </div>`;
+  snapPeriodAtOpen();
   document.getElementById('editPanel').classList.add('open');
   document.getElementById('overlay').classList.add('open');
 }
@@ -2490,6 +2496,7 @@ function openNew(){
 
   selectNewLv('TK');
 
+  snapPeriodAtOpen();
   document.getElementById('editPanel').classList.add('open');
   document.getElementById('overlay').classList.add('open');
 }
@@ -2660,7 +2667,10 @@ function saveEdit(){
   const teamEl=document.getElementById('f-team'); if(teamEl) d.team=teamEl.value;
   const picEl=document.getElementById('f-pic');   if(picEl)  d.pic=picEl.value;
   const revEl=document.getElementById('f-reviewer'); if(revEl) d.reviewer=revEl.value;
-  d.period=periodPickerVal();
+  // 사람이 기간 칸을 실제로 건드렸을 때만 다시 쓴다.
+  // 열었다 저장만 눌러도 값이 바뀌던 것을 막는다(737행 중 421행이 영향받았다).
+  const _pv = periodPickerVal();
+  if(_pv !== _periodAtOpen || !d.period) d.period = _pv;
 
   const tgtEl=document.getElementById('f-target'); if(tgtEl) d.target=parseNumVal(tgtEl.value);
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
