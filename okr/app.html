@@ -280,7 +280,7 @@ tr.dragging{opacity:.35}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.19-10";</script>
 </head>
 <body>
 
@@ -1674,7 +1674,7 @@ function renderTable(){
             ${fbList.map(f=>`
               <div class="fb-tip-item">
                 <div class="fb-tip-meta">${f.by||'?'} · ${f.date||''}</div>
-                <div class="fb-tip-text">${(f.text||'').replace(/</g,'&lt;')}</div>
+                <div class="fb-tip-text">${TL(f.text||'').replace(/</g,'&lt;')}</div>
               </div>`).join('')}
           </div>
         </div>`
@@ -2376,7 +2376,7 @@ function openEdit(id){
   document.getElementById('deleteBtn').textContent=t('btnDelete');
   document.getElementById('btnSave').textContent=t('btnSave');
   document.getElementById('btnCancel').textContent=t('btnCancel');
-  const fbH=(d.feedbacks||[]).map(f=>`<div class="fb-item"><div class="fb-meta"><span class="fb-by">${f.by}</span><span>${f.date}</span></div><div class="fb-text">${f.text}</div></div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0">${t('fldFbNone')}</div>`;
+  const fbH=(d.feedbacks||[]).map(f=>`<div class="fb-item"><div class="fb-meta"><span class="fb-by">${f.by}</span><span>${f.date}</span></div><div class="fb-text">${String(TL(f.text)||'').replace(/</g,'&lt;')}</div></div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0">${t('fldFbNone')}</div>`;
   const lvO=['O','KR','TO','TK','IN','TD'].map(v=>`<option${d.lv===v?' selected':''}>${v}</option>`).join('');
   const stO=['In Progress','Done','Not Started'].map(v=>`<option${d.status===v?' selected':''}>${v}</option>`).join('');
   const parentSel = parentOptions(d.lv, d.pid);
