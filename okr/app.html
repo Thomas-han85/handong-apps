@@ -311,7 +311,7 @@ tr.dragging{opacity:.35}
 .sc-chip .ok{color:#16A34A}
 @media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-5";</script>
 </head>
 <body>
 
@@ -689,6 +689,7 @@ function buildAuthUI(){
   +   '<div id="umWho" style="font-size:12px;color:#5A7A96;padding:6px 8px;border-bottom:1px solid #EEF2F6;margin-bottom:4px"></div>'
   +   '<button id="umAdmin" onclick="openAdminPanel()" style="'+MENU_BTN+'">👥 User Management</button>'
   +   '<button id="umTrKey" onclick="openTrKey()" style="'+MENU_BTN+'" data-i18n="trKeyMenu">🌐 Gemini key for translation</button>'
+  +   '<button id="umPicMerge" onclick="openPicMerge()" style="'+MENU_BTN+'">🧹 담당자 표기 합치기</button>'
   +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 비밀번호 변경</button>'
   +   '<button onclick="doLogout()" style="'+MENU_BTN+'">🚪 Logout</button>'
   + '</div>'
@@ -748,6 +749,8 @@ function openUserMenu(){
   document.getElementById('umWho').textContent = AUTH.user.username+' · '+AUTH.user.role+' · Teams: '+((AUTH.user.teams||[]).join(', ')||'-');
   document.getElementById('umAdmin').style.display = AUTH.isAdmin()?'block':'none';
   document.getElementById('umTrKey').style.display = AUTH.isAdmin()?'block':'none';
+  var pm = document.getElementById('umPicMerge');
+  if(pm) pm.style.display = AUTH.isAdmin()?'block':'none';
   m.style.display = (m.style.display==='block')?'none':'block';
 }
 async function doLogout(){
@@ -1472,6 +1475,129 @@ function dueStatus(d){
   if(ed.getTime()<t.getTime())  return 'overdue';
   return null;
 }
+/* ══ 담당자 표기 합치기 ═════════════════════════════════════════════════
+   같은 사람이 'Mr.Quan' 과 'Quan' 두 표기로 갈려 있는 것을 한 번에 합친다.
+   서버는 기존 update_item 만 쓴다. */
+
+/* 표기를 비교용으로 눕힌다 — 대소문자·공백·마침표·성조·Mr./Ms. 를 지운다 */
+function picNorm(v){
+  var t = String(v || '').toLowerCase().trim();
+  try { t = t.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e) {}
+  t = t.replace(/đ/g, 'd');
+  t = t.replace(/^(mr|ms|mrs|miss)\s*\.?\s*/, '');
+  return t.replace(/[^a-z0-9가-힣]/g, '');
+}
+
+/* 합칠 만한 묶음을 찾는다 — 눕힌 값이 같은데 원래 표기가 둘 이상인 것 */
+function picGroups(){
+  var by = {};
+  (DATA || []).forEach(function(d){
+    var p = (d.pic || '').trim();
+    if(!p) return;
+    var k = picNorm(p);
+    if(!k) return;
+    (by[k] = by[k] || {})[p] = (by[k][p] || 0) + 1;
+  });
+  var out = [];
+  Object.keys(by).forEach(function(k){
+    var vs = Object.keys(by[k]);
+    if(vs.length < 2) return;
+    vs.sort(function(a, b){ return by[k][b] - by[k][a]; });
+    out.push({ key: k, variants: vs.map(function(v){ return { v: v, n: by[k][v] }; }) });
+  });
+  out.sort(function(a, b){
+    var sa = a.variants.reduce(function(x, y){ return x + y.n; }, 0);
+    var sb = b.variants.reduce(function(x, y){ return x + y.n; }, 0);
+    return sb - sa;
+  });
+  return out;
+}
+
+function openPicMerge(){
+  if(!AUTH.isAdmin()){ toast('관리자만 쓸 수 있습니다.', 'error'); return; }
+  var g = picGroups();
+  var h = '';
+  if(!g.length){
+    h = '<div style="font-size:13px;color:var(--text3)">합칠 만한 표기가 없습니다.</div>';
+  } else {
+    h = '<div style="font-size:12px;color:var(--text2);margin-bottom:12px">'
+      + '같은 사람으로 보이는 표기를 묶었습니다. <b>남길 표기</b>를 고르고 합칠 것만 켜 두십시오.<br>'
+      + '<span style="color:#B7791F">Ms.Quan 과 Mr.Quan 처럼 실제로 다른 사람이면 꺼 두십시오.</span></div>';
+    g.forEach(function(grp, gi){
+      var tot = grp.variants.reduce(function(x, y){ return x + y.n; }, 0);
+      h += '<div style="border:1px solid var(--border);border-radius:9px;padding:10px 12px;margin-bottom:8px">'
+        +  '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">'
+        +  '<b style="font-size:13px">' + bfEsc(grp.variants[0].v) + '</b>'
+        +  '<span style="font-size:11px;color:var(--text3)">모두 ' + tot + '행</span>'
+        +  '<span style="flex:1"></span>'
+        +  '<span style="font-size:11px;color:var(--text3)">남길 표기</span>'
+        +  '<select class="filter-sel" id="pm-t-' + gi + '" style="width:150px">'
+        +  grp.variants.map(function(x){
+               return '<option value="' + bfEsc(x.v) + '">' + bfEsc(x.v) + ' (' + x.n + ')</option>'; }).join('')
+        +  '</select></div>';
+      grp.variants.forEach(function(x, vi){
+        h += '<label style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:12px;cursor:pointer">'
+          +  '<input type="checkbox" id="pm-v-' + gi + '-' + vi + '" data-v="' + bfEsc(x.v) + '" checked>'
+          +  bfEsc(x.v) + ' <span style="color:var(--text3)">' + x.n + '</span></label>';
+      });
+      h += '</div>';
+    });
+    h += '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'
+      +  '<button class="btn" onclick="scModalClose()">닫기</button>'
+      +  '<button class="btn primary" onclick="runPicMerge(' + g.length + ')">합치기</button></div>';
+  }
+  scModal('담당자 표기 합치기', h);
+  window._pmGroups = g;
+}
+
+async function runPicMerge(n){
+  var g = window._pmGroups || [];
+  var plan = [];
+  for(var gi = 0; gi < n; gi++){
+    var tgt = (document.getElementById('pm-t-' + gi) || {}).value;
+    if(!tgt) continue;
+    (g[gi].variants || []).forEach(function(x, vi){
+      var cb = document.getElementById('pm-v-' + gi + '-' + vi);
+      if(!cb || !cb.checked) return;
+      if(x.v === tgt) return;
+      plan.push({ from: x.v, to: tgt });
+    });
+  }
+  if(!plan.length){ toast('합칠 것이 없습니다.', 'error'); return; }
+
+  var rows = (DATA || []).filter(function(d){
+    var p = (d.pic || '').trim();
+    return plan.some(function(q){ return q.from === p; });
+  });
+  if(!rows.length){ toast('해당하는 행이 없습니다.', 'error'); return; }
+
+  var lines = plan.map(function(q){ return q.from + '  →  ' + q.to; }).join('\n');
+  if(!confirm(rows.length + '행을 고칩니다.\n\n' + lines + '\n\n진행할까요?')) return;
+
+  scModalClose();
+  var ok = 0, fail = 0;
+  for(var i = 0; i < rows.length; i++){
+    var d = rows[i];
+    var q = plan.filter(function(x){ return x.from === (d.pic || '').trim(); })[0];
+    if(!q) continue;
+    var prev = d.pic;
+    d.pic = q.to;
+    try{
+      await okrApi('update_item', { item: d, baseUat: d._uat });
+      ok++;
+    }catch(e){
+      d.pic = prev; fail++;
+    }
+    if(i % 5 === 0) toast('합치는 중 ' + (i + 1) + ' / ' + rows.length);
+  }
+  saveData();
+  /* 폴링이 방금 고친 것을 덮어쓰지 않게 해시를 다시 잡는다 */
+  try{ window._nasHash = JSON.stringify(DATA); }catch(e){}
+  refreshTeamFilter(); renderTable();
+  toast(fail ? ('합침 ' + ok + '행 · 실패 ' + fail + '행') : ('합쳤습니다 — ' + ok + '행'),
+        fail ? 'error' : 'success');
+}
+
 /* ══ 담당자·팀 칸 제안 목록 ═════════════════════════════════════════════
    자유 입력은 그대로 둔다. 다만 이미 쓰던 이름을 띄워 주어
    같은 사람이 두 표기로 갈리는 것을 줄인다. 새 이름은 얼마든지 칠 수 있다. */
