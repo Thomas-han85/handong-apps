@@ -311,7 +311,7 @@ tr.dragging{opacity:.35}
 .sc-chip .ok{color:#16A34A}
 @media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-4";</script>
 </head>
 <body>
 
@@ -1472,6 +1472,68 @@ function dueStatus(d){
   if(ed.getTime()<t.getTime())  return 'overdue';
   return null;
 }
+/* ══ 담당자·팀 칸 제안 목록 ═════════════════════════════════════════════
+   자유 입력은 그대로 둔다. 다만 이미 쓰던 이름을 띄워 주어
+   같은 사람이 두 표기로 갈리는 것을 줄인다. 새 이름은 얼마든지 칠 수 있다. */
+
+/* 지금 데이터에 실제로 쓰인 값을 많이 쓰인 순으로 준다 */
+function picOptions(){
+  var cnt = {};
+  (DATA || []).forEach(function(d){
+    var p = (d.pic || '').trim();
+    if(p) cnt[p] = (cnt[p] || 0) + 1;
+  });
+  var known = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; });
+  /* 계정과 이어지는 이름을 위로 올린다 */
+  var accs = Object.keys(PIC_ALIAS);
+  function acctOf(name){
+    for(var i = 0; i < accs.length; i++) if(nameMatch(name, accs[i])) return accs[i];
+    return '';
+  }
+  var linked = [], plain = [];
+  known.forEach(function(n){ (acctOf(n) ? linked : plain).push(n); });
+  return linked.concat(plain).map(function(n){
+    var a = acctOf(n);
+    return {v: n, label: a ? (n + '  ·  ' + a) : n, n: cnt[n]};
+  });
+}
+function teamOptions(){
+  var cnt = {};
+  (DATA || []).forEach(function(d){
+    var t = (d.team || '').trim();
+    if(t) cnt[t] = (cnt[t] || 0) + 1;
+  });
+  return Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; });
+}
+function picListHtml(){
+  return '<datalist id="picList">'
+       + picOptions().map(function(o){
+           return '<option value="' + bfEsc(o.v) + '">' + bfEsc(o.label) + '</option>'; }).join('')
+       + '</datalist><datalist id="teamList">'
+       + teamOptions().map(function(t){ return '<option value="' + bfEsc(t) + '">'; }).join('')
+       + '</datalist>';
+}
+
+/* 친 이름이 계정과 이어지는지 칸 밑에 조용히 알려 준다. 막지는 않는다. */
+function picHint(){
+  var el = document.getElementById('f-pic'), box = document.getElementById('f-pic-hint');
+  if(!el || !box) return;
+  var v = (el.value || '').trim();
+  if(!v){ box.textContent = ''; return; }
+  var hit = '';
+  Object.keys(PIC_ALIAS).forEach(function(a){ if(!hit && nameMatch(v, a)) hit = a; });
+  if(hit){
+    box.textContent = '계정 ' + hit + ' 과 이어집니다';
+    box.style.color = '#16A34A';
+  } else {
+    var used = (DATA || []).filter(function(d){ return (d.pic || '').trim() === v; }).length;
+    box.textContent = used
+      ? ('계정 없음 — 이 표기로 ' + used + '건 쓰였습니다')
+      : '새 이름입니다. 계정과 안 이어져 마이태스크·마감알림을 못 받습니다';
+    box.style.color = used ? 'var(--text3)' : '#B7791F';
+  }
+}
+
 /* 담당자 표기 ↔ 로그인 계정.
    로그인 기능을 나중에 붙여서 둘이 갈렸다. 데이터의 표기는 그대로 두고
    계정 쪽에 별명을 달아 잇는다. 표기가 새로 생기면 여기에 한 줄 더한다.
@@ -2453,7 +2515,7 @@ function openEdit(id){
       <div class="field-row"><div class="field-group"><div class="field-lbl">${t('fldLevel')}</div><select class="field-sel" id="f-lv" onchange="onEditLevelChange()">${lvO}</select></div><div class="field-group"><div class="field-lbl">${t('fldKR')} <span style="font-size:10px;color:var(--text3)">${t('fldKRAuto')}</span></div><input class="field-input" id="f-kr" value="${d.kr||''}" style="background:var(--gray-bg);color:var(--text2)" readonly></div></div>
       <div id="edit-parent-wrap">${parentSel}</div>
       <div class="field-group"><div class="field-lbl">${t('fldContent')}</div><input class="field-input" id="f-label" value="${d.label}">${TL(d.label)!==d.label?`<div style="font-size:11px;color:var(--text2);margin-top:4px;padding:5px 8px;background:var(--gray-bg);border-radius:5px">🌐 ${TL(d.label)}</div>`:''}</div>
-      <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" value="${d.team||''}" ></div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" value="${d.pic||''}" ></div></div>
+      <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value="${d.team||''}" ></div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="${d.pic||''}" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div></div>${picListHtml()}
       ${(d.lv==='TD'||d.lv==='IN')?`<div class="field-group"><div class="field-lbl">${t('fldReviewer')} <span style="font-size:10px;color:var(--text3)">${t('fldReviewerHint')}</span></div><input class="field-input" id="f-reviewer" value="${d.reviewer||''}" placeholder="${t('fldReviewerPh')}"></div>`:''}
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml(d)}</div>
     </div>
@@ -2488,6 +2550,7 @@ function openEdit(id){
       ${fbH}
       <div class="field-group" style="margin-top:10px"><div class="field-lbl">${t('fldFbNew')}</div><textarea class="field-ta" id="f-fb" placeholder="${t('fldFbPh')}"></textarea></div>
     </div>`;
+  picHint();
   snapPeriodAtOpen();
   document.getElementById('editPanel').classList.add('open');
   document.getElementById('overlay').classList.add('open');
@@ -2537,8 +2600,8 @@ function openNew(){
       </div>
       <div class="field-group"><div class="field-lbl">${t('fldContent')} <span style="color:var(--red)">*</span></div><input class="field-input" id="f-label" placeholder="${t('fldContentPh')}"></div>
       <div class="field-row">
-        <div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" value=""></div>
-        <div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" value=""></div>
+        <div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value=""></div>
+        <div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div>
       </div>
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml({period:''})}</div>
       <div class="field-group" id="new-reviewer-row" style="display:none"><div class="field-lbl">${t('fldReviewer')}</div><input class="field-input" id="f-reviewer" value="" placeholder="${t('fldReviewerPhNew')}"></div>
@@ -2559,6 +2622,9 @@ function openNew(){
 
   selectNewLv('TK');
 
+  var pb = document.getElementById('panelBody');
+  if(pb && !document.getElementById('picList')) pb.insertAdjacentHTML('beforeend', picListHtml());
+  picHint();
   snapPeriodAtOpen();
   document.getElementById('editPanel').classList.add('open');
   document.getElementById('overlay').classList.add('open');
