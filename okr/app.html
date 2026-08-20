@@ -279,8 +279,39 @@ tr.dragging{opacity:.35}
 .tr-chip.busy{background:rgba(155,184,212,.18);color:#9BB8D4}
 .tr-chip.warn{background:rgba(245,166,35,.16);color:#F5A623;border-color:rgba(245,166,35,.45)}
 .tr-chip.err {background:rgba(220,38,38,.18);color:#FCA5A5;border-color:rgba(220,38,38,.5)}
+
+/* ── 미팅 일정 캘린더 ── */
+.sc-view{display:flex;gap:6px;margin-bottom:10px}
+.sc-view button{padding:5px 14px;border:1px solid var(--border);background:var(--card,#fff);
+  border-radius:7px;font:inherit;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer}
+.sc-view button.on{background:var(--navy,#1D4ED8);border-color:var(--navy,#1D4ED8);color:#fff}
+.sc-mhead{display:flex;align-items:center;justify-content:center;gap:16px;margin:4px 0 10px}
+.sc-mhead b{font-size:15px;font-variant-numeric:tabular-nums}
+.sc-mhead button{width:28px;height:28px;border:1px solid var(--border);background:var(--card,#fff);
+  border-radius:7px;cursor:pointer;font:inherit;color:var(--text2)}
+.sc-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);
+  border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.sc-cal .dow{background:var(--bg2,#F6F8FA);padding:6px 0;text-align:center;font-size:11px;
+  font-weight:700;color:var(--text3)}
+.sc-cal .dow.sun{color:#DC2626}.sc-cal .dow.sat{color:#1D4ED8}
+.sc-cell{background:var(--card,#fff);min-height:92px;padding:4px 5px 6px;position:relative}
+.sc-cell.out{background:var(--bg2,#F8FAFC);opacity:.5}
+.sc-cell.today{box-shadow:inset 0 0 0 2px var(--navy,#1D4ED8)}
+.sc-cell .dnum{font-size:11px;font-weight:700;color:var(--text2);font-variant-numeric:tabular-nums}
+.sc-cell.addable{cursor:pointer}
+.sc-cell.addable:hover{background:var(--bluebg,#EFF6FF)}
+.sc-cell .plus{position:absolute;right:4px;top:3px;font-size:13px;color:var(--text3);opacity:0}
+.sc-cell.addable:hover .plus{opacity:1}
+.sc-chip{display:block;width:100%;margin-top:3px;padding:3px 5px;border-radius:5px;
+  border:1px solid var(--blueline,#C7D9FF);background:var(--bluebg,#EFF6FF);color:var(--navy,#1D4ED8);
+  font-size:10.5px;font-weight:600;text-align:left;cursor:pointer;line-height:1.35;
+  font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-chip.full{border-color:#CBD5E1;background:#F1F5F9;color:#64748B}
+.sc-chip.mine{border-color:#86EFAC;background:#F0FDF4;color:#14532D}
+.sc-chip .ok{color:#16A34A}
+@media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-2";</script>
 </head>
 <body>
 
@@ -4192,7 +4223,10 @@ function scRender(){
   var today = new Date(); today.setHours(0,0,0,0);
   var showPast = document.getElementById('scPast').checked;
 
-  var h = '';
+  var h = '<div class="sc-view">'
+        + '<button class="' + (scView === 'cal' ? 'on' : '') + '" onclick="scSetView(\'cal\')">캘린더</button>'
+        + '<button class="' + (scView === 'list' ? 'on' : '') + '" onclick="scSetView(\'list\')">목록</button>'
+        + '</div>';
   if(priv){
     var d0 = new Date(Date.now() + 86400000).toISOString().slice(0,10);
     h += '<div class="sc-form">'
@@ -4214,6 +4248,14 @@ function scRender(){
       +  '</div>';
   } else {
     h += '<div class="bf-note">' + t('scHelp') + '</div>';
+  }
+
+  /* 캘린더 화면이면 여기서 끝낸다 — 지난 일정 숨김·내 예약 요약은 목록 화면 것이다 */
+  if(scView === 'cal'){
+    h += scCalHtml();
+    body.innerHTML = h;
+    scPreview();
+    return;
   }
 
   var list = BF.slots.filter(function(s){
@@ -4277,6 +4319,206 @@ function scRender(){
   scPreview();
 }
 
+/* ══ 미팅 일정 — 캘린더 ══════════════════════════════════════════════════
+   주최자가 날짜를 눌러 시간을 열고, 팀이 예약하고, 주최자가 확정한다.
+   scView 는 'cal' 또는 'list'. scMonth 는 보고 있는 달의 1일. */
+var scView = 'cal', scMonth = null;
+
+/* 가벼운 모달 하나 — 이 앱에 공용 모달이 없어서 여기서 만든다 */
+function scModal(title, inner){
+  scModalClose();
+  var w = document.createElement('div');
+  w.id = 'scModal';
+  w.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:3000;'
+    + 'display:flex;align-items:center;justify-content:center;padding:16px';
+  w.onclick = function(e){ if(e.target === w) scModalClose(); };
+  w.innerHTML = '<div style="background:var(--card,#fff);border-radius:14px;padding:20px;'
+    + 'width:560px;max-width:96vw;max-height:86vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.28)">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+    + '<b style="font-size:15px">' + bfEsc(title) + '</b>'
+    + '<button onclick="scModalClose()" style="border:none;background:none;font-size:20px;'
+    + 'cursor:pointer;color:var(--text3);line-height:1">×</button></div>' + inner + '</div>';
+  document.body.appendChild(w);
+}
+function scModalClose(){ var e = document.getElementById('scModal'); if(e) e.remove(); }
+
+function scMonthStart(){
+  if(!scMonth){ var n = new Date(); scMonth = new Date(n.getFullYear(), n.getMonth(), 1); }
+  return scMonth;
+}
+function scMonthMove(n){
+  var m = scMonthStart();
+  scMonth = new Date(m.getFullYear(), m.getMonth() + n, 1);
+  scRender();
+}
+function scSetView(v){ scView = v; scRender(); }
+function scYmd(d){
+  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+}
+
+/* 주최자가 빈 날짜를 눌렀을 때 — 그 날짜로 만들기 폼을 채워 준다 */
+function scPickDay(ds){
+  var el = document.getElementById('scDate');
+  if(!el) return;
+  el.value = ds;
+  el.scrollIntoView({block:'center', behavior:'smooth'});
+  var st = document.getElementById('scStart');
+  if(st) st.focus();
+  scPreview();
+}
+
+function scCalHtml(){
+  var priv = AUTH.isPriv(), mine = bfMyTeams();
+  var m = scMonthStart();
+  var y = m.getFullYear(), mo = m.getMonth();
+  var first = new Date(y, mo, 1), last = new Date(y, mo + 1, 0);
+  var start = new Date(first); start.setDate(1 - first.getDay());   // 그 주 일요일부터
+  var todayS = scYmd(new Date());
+
+  /* 날짜별로 슬롯을 모은다 */
+  var byDay = {};
+  (BF.slots || []).forEach(function(s){ (byDay[s.date] = byDay[s.date] || []).push(s); });
+
+  var h = '<div class="sc-mhead">'
+        + '<button onclick="scMonthMove(-1)" title="이전 달">‹</button>'
+        + '<b>' + y + '년 ' + (mo + 1) + '월</b>'
+        + '<button onclick="scMonthMove(1)" title="다음 달">›</button></div>'
+        + '<div class="sc-cal">';
+  ['일','월','화','수','목','금','토'].forEach(function(d, i){
+    h += '<div class="dow' + (i === 0 ? ' sun' : (i === 6 ? ' sat' : '')) + '">' + d + '</div>';
+  });
+
+  var cur = new Date(start);
+  for(var w = 0; w < 6; w++){
+    for(var i = 0; i < 7; i++){
+      var ds = scYmd(cur), out = (cur.getMonth() !== mo);
+      var list = (byDay[ds] || []).slice().sort(function(a,b){ return a.start < b.start ? -1 : 1; });
+      h += '<div class="sc-cell' + (out ? ' out' : '') + (ds === todayS ? ' today' : '')
+        +  (priv && !out ? ' addable" onclick="scPickDay(\'' + ds + '\')"' : '"') + '>'
+        +  '<span class="dnum">' + cur.getDate() + '</span>'
+        +  (priv && !out ? '<span class="plus">＋</span>' : '');
+      list.forEach(function(s){
+        var bk = s.bookings || [], cap = Math.max(1, s.cap || 1), left = cap - bk.length;
+        var isMine = bk.some(function(b){ return mine.some(function(t){ return t.toLowerCase() === String(b.team).toLowerCase(); }); });
+        var okAll = bk.length > 0 && bk.every(function(b){ return b.ok; });
+        var who = bk.length ? bk.map(function(b){ return b.team; }).join(',') : ('빈자리 ' + left);
+        h += '<button class="sc-chip' + (isMine ? ' mine' : (left <= 0 ? ' full' : '')) + '"'
+          +  ' onclick="event.stopPropagation();scSlotOpen(\'' + bfEsc(s.id) + '\')">'
+          +  (okAll ? '<span class="ok">✓</span> ' : '') + bfEsc(s.start) + ' ' + bfEsc(who) + '</button>';
+      });
+      h += '</div>';
+      cur.setDate(cur.getDate() + 1);
+    }
+    if(cur > last && cur.getDay() === 0) break;
+  }
+  h += '</div>';
+  return h;
+}
+
+/* 슬롯 하나를 눌렀을 때 — 주최자는 고치고 확정, 팀원은 예약 */
+function scSlotOpen(id){
+  var s = (BF.slots || []).filter(function(x){ return x.id === id; })[0];
+  if(!s) return;
+  var priv = AUTH.isPriv(), mine = bfMyTeams();
+  var teams = (priv ? bfAllTeams() : (mine.length ? mine : bfAllTeams()));
+  var bk = s.bookings || [], cap = Math.max(1, s.cap || 1), left = cap - bk.length;
+  var dur = 60;
+  try{
+    var a = /^(\d+):(\d+)$/.exec(s.start), b = /^(\d+):(\d+)$/.exec(s.end);
+    if(a && b) dur = ((+b[1]) * 60 + (+b[2])) - ((+a[1]) * 60 + (+a[2]));
+  }catch(e){}
+
+  var h = '<div style="font-size:13px;color:var(--text2);margin-bottom:10px">'
+        + bfEsc(s.date) + ' (' + scDow(s.date) + ')  ' + bfEsc(s.start) + ' – ' + bfEsc(s.end)
+        + (s.note ? '  ·  ' + bfEsc(s.note) : '') + '</div>';
+
+  /* 예약 목록 */
+  if(bk.length){
+    h += '<div style="margin-bottom:10px">';
+    bk.forEach(function(b){
+      var canX = priv || b.by === (AUTH.user && AUTH.user.username);
+      h += '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+        +  '<b style="font-size:13px">' + bfEsc(b.team) + '</b>'
+        +  '<span style="font-size:11px;color:var(--text3)">' + bfEsc(b.by || '') + '</span>'
+        +  (b.ok ? '<span style="font-size:11px;color:#16A34A;font-weight:700">✓ 확정</span>'
+                 : '<span style="font-size:11px;color:#B7791F">확정 대기</span>')
+        +  '<span style="flex:1"></span>';
+      if(priv) h += '<button class="btn" onclick="scConfirm(\'' + bfEsc(s.id) + '\',\'' + bfEsc(b.team) + '\',' + (b.ok ? 'false' : 'true') + ')">'
+                 +  (b.ok ? '확정 해제' : '확정') + '</button>';
+      if(canX) h += '<button class="btn danger" onclick="scUnbook(\'' + bfEsc(s.id) + '\',\'' + bfEsc(b.team) + '\')">취소</button>';
+      h += '</div>';
+    });
+    h += '</div>';
+  }
+
+  /* 예약하기 */
+  if(left > 0){
+    h += '<div style="display:flex;gap:6px;align-items:center;margin-bottom:12px">'
+      +  '<select class="filter-sel" id="bk_' + bfEsc(s.id) + '" style="width:130px">'
+      +  teams.map(function(t){ return '<option value="' + bfEsc(t) + '">' + bfEsc(t) + '</option>'; }).join('')
+      +  '</select><button class="btn primary" onclick="scBook(\'' + bfEsc(s.id) + '\')">예약</button>'
+      +  '<span style="font-size:11px;color:var(--text3)">남은 자리 ' + left + ' / ' + cap + '</span></div>';
+  } else {
+    h += '<div style="font-size:12px;color:var(--text3);margin-bottom:12px">자리가 찼습니다.</div>';
+  }
+
+  /* 주최자 수정 */
+  if(priv){
+    h += '<div style="border-top:1px solid var(--border);padding-top:10px">'
+      +  '<div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">주최자 수정</div>'
+      +  '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
+      +  '<input type="date" id="su-date" value="' + bfEsc(s.date) + '">'
+      +  '<input type="time" id="su-start" value="' + bfEsc(s.start) + '" step="900">'
+      +  '<select class="filter-sel" id="su-dur" style="width:100px">'
+      +  [30,60,90,120].map(function(m){ return '<option value="'+m+'"'+(m===dur?' selected':'')+'>'+m+'분</option>'; }).join('')
+      +  '</select>'
+      +  '<input type="number" id="su-cap" value="' + cap + '" min="1" max="20" style="width:70px">'
+      +  '<input type="text" id="su-note" value="' + bfEsc(s.note || '') + '" placeholder="메모" style="flex:1;min-width:120px">'
+      +  '<button class="btn primary" onclick="scUpdate(\'' + bfEsc(s.id) + '\')">저장</button>'
+      +  '<button class="btn danger" onclick="scDel(\'' + bfEsc(s.id) + '\')">삭제</button>'
+      +  '</div></div>';
+  }
+
+  scModal('일정', h);
+}
+
+/* 확정 / 확정 해제 — 서버 액션이 필요하다 */
+async function scConfirm(id, team, ok){
+  try{
+    var r = await okrApi('sch_confirm', {id:id, team:team, ok:ok});
+    BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
+    scModalClose(); scRender(); toast(ok ? '확정했습니다.' : '확정을 풀었습니다.');
+  }catch(e){ scSrvErr(e); }
+}
+
+/* 주최자 수정 — 예약은 그대로 두고 시각·정원·메모만 고친다 */
+async function scUpdate(id){
+  var start = document.getElementById('su-start').value;
+  var dur   = parseInt(document.getElementById('su-dur').value, 10) || 60;
+  var p = {
+    id:    id,
+    date:  document.getElementById('su-date').value,
+    start: start,
+    end:   scEndOf(start, dur),
+    cap:   parseInt(document.getElementById('su-cap').value, 10) || 1,
+    note:  document.getElementById('su-note').value
+  };
+  if(!p.date || !p.start || !p.end){ toast(t('scNeedTime'), 'error'); return; }
+  try{
+    var r = await okrApi('sch_update', p);
+    BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
+    scModalClose(); scRender(); toast('고쳤습니다.');
+  }catch(e){ scSrvErr(e); }
+}
+
+/* 서버가 아직 옛 판이면 그 사실을 알려 준다 */
+function scSrvErr(e){
+  var msg = (e && e.data && e.data.error) || '';
+  if(/Unknown action/i.test(msg) || (e && e.status === 400 && !msg))
+    toast('이 기능은 NAS 의 api.php 를 올려야 켜집니다.', 'error');
+  else toast(msg || '실패했습니다.', 'error');
+}
+
 /* 시작 시각 + 길이(분) → 끝 시각. 자정을 넘기면 23:59 에서 멈춘다. */
 function scEndOf(start, mins){
   var m = /^(\d{1,2}):(\d{2})$/.exec(String(start || ''));
@@ -4326,6 +4568,7 @@ async function scDel(id){
     await okrApi('sch_delete', {id: id});
     BF.slots = BF.slots.filter(function(s){ return s.id !== id; });
     toast(t('scDeleted'));
+    scModalClose();
     scRender();
   }catch(e){ toast((e && e.data && e.data.error) || t('scDelFail'), 'error'); }
 }
@@ -4337,6 +4580,7 @@ async function scBook(id){
     var r = await okrApi('sch_book', {id: id, team: sel.value});
     BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
     toast(t('scBooked').replace('{t}', sel.value));
+    scModalClose();
     scRender();
   }catch(e){ toast((e && e.data && e.data.error) || t('scBookFail'), 'error'); }
 }
@@ -4346,6 +4590,7 @@ async function scUnbook(id, team){
     var r = await okrApi('sch_unbook', {id: id, team: team});
     BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
     toast(t('scUnbooked'));
+    scModalClose();
     scRender();
   }catch(e){ toast((e && e.data && e.data.error) || t('scUnbookFail'), 'error'); }
 }
