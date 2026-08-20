@@ -311,7 +311,7 @@ tr.dragging{opacity:.35}
 .sc-chip .ok{color:#16A34A}
 @media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-6";</script>
 </head>
 <body>
 
@@ -387,7 +387,7 @@ tr.dragging{opacity:.35}
 <div class="toolbar" id="tbGantt" style="display:none">
   <span class="gantt-label">Period view:</span>
   <select class="filter-sel" id="ganttYear" onchange="renderGantt()">
-    <option value="2026">2026</option>
+    <!-- 목록은 fillGanttYears() 가 데이터에 실제로 있는 연도로 채운다 -->
   </select>
   <select class="filter-sel" id="ganttTeam" onchange="renderGantt()">
     <option value="">All Teams</option>
@@ -1208,20 +1208,38 @@ async function nasWrite(){
 
 // \ud56d\ubaa9 \ud558\ub098\ub9cc \uc5c5\ub370\uc774\ud2b8 \u2014 \ub3d9\uc2dc\ud3b8\uc9d1 \ucda9\ub3cc(409) \ucc98\ub9ac
 async function nasUpdateItem(item){
-  if(!nasMode || !NAS_API) return;
+  if(!nasMode || !NAS_API) return true;      // 서버를 안 쓰는 상태면 실패로 치지 않는다
   try{
     const r = await okrApi('update_item',{item:item, baseUat:item._uat});
     if(r && r._uat) item._uat = r._uat;
+    // 서버는 저장할 때 _uat 와 _uby 를 함께 찍는데 응답으로는 _uat 만 준다(api.php 529).
+    // 로컬에 _uby 를 안 채우면 서버 내용과 반드시 어긋나고,
+    // 10초 폴링이 DATA 를 통째로 갈아 끼우며 화면을 다시 그린다. 치던 글자가 날아간다.
+    try{ if(AUTH.user && AUTH.user.username) item._uby = AUTH.user.username; }catch(_){}
+    try{ window._nasHash = JSON.stringify(DATA); }catch(_){}
+    return true;
   }catch(e){
     if(e.status===409 && e.data && e.data.current){
       toast('\u26a0 Someone edited this first. Refreshing to the latest version.','error');
       const cur=e.data.current, i=DATA.findIndex(x=>x.id===cur.id);
       if(i>=0) DATA[i]=cur;
       window._nasHash=JSON.stringify(DATA); renderTable();
-    } else if(e.status===403){ toast('You do not have permission to edit this item.','error'); }
+    } else if(e.status===403){ toast(t('saveDenied'),'error'); }
     else if(e.kind==='auth'){ AUTH.clear(); secUnlocked=false; showLogin(); }
-    else dbg('update_item failed', e);
+    else { dbg('update_item failed', e); toast(t('saveFailed'),'error'); }
+    return false;
   }
+}
+
+/* 저장이 거절되면 방금 바꾼 값을 되돌린다.
+   409 는 위에서 DATA[i] 를 통째로 바꿔치운 뒤라 여기서 되돌리면 안 된다 —
+   그래서 nasUpdateItem 이 409 에서도 false 를 주지만, 호출부는 이미 새 값을 받은 상태다.
+   되돌릴 값을 미리 떠 두고 실패했을 때만 쓴다. */
+function snapItem(d){ try{ return JSON.parse(JSON.stringify(d)); }catch(e){ return null; } }
+function restoreItem(d, snap){
+  if(!d || !snap) return;
+  if(!DATA.some(function(x){ return x === d; })) return;   // 폴링이 배열을 갈아 끼웠으면 손대지 않는다
+  Object.keys(snap).forEach(function(k){ d[k] = snap[k]; });
 }
 
 async function nasDeleteItems(ids){
@@ -1431,8 +1449,9 @@ function toggleInTd(id){
   toast(d.lv==='TD' ? t('toastTodoSwitch') : t('toastInitSwitch'), 'success');
 }
 // My Tasks 카드에서 직접 이동
-function mtMove(id, action){
+async function mtMove(id, action){
   const d = DATA.find(x=>x.id===id); if(!d) return;
+  const _snap = snapItem(d);
   switch(action){
     case 'review':    d.review=true;  break;
     case 'unreview':  d.review=false; break;
@@ -1445,9 +1464,11 @@ function mtMove(id, action){
       d.urgency = (d.urgency==='Urgent') ? '덜긴급' : 'Urgent';
       break;
   }
-  saveData(); nasUpdateItem(d);
+  saveData();
   renderTable();   // Refresh OKR List
   renderMatrix();  // Re-render My Tasks
+  const _ok = await nasUpdateItem(d);
+  if(!_ok){ restoreItem(d, _snap); saveData(); renderTable(); renderMatrix(); }
 }
 function toggleReview(id){
   const d=DATA.find(x=>x.id===id); if(!d)return;
@@ -2046,7 +2067,26 @@ function ganttToggleAll(){
   if(fully){ ganttExpandedIN.clear(); } else { ganttCollapsedTK.clear(); ganttExpandedIN=new Set(allIN); }
   renderGantt();
 }
+/* 간트 연도 목록 — 데이터에 실제로 있는 연도 + 올해 + 내년 */
+function fillGanttYears(){
+  const el = document.getElementById('ganttYear');
+  if(!el) return;
+  const now = new Date().getFullYear();
+  const ys = new Set([now, now + 1]);
+  (DATA || []).forEach(function(d){
+    const m = /(20\d{2})/.exec(String(d.period || ''));
+    if(m) ys.add(parseInt(m[1], 10));
+  });
+  const list = Array.from(ys).sort();
+  const keep = el.value && list.indexOf(parseInt(el.value, 10)) >= 0 ? parseInt(el.value, 10) : null;
+  const sel = keep !== null ? keep : (list.indexOf(now) >= 0 ? now : list[0]);
+  el.innerHTML = list.map(function(y){
+    return '<option value="' + y + '"' + (y === sel ? ' selected' : '') + '>' + y + '</option>';
+  }).join('');
+}
+
 function renderGantt(){
+  fillGanttYears();
   const filterTeam = document.getElementById('ganttTeam').value;
   const filterSt   = document.getElementById('ganttStatus').value;
 
@@ -2062,9 +2102,16 @@ function renderGantt(){
 
   // ── 공통 ──
   const months    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const monthDays = [31,28,31,30,31,30,31,31,30,31,30,31];
-  const yearStart = new Date(2026,0,1);
-  const totalDays = 365;
+  // 연도를 고정하지 않는다. 2027년이 되면 간트가 안 그려지던 원인이 여기였다.
+  const gy = (function(){
+    const el = document.getElementById('ganttYear');
+    const v = el && parseInt(el.value, 10);
+    return (v && v > 1990) ? v : new Date().getFullYear();
+  })();
+  const isLeap = (gy % 4 === 0 && gy % 100 !== 0) || (gy % 400 === 0);
+  const monthDays = [31, isLeap ? 29 : 28, 31,30,31,30,31,31,30,31,30,31];
+  const yearStart = new Date(gy,0,1);
+  const totalDays = isLeap ? 366 : 365;
   const monthTotalW = 860;
   const mWidths = monthDays.map(d=>Math.round(d/totalDays*monthTotalW));
   function dayOff(d){ return Math.round((d-yearStart)/(1000*60*60*24)); }
@@ -3081,6 +3128,18 @@ function onDrop(e, tgtId){
   DATA.push(...rest);
   saveData();
   renderTable();
+
+  // 지금까지 드래그는 브라우저에만 남고 서버로 안 갔다. 새로고침하면 사라졌다.
+  // 부모가 바뀐 경우만 항목 단위로 보낼 수 있다.
+  // 순서만 바꾼 것은 배열 순서라 update_item 으로 못 남긴다 — 그 사실을 알린다.
+  if(mode === 'child'){
+    const _snap = snapItem(srcD);
+    nasUpdateItem(srcD).then(function(ok){
+      if(!ok){ restoreItem(srcD, _snap); saveData(); renderTable(); }
+    });
+  } else {
+    toast(t('orderNotSaved'));
+  }
 }
 
 function onDragEnd(e){
@@ -3132,12 +3191,15 @@ function parseNumVal(v){
   const n = parseFloat(s);
   return isNaN(n) ? s : n;
 }
-function saveActual(id){
+async function saveActual(id){
   const inp=document.getElementById('ia-'+id); if(!inp)return;
   const val=inp.value.trim(); if(val==='')return;
   const d=DATA.find(x=>x.id===id); if(!d)return;
+  const _snap = snapItem(d);
   d.actual=parseNumVal(val);
-  saveData(); nasUpdateItem(d); renderTable();
+  saveData(); renderTable();
+  const _ok = await nasUpdateItem(d);
+  if(!_ok){ restoreItem(d, _snap); saveData(); renderTable(); return; }
   toast('Actual saved','success');
 }
 
@@ -3264,6 +3326,9 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    saveDenied:'Not saved \u2014 you do not have permission to edit this item. The value has been put back.',
+    saveFailed:'Not saved \u2014 the server did not accept the change. The value has been put back.',
+    orderNotSaved:'Moved on screen only \u2014 row order is not saved to the server.',
     resetBlocked:'Blocked while connected to the NAS \u2014 this would erase the server data, not restore it.',
     confirmDelete:'Delete this item?\nAll sub-items will also be deleted.',
     panelEdit:'Edit', panelNew:'Add new item',
@@ -3399,6 +3464,9 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    saveDenied:'저장되지 않았습니다 — 이 항목을 고칠 권한이 없습니다. 값을 되돌렸습니다.',
+    saveFailed:'저장되지 않았습니다 — 서버가 받아들이지 않았습니다. 값을 되돌렸습니다.',
+    orderNotSaved:'화면에서만 옮겨졌습니다 — 줄 순서는 서버에 저장되지 않습니다.',
     resetBlocked:'NAS 에 연결된 동안에는 막혀 있습니다 — 되돌리는 것이 아니라 서버 데이터를 지우게 됩니다.',
     confirmDelete:'이 항목을 지울까요?\n하위 항목도 함께 지워집니다.',
     panelEdit:'수정', panelNew:'새 항목 추가',
@@ -3534,6 +3602,9 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    saveDenied:'Chưa lưu — bạn không có quyền sửa mục này. Giá trị đã được hoàn lại.',
+    saveFailed:'Chưa lưu — máy chủ không chấp nhận. Giá trị đã được hoàn lại.',
+    orderNotSaved:'Chỉ di chuyển trên màn hình — thứ tự dòng không được lưu.',
     resetBlocked:'Bị chặn khi đang kết nối NAS — thao tác này sẽ xóa dữ liệu máy chủ, không phải khôi phục.',
     confirmDelete:'Xóa mục này?\nCác mục con cũng sẽ bị xóa.',
     panelEdit:'Sửa', panelNew:'Thêm mục mới',
