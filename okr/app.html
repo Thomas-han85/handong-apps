@@ -373,7 +373,7 @@ tr.dragging{opacity:.35}
   border-radius:9px;padding:1px 7px;margin:3px 3px 0 0;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-9";</script>
 </head>
 <body>
 
@@ -1476,7 +1476,7 @@ function periodPickerVal(){
 function impCell(d){
   if(d.lv!=='TD') return '<span style="color:var(--text3);font-size:10px">—</span>';
   if(d.status==='Done'||d.review===true||d.review==='true') return '<span style="color:var(--text3);font-size:10px">—</span>';
-  const v=d.importance||'';
+  const v=flagNorm(d.importance)==='Important'?'Important':(flagNorm(d.importance)==='Less'?'덜중요':'');
   if(v==='Important') return `<span onclick="event.stopPropagation();cycleImp(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:#FEE2E2;color:#991B1B">${t('imp')}</span>`;
   if(v==='덜중요') return `<span onclick="event.stopPropagation();cycleImp(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;background:#F1F5F9;color:#64748B">${t('lessImp')}</span>`;
   return `<span onclick="event.stopPropagation();cycleImp(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;color:var(--text3);border:1px dashed var(--border)">${t('setLabel')}</span>`;
@@ -1517,7 +1517,7 @@ async function cycleConf(id){
 function urgCell(d){
   if(d.lv!=='TD') return '<span style="color:var(--text3);font-size:10px">—</span>';
   if(d.status==='Done'||d.review===true||d.review==='true') return '<span style="color:var(--text3);font-size:10px">—</span>';
-  const v=d.urgency||'';
+  const v=flagNorm(d.urgency)==='Urgent'?'Urgent':(flagNorm(d.urgency)==='Less'?'덜긴급':'');
   if(v==='Urgent') return `<span onclick="event.stopPropagation();cycleUrg(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;background:#FEF3C7;color:#92400E">${t('urg')}</span>`;
   if(v==='덜긴급') return `<span onclick="event.stopPropagation();cycleUrg(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;background:#F1F5F9;color:#64748B">${t('lessUrg')}</span>`;
   return `<span onclick="event.stopPropagation();cycleUrg(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;color:var(--text3);border:1px dashed var(--border)">${t('setLabel')}</span>`;
@@ -1586,9 +1586,45 @@ function cycleStatus(id){
   d.status=order[(i+1)%order.length];
   saveData(); nasUpdateItem(d); renderTable();
 }
-function cycleImp(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Important','덜중요'];const i=order.indexOf(d.importance||'');d.importance=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
-function cycleUrg(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Urgent','덜긴급'];const i=order.indexOf(d.urgency||'');d.urgency=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
-function calcPct(d){if(d.target===''||d.target===null)return null;const t=parseFloat(d.target);if(!t)return null;return Math.min(Math.round((parseFloat(d.actual)||0)/t*100),200);}
+/* 중요도·긴급도 값이 두 벌로 갈려 있다 — 'Important' 와 '중요', '덜중요' 와 '덜Important'.
+   읽을 때 눕혀서 비교하고 저장은 영문 한 벌로 한다. 기존 데이터는 안 건드린다. */
+function flagNorm(v){
+  var x = String(v || '').trim().toLowerCase();
+  if(x === 'important' || x === '중요')       return 'Important';
+  if(x === 'urgent'    || x === '긴급')       return 'Urgent';
+  if(x === '덜중요'    || x === '덜important') return 'Less';
+  if(x === '덜긴급'    || x === '덜urgent')   return 'Less';
+  return '';
+}
+function cycleImp(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Important','덜중요'];const i=order.indexOf(flagNorm(d.importance)==='Important'?'Important':(flagNorm(d.importance)==='Less'?'덜중요':''));d.importance=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
+function cycleUrg(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Urgent','덜긴급'];const i=order.indexOf(flagNorm(d.urgency)==='Urgent'?'Urgent':(flagNorm(d.urgency)==='Less'?'덜긴급':''));d.urgency=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
+/* 달성률.
+   지금까지는 실적/목표 하나뿐이라 '사고 10건 → 2건' 목표에 3건이 나면 150% 로 보였다.
+   못한 것이 잘한 것으로 표시된 것이다.
+   방향(dir)과 시작값(base)이 있으면 그것으로 계산한다.
+     증가형  (실적 − 시작값) / (목표 − 시작값)
+     감소형  (시작값 − 실적) / (시작값 − 목표)
+   시작값이 없으면 예전 방식 그대로다 — 기존 데이터는 그대로 보인다.
+   4DX 가 지목한 그대로다: 시작선(X)이 없는 것이 감소형이 깨지는 진짜 원인이다. */
+function calcPct(d){
+  if(d.target===''||d.target===null) return null;
+  const T = parseFloat(d.target);
+  if(isNaN(T)) return null;
+  const A = parseFloat(d.actual)||0;
+  const hasBase = (d.base!==undefined && d.base!==null && String(d.base).trim()!=='');
+  const B = hasBase ? parseFloat(d.base) : NaN;
+  if(hasBase && !isNaN(B) && B!==T){
+    const p = (d.dir==='dec') ? (B - A) / (B - T) : (A - B) / (T - B);
+    return Math.max(Math.min(Math.round(p*100), 200), -100);
+  }
+  if(d.dir==='dec'){
+    // 시작값이 없는 감소형 — 목표 이하이면 달성으로 본다
+    if(!T) return null;
+    return Math.max(Math.min(Math.round((T / (A||T)) * 100), 200), 0);
+  }
+  if(!T) return null;
+  return Math.min(Math.round(A/T*100),200);
+}
 function dueStatus(d){
   if(!d || d.status==='Done') return null;
   if(d.lv!=='TD' && d.lv!=='IN') return null;
@@ -1938,8 +1974,8 @@ function getRows(){
       const matchTm=(!fTm||(d.team||'')===fTm);
       // filterTab: TD에만 적용
       let matchTab=true;
-      if(filterTab==='imp') matchTab=(d.lv==='TD'&&d.importance==='Important');
-      else if(filterTab==='urg') matchTab=(d.lv==='TD'&&d.urgency==='Urgent');
+      if(filterTab==='imp') matchTab=(d.lv==='TD'&&flagNorm(d.importance)==='Important');
+      else if(filterTab==='urg') matchTab=(d.lv==='TD'&&flagNorm(d.urgency)==='Urgent');
       else if(filterTab==='rev') matchTab=(d.lv==='TD'&&(d.review===true||d.review==='true'));
       // 아직 실행과제에 안 붙은 개인 할 일은 OKR 트리에 넣지 않는다.
       // 데이터는 그대로 있고 My Tasks 와 간트, 요약 카드, CSV 에는 계속 나온다.
@@ -3118,6 +3154,17 @@ function openEdit(id){
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml(d)}</div>
     </div>
     <div class="p-sec"><div class="p-sec-title">${t('panelGoal')}</div>
+      ${d.lv!=='TD' ? `<div class="field-row">
+        <div class="field-group"><div class="field-lbl">${t('fldDir')}</div>
+          <select class="field-sel" id="f-dir">
+            <option value=""${d.dir!=='dec'?' selected':''}>${t('dirInc')}</option>
+            <option value="dec"${d.dir==='dec'?' selected':''}>${t('dirDec')}</option>
+          </select></div>
+        <div class="field-group"><div class="field-lbl">${t('fldBase')}</div>
+          <input class="field-input" type="text" inputmode="decimal" id="f-base"
+                 value="${d.base==null?'':d.base}" placeholder="${t('fldBasePh')}"></div>
+      </div>
+      <div style="font-size:10.5px;color:var(--text3);margin:-4px 0 8px;line-height:1.5">${t('dirHint')}</div>` : ''}
       <div class="field-row">
       <div class="field-group">
         <div class="field-lbl" style="display:flex;align-items:center;gap:6px">${t('fldTarget')}
@@ -3423,6 +3470,8 @@ function saveEdit(){
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
   const stEl=document.getElementById('f-status');  if(stEl)  d.status=stEl.value;
 
+  const dirEl=document.getElementById('f-dir');   if(dirEl)  d.dir=dirEl.value;
+  const baseEl=document.getElementById('f-base'); if(baseEl) d.base=parseNumVal(baseEl.value.trim());
   const confEl=document.getElementById('f-conf'); if(confEl) d.conf=confEl.value;
   if(document.getElementById('f-imp')) d.importance=document.getElementById('f-imp').value;
   if(document.getElementById('f-urg')) d.urgency=document.getElementById('f-urg').value;
@@ -3437,8 +3486,34 @@ function saveEdit(){
   if(nasMode){ nasUpdateItem(d); }   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사)
   closePanel(); toast(t('toastSaved'),'success');
 }
+/* 지울 것을 미리 세어 본다 — 자손까지 전부 */
+function delPreview(id){
+  var lvN = {O:'Objective', KR:'Company KR', TO:'Team Obj', TK:'Team KR', IN:'Initiative', TD:'Todo'};
+  var out = [], cnt = {};
+  (function walk(x){
+    (DATA || []).filter(function(y){ return y.pid === x; }).forEach(function(y){ walk(y.id); });
+    var d = (DATA || []).find(function(y){ return y.id === x; });
+    if(d){ out.push(d); cnt[d.lv] = (cnt[d.lv] || 0) + 1; }
+  })(id);
+  var self = (DATA || []).find(function(y){ return y.id === id; });
+  var kids = out.filter(function(d){ return d.id !== id; });
+  var parts = Object.keys(cnt).filter(function(k){ return !(self && k === self.lv && cnt[k] === 1); })
+                .map(function(k){ return (lvN[k] || k) + ' ' + cnt[k]; });
+  return {all: out, kids: kids.length, label: self ? (TL(self.label) || '') : '', parts: parts};
+}
 function deleteItem(){
-  if(!confirm(t('confirmDelete')))return;
+  var _p = delPreview(editId);
+  var _msg;
+  if(_p.kids > 0){
+    _msg = t('delWithKids')
+             .replace('{label}', _p.label.slice(0, 40))
+             .replace('{n}', _p.kids)
+         + '\n\n    ' + _p.parts.join('  ·  ')
+         + '\n\n' + t('delNoUndo');
+  } else {
+    _msg = t('confirmDelete');
+  }
+  if(!confirm(_msg))return;
   if(_pendingNew && _pendingNew.id === editId){ _pendingNew=null; closePanel(); toast(t('toastDeleted'),'success'); return; }
   // Delete할 항목 id 수집 (하위 포함)
   const deletedIds = [];
@@ -3639,10 +3714,11 @@ function parseNumVal(v){
 }
 async function saveActual(id){
   const inp=document.getElementById('ia-'+id); if(!inp)return;
-  const val=inp.value.trim(); if(val==='')return;
+  const val=inp.value.trim();
   const d=DATA.find(x=>x.id===id); if(!d)return;
   const _snap = snapItem(d);
-  d.actual=parseNumVal(val);
+  // 빈칸으로 저장할 수 있어야 한다 — '0' 과 '아직 안 넣음' 은 뜻이 다르다
+  d.actual = (val==='') ? '' : parseNumVal(val);
   saveData(); renderTable();
   const _ok = await nasUpdateItem(d);
   if(!_ok){ restoreItem(d, _snap); saveData(); renderTable(); return; }
@@ -3781,6 +3857,14 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    delWithKids:'Delete \u201c{label}\u201d and its {n} sub-items?',
+    delNoUndo:'This cannot be undone.',
+    fldDir:'Direction',
+    dirInc:'Higher is better',
+    dirDec:'Lower is better',
+    fldBase:'Starting value',
+    fldBasePh:'e.g. 10',
+    dirHint:'For a reduction goal (accidents 10 \u2192 2), pick \u201cLower is better\u201d and enter 10 as the starting value. Without it, 3 accidents would show as 150%.',
     idReissued:'Another item already had that number, so the server gave this one a new number. Nothing was overwritten.',
     loadAdminOnly:'Only an administrator can load a file over the server data.',
     loadWarn:'This replaces ALL {n} rows on the server with the file.\n\nAnything other people saved in the meantime will be lost.\n\nContinue?',
@@ -3934,6 +4018,14 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    delWithKids:'“{label}” 와 하위 {n}건을 함께 지우니다.',
+    delNoUndo:'되돌릴 수 없습니다. 계속할까요?',
+    fldDir:'방향',
+    dirInc:'늘리는 목표',
+    dirDec:'줄이는 목표',
+    fldBase:'시작값',
+    fldBasePh:'예: 10',
+    dirHint:'절감 목표(사고 10건 → 2건)라면 “줄이는 목표” 를 고르고 시작값에 10 을 넣으세요. 안 넣으면 3건이 150% 로 표시됩니다.',
     idReissued:'같은 번호를 쓴 항목이 이미 있어 서버가 새 번호를 줍니다. 덮어쓴 것은 없습니다.',
     loadAdminOnly:'파일 불러오기는 관리자만 할 수 있습니다.',
     loadWarn:'서버의 {n}행을 이 파일로 통째로 바꿉니다.\n\n그 사이에 다른 사람이 저장한 내용은 사라집니다.\n\n계속할까요?',
@@ -4087,6 +4179,14 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    delWithKids:'Xóa “{label}” và {n} mục con?',
+    delNoUndo:'Không thể hoàn tác.',
+    fldDir:'Hướng',
+    dirInc:'Càng cao càng tốt',
+    dirDec:'Càng thấp càng tốt',
+    fldBase:'Giá trị bắt đầu',
+    fldBasePh:'ví dụ 10',
+    dirHint:'Mục tiêu giảm (10 \u2192 2): chọn “Càng thấp càng tốt” và nhập 10.',
     idReissued:'Số này đã có, máy chủ đã cấp số mới. Không có gì bị ghi đè.',
     loadAdminOnly:'Chỉ quản trị viên mới tải được tệp.',
     loadWarn:'Thay toàn bộ {n} dòng trên máy chủ bằng tệp này.\n\nDữ liệu người khác vừa lưu sẽ mất.\n\nTiếp tục?',
