@@ -373,7 +373,7 @@ tr.dragging{opacity:.35}
   border-radius:9px;padding:1px 7px;margin:3px 3px 0 0;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-8";</script>
 </head>
 <body>
 
@@ -1275,10 +1275,18 @@ async function nasUpdateItem(item){
   try{
     const r = await okrApi('update_item',{item:item, baseUat:item._uat});
     if(r && r._uat) item._uat = r._uat;
-    // 서버는 저장할 때 _uat 와 _uby 를 함께 찍는데 응답으로는 _uat 만 준다(api.php 529).
-    // 로컬에 _uby 를 안 채우면 서버 내용과 반드시 어긋나고,
-    // 10초 폴링이 DATA 를 통째로 갈아 끼우며 화면을 다시 그린다. 치던 글자가 날아간다.
-    try{ if(AUTH.user && AUTH.user.username) item._uby = AUTH.user.username; }catch(_){}
+    // 서버가 번호를 새로 발급했으면(두 사람이 같은 번호를 뽑은 경우) 그것으로 고쳐 잡는다.
+    // 안 고치면 로컬은 옛 번호를 들고 있어 다음 수정이 남의 항목으로 날아간다.
+    if(r && r.id && item.id !== r.id){
+      const _old = item.id;
+      item.id = r.id;
+      toast(t('idReissued'));
+      dbg('id reissued', _old, '->', r.id);
+    }
+    // 서버는 저장할 때 _uat 와 _uby 를 함께 찍는다. 로컬에 _uby 가 없으면
+    // 서버 내용과 반드시 어긋나고 10초 폴링이 표를 통째로 다시 그린다.
+    if(r && r._uby) item._uby = r._uby;
+    else { try{ if(AUTH.user && AUTH.user.username) item._uby = AUTH.user.username; }catch(_){} }
     try{ window._nasHash = JSON.stringify(DATA); }catch(_){}
     return true;
   }catch(e){
@@ -2576,12 +2584,10 @@ function myTeamName(){
     return ts.length === 1 ? ts[0] : (ts.length ? ts[0] : '');
   }catch(e){ return ''; }
 }
-/* 여러 사람이 같은 순간에 만들어도 안 겹치게. nextId 는 로컬 최대값이라 겹친다. */
-function newTodoId(){
-  var uid = 0;
-  try{ uid = (AUTH.user && AUTH.user.id) || 0; }catch(e){}
-  return Date.now() * 10 + (uid % 10);
-}
+/* 번호는 작게 유지한다 — CSV 의 No 칸에 그대로 나가기 때문이다.
+   두 사람이 같은 번호를 뽑는 경우는 서버가 막고 새 번호를 발급한다
+   (api.php update_item 의 번호 충돌 방어). */
+function newTodoId(){ return nextId(); }
 
 async function todayAdd(){
   var ta = document.getElementById('todayIn');
@@ -3677,6 +3683,14 @@ function exportJSON(){
   toast(t('toastExport'), 'success');
 }
 
+/* 파일 불러오기는 서버를 통째로 덮어쓴다 — 그 사이 남이 한 저장이 전부 사라진다.
+   그래서 관리자만 쓰고, 무엇이 사라지는지 알린 뒤에 진행한다. */
+function importGuard(){
+  if(!AUTH.isPriv()){ toast(t('loadAdminOnly'),'error'); return false; }
+  if(!nasMode) return true;
+  var n = (DATA||[]).length;
+  return confirm(t('loadWarn').replace('{n}', n));
+}
 function importJSON(e){
   const file = e.target.files[0]; if(!file) return;
   const reader = new FileReader();
@@ -3684,6 +3698,7 @@ function importJSON(e){
     try {
       const parsed = JSON.parse(ev.target.result);
       if(!Array.isArray(parsed)) throw new Error('format error');
+      if(!importGuard()) return;
       if(!confirm(t('confirmImport').replace('{n}', parsed.length))) return;
       DATA = parsed;
       saveData(); if(nasMode) nasWrite(); // 전체 교체이므로 전체 Save
@@ -3766,6 +3781,9 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    idReissued:'Another item already had that number, so the server gave this one a new number. Nothing was overwritten.',
+    loadAdminOnly:'Only an administrator can load a file over the server data.',
+    loadWarn:'This replaces ALL {n} rows on the server with the file.\n\nAnything other people saved in the meantime will be lost.\n\nContinue?',
     thConf:'Confidence',
     conf_high:'High',
     conf_mid:'Mid',
@@ -3916,6 +3934,9 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    idReissued:'같은 번호를 쓴 항목이 이미 있어 서버가 새 번호를 줍니다. 덮어쓴 것은 없습니다.',
+    loadAdminOnly:'파일 불러오기는 관리자만 할 수 있습니다.',
+    loadWarn:'서버의 {n}행을 이 파일로 통째로 바꿉니다.\n\n그 사이에 다른 사람이 저장한 내용은 사라집니다.\n\n계속할까요?',
     thConf:'자신감',
     conf_high:'상',
     conf_mid:'중',
@@ -4066,6 +4087,9 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    idReissued:'Số này đã có, máy chủ đã cấp số mới. Không có gì bị ghi đè.',
+    loadAdminOnly:'Chỉ quản trị viên mới tải được tệp.',
+    loadWarn:'Thay toàn bộ {n} dòng trên máy chủ bằng tệp này.\n\nDữ liệu người khác vừa lưu sẽ mất.\n\nTiếp tục?',
     thConf:'Mức tự tin',
     conf_high:'Cao',
     conf_mid:'Trung bình',
