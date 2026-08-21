@@ -343,7 +343,7 @@ tr.dragging{opacity:.35}
 .tr1 .mt{font-size:10.5px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tr1.dn .lb{text-decoration:line-through;color:var(--text3)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-2";</script>
 </head>
 <body>
 
@@ -3515,6 +3515,8 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    bfNoTOWhy:' has no Team Objective registered \u2014 this is not a filter problem.',
+    bfNoTOWho:'Teams that do have one ({n})',
     saveDenied:'Not saved \u2014 you do not have permission to edit this item. The value has been put back.',
     saveFailed:'Not saved \u2014 the server did not accept the change. The value has been put back.',
     orderNotSaved:'Moved on screen only \u2014 row order is not saved to the server.',
@@ -3653,6 +3655,8 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    bfNoTOWhy:' 팀에는 팀 목표(Team Objective)가 등록되어 있지 않습니다 — 걸러내기 문제가 아닙니다.',
+    bfNoTOWho:'팀 목표가 있는 팀 ({n}개)',
     saveDenied:'저장되지 않았습니다 — 이 항목을 고칠 권한이 없습니다. 값을 되돌렸습니다.',
     saveFailed:'저장되지 않았습니다 — 서버가 받아들이지 않았습니다. 값을 되돌렸습니다.',
     orderNotSaved:'화면에서만 옮겨졌습니다 — 줄 순서는 서버에 저장되지 않습니다.',
@@ -3791,6 +3795,8 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    bfNoTOWhy:' chưa đăng ký Team Objective — không phải lỗi bộ lọc.',
+    bfNoTOWho:'Các nhóm đã có ({n})',
     saveDenied:'Chưa lưu — bạn không có quyền sửa mục này. Giá trị đã được hoàn lại.',
     saveFailed:'Chưa lưu — máy chủ không chấp nhận. Giá trị đã được hoàn lại.',
     orderNotSaved:'Chỉ di chuyển trên màn hình — thứ tự dòng không được lưu.',
@@ -4249,8 +4255,11 @@ function bfDefaultKey(out){
 
 /* ── 팀 / 권한 ───────────────────────────────────────────────────── */
 
+/* 여러 팀이 붙은 값을 낱개로 쪼갠다.
+   구분자는 콤마 · 더하기 · 슬래시 셋이다 — 'FM+ACC' 'CSP, FO' 'A/B'
+   앰퍼샌드(&)는 절대 쪼개지 않는다. C&C1 · C&C2 · P&C 가 팀 이름 자체이기 때문이다. */
 function bfTeamsOf(v){
-  return String(v == null ? '' : v).split(',').map(function(x){ return x.trim(); })
+  return String(v == null ? '' : v).split(/[,+\/]/).map(function(x){ return x.trim(); })
          .filter(function(x){ return x !== ''; });
 }
 function bfHasTeam(rowTeam, team){
@@ -4356,6 +4365,22 @@ function bfPick(){
     if(BF.scope === 'company' && r.lv === 'KR') o.rollup = bfTeamRoll(r.id);
     return o;
   });
+}
+
+/* 팀 목표가 없을 때 그냥 '없음' 이라고만 하지 않는다.
+   코드가 못 찾는 것이 아니라 그 팀에 등록된 팀 목표가 없는 것이다. */
+function bfNoTOMsg(){
+  var have = {};
+  (DATA || []).forEach(function(r){
+    if(r.lv === 'TO') bfTeamsOf(r.team).forEach(function(t){ if(t !== 'team') have[t] = 1; });
+  });
+  var list = Object.keys(have).sort();
+  var n = list.length;
+  return t('bfNoTO')
+       + '<div style="margin-top:6px;font-size:11.5px;color:var(--text3);line-height:1.6">'
+       + bfEsc(BF.team) + t('bfNoTOWhy')
+       + (n ? ('<br>' + t('bfNoTOWho').replace('{n}', n) + ' — ' + bfEsc(list.join(' · '))) : '')
+       + '</div>';
 }
 
 /* 전사 카드에서 KR 아래 팀별 진척을 한 줄로 요약 */
@@ -4570,7 +4595,7 @@ function bfRender(){
     h += '<div class="bf-sec"><h4>' + t('bfSecTO') + '<span class="n">' + objs.length + '</span></h4>'
        + (objs.length
           ? bfTable(objs, {team: false})
-          : '<div class="bf-empty">' + t('bfNoTO') + '</div>')
+          : '<div class="bf-empty">' + bfNoTOMsg() + '</div>')
        + '</div>';
     // 팀 KR 과 Initiative 는 묶여 있으므로 묶어서 낸다.
     h += '<div class="bf-sec"><h4>' + t('bfSecTK')
