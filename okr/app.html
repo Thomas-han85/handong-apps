@@ -342,8 +342,23 @@ tr.dragging{opacity:.35}
 .tr1 .lb{flex:1;line-height:1.45;min-width:0}
 .tr1 .mt{font-size:10.5px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tr1.dn .lb{text-decoration:line-through;color:var(--text3)}
+
+/* ── 붙이기 ── */
+.tr1 .at{font-size:11px;padding:3px 9px;border-radius:14px;border:1px solid var(--border);
+  background:#fff;color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0}
+.tr1 .at:hover{border-color:var(--navy,#1D4ED8);color:var(--navy,#1D4ED8)}
+.tr1 .up{font-size:10.5px;color:var(--text3);white-space:nowrap;max-width:190px;
+  overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
+.tr1 .up.keep{color:#94A3B8;font-style:italic}
+.atbox{display:flex;gap:6px;align-items:center;padding:7px 13px 9px 39px;background:var(--bg2,#F8FAFC);
+  border-bottom:1px solid var(--bg2,#F1F5F9)}
+.atbox select{flex:1;min-width:0;font:inherit;font-size:12px;padding:5px 8px;
+  border:1px solid var(--border);border-radius:7px;background:#fff}
+.atbox button{font:inherit;font-size:11.5px;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.atbox .go{border:none;background:var(--navy,#1D4ED8);color:#fff;font-weight:700}
+.atbox .no{border:1px solid var(--border);background:#fff;color:var(--text2)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-3";</script>
 </head>
 <body>
 
@@ -2535,20 +2550,112 @@ function todayHtml(pic){
       var ea = parseDate(a.period,true), eb = parseDate(b.period,true);
       return (ea?ea.getTime():9e15) - (eb?eb.getTime():9e15);
     });
+    var pend = list.filter(atPending).length;
     h += '<div class="tg ' + x[2] + (shut ? ' shut' : '') + '">'
       +  '<h4 onclick="todayToggle(\'' + k + '\')">' + x[1]
-      +  ' <span class="n">' + list.length + '</span><span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
+      +  ' <span class="n">' + list.length + '</span>'
+      +  (pend ? '<span class="n" style="color:#B7791F">· 안 붙임 ' + pend + '</span>' : '')
+      +  '<span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
       +  '<div class="tgb">';
     list.forEach(function(d){
+      var up = '';
+      if(d.pid){
+        var par = DATA.find(function(x){ return x.id === d.pid; });
+        if(par) up = '<div class="up" title="' + bfEsc(TL(par.label)) + '">↳ ' + bfEsc(TL(par.label)) + '</div>';
+      } else if(d.noOkr){
+        up = '<div class="up keep" onclick="atUndoSkip(' + d.id + ')" title="누르면 다시 붙일 수 있습니다">내 할 일</div>';
+      }
       h += '<div class="tr1" data-id="' + d.id + '">'
         +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
+        +  up
+        +  (atPending(d) ? '<div class="at" onclick="atToggle(' + d.id + ')">↳ 붙이기</div>' : '')
         +  '<div class="mt">' + bfEsc(ago(d)) + '</div></div>';
+      if(_atOpen === d.id){
+        h += '<div class="atbox">'
+          +  '<select id="at-' + d.id + '">' + atOptions() + '</select>'
+          +  '<button class="go" onclick="atApply(' + d.id + ')">붙이기</button>'
+          +  '<button class="no" onclick="atSkip(' + d.id + ')">붙일 데 없음</button>'
+          +  '<button class="no" onclick="atToggle(' + d.id + ')">닫기</button>'
+          +  '</div>';
+      }
     });
     h += '</div></div>';
   });
   h += '</div>';
   return h;
+}
+
+/* ══ 붙이기 — 적어 둔 것을 나중에 실행과제에 잇는다 ══════════════════════
+   적을 때는 안 묻고, 붙일 것만 나중에 붙인다.
+   안 붙이는 것도 정상이다 — 일상 업무는 원래 OKR 에 안 붙는다(라모트 #14). */
+
+var _atOpen = null;                 /* 지금 열려 있는 붙이기 줄 */
+function atToggle(id){ _atOpen = (_atOpen === id) ? null : id; renderMatrix(); }
+
+/* 아직 안 붙었고, 붙이지 않기로 표시하지도 않은 줄 */
+function atPending(d){
+  return d && d.lv === 'TD' && !d.pid && !d.noOkr;
+}
+
+/* 고를 수 있는 실행과제 — 내 팀 것을 위로 */
+function atOptions(){
+  var mine = bfMyTeams();
+  var ins = (DATA || []).filter(function(d){ return d.lv === 'IN'; });
+  function isMine(d){
+    if(!mine.length) return false;
+    return mine.some(function(t){ return bfHasTeam(d.team, t); });
+  }
+  var a = ins.filter(isMine), b = ins.filter(function(d){ return !isMine(d); });
+  function lab(d){
+    var s = TL(d.label) || '';
+    return (d.team ? '[' + d.team + '] ' : '') + (s.length > 46 ? s.slice(0, 46) + '…' : s);
+  }
+  var h = '<option value="">어디에 붙일까요…</option>';
+  if(a.length) h += '<optgroup label="내 팀">' + a.map(function(d){
+    return '<option value="' + d.id + '">' + bfEsc(lab(d)) + '</option>'; }).join('') + '</optgroup>';
+  if(b.length) h += '<optgroup label="그 밖">' + b.map(function(d){
+    return '<option value="' + d.id + '">' + bfEsc(lab(d)) + '</option>'; }).join('') + '</optgroup>';
+  return h;
+}
+
+async function atApply(id){
+  var sel = document.getElementById('at-' + id);
+  if(!sel || !sel.value){ toast('붙일 실행과제를 고르세요.','error'); return; }
+  var d = DATA.find(function(x){ return x.id === id; });
+  var p = DATA.find(function(x){ return x.id === parseInt(sel.value, 10); });
+  if(!d || !p) return;
+  var snap = snapItem(d);
+  d.pid  = p.id;
+  d.team = p.team || d.team;          /* 팀·KR 코드는 상위에서 물려받는다 */
+  d.kr   = p.kr || d.kr;
+  _atOpen = null;
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  toast('붙였습니다 — ' + (TL(p.label) || '').slice(0, 24));
+}
+
+/* 붙일 데 없음 — 오류가 아니라 정상 경로다. 다시 안 묻는다. */
+async function atSkip(id){
+  var d = DATA.find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  d.noOkr = true;
+  _atOpen = null;
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  toast('그냥 내 할 일로 두었습니다.');
+}
+async function atUndoSkip(id){
+  var d = DATA.find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  d.noOkr = false;
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); }
 }
 
 async function todayDone(id){
