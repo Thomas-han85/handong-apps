@@ -35,7 +35,11 @@ body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--
 .search-box:focus,.filter-sel:focus{outline:none;border-color:var(--blue);background:#fff}
 
 /* SUMMARY */
-.summary-wrap{padding:14px 20px 0;display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.summary-wrap{padding:14px 20px 0;display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+@media (max-width:1500px){ .summary-wrap{grid-template-columns:repeat(4,1fr)} }
+@media (max-width:900px){ .summary-wrap{grid-template-columns:repeat(2,1fr)} }
+.sum-card .bar{height:5px;border-radius:3px;background:var(--border-light,#E2E8F0);overflow:hidden;margin-top:6px;display:flex}
+.sum-card .bar i{display:block;height:100%}
 .sum-card{background:var(--surface);border:1px solid var(--border-light);border-radius:8px;padding:12px 14px}
 .sum-card .lbl{font-size:10px;color:var(--text2);font-weight:500;letter-spacing:.3px;text-transform:uppercase;margin-bottom:4px}
 .sum-card .val{font-size:22px;font-weight:600;line-height:1}
@@ -358,7 +362,7 @@ tr.dragging{opacity:.35}
 .atbox .go{border:none;background:var(--navy,#1D4ED8);color:#fff;font-weight:700}
 .atbox .no{border:1px solid var(--border);background:#fff;color:var(--text2)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-4";</script>
 </head>
 <body>
 
@@ -1884,7 +1888,11 @@ function getRows(){
       if(filterTab==='imp') matchTab=(d.lv==='TD'&&d.importance==='Important');
       else if(filterTab==='urg') matchTab=(d.lv==='TD'&&d.urgency==='Urgent');
       else if(filterTab==='rev') matchTab=(d.lv==='TD'&&(d.review===true||d.review==='true'));
-      const ok=matchSearch&&matchLv&&matchSt&&matchTm&&matchTab;
+      // 아직 실행과제에 안 붙은 개인 할 일은 OKR 트리에 넣지 않는다.
+      // 데이터는 그대로 있고 My Tasks 와 간트, 요약 카드, CSV 에는 계속 나온다.
+      // OKR 목록은 회의에서 같이 보는 화면이라 개인 할 일이 한 줄도 없어야 한다.
+      const loose = (d.lv==='TD' && !d.pid);
+      const ok=matchSearch&&matchLv&&matchSt&&matchTm&&matchTab&&!loose;
       // 보안 잠금 Status에서 secured 항목 완전히 숨김
       if(ok && !(d.secured === true && !secUnlocked)) rows.push({...d,depth});
       if(!collapsed.has(d.id)) walk(d.id,depth+1);
@@ -2064,12 +2072,35 @@ function renderSummary(){
   const pctIN  = cntIN ? Math.round(doneIN/cntIN*100) : 0;
   const pctTD  = cntTD ? Math.round(doneTD/cntTD*100) : 0;
 
+  // OKR 에 붙은 일과 안 붙은 일의 비중.
+  // 라모트 #14 — 업무 노력의 50~70% 가 OKR 에 반영되는 것을 목표로 하고,
+  // 일상 업무는 일반적으로 OKR 의 일부가 되어서는 안 된다.
+  // 100% 면 일상 업무까지 밀어 넣은 것이고, 20% 면 OKR 이 실제 일과 따로 노는 것이다.
+  const work    = DATA.filter(d=>d.lv==='TD'||d.lv==='IN');
+  const linked  = work.filter(d=>!!d.pid).length;
+  const loose   = work.length - linked;
+  const pctLink = work.length ? Math.round(linked/work.length*100) : 0;
+  const bandOk  = (pctLink >= 50 && pctLink <= 70);
+  const linkCol = bandOk ? '#16A34A' : '#B7791F';
+
   // Company KR 평균 Attainment
   const krs  = DATA.filter(d=>d.lv==='KR');
   const pcts = krs.map(d=>calcPct(d)).filter(p=>p!==null);
   const avg  = pcts.length ? Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length) : 0;
 
   document.getElementById('summaryBar').innerHTML=`
+    <div class="sum-card" title="${t('linkTip')}">
+      <div class="lbl">${t('linkLbl')}</div>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <div class="val" style="color:${linkCol}">${pctLink}%</div>
+        <div style="line-height:1.3;margin-bottom:1px">
+          <div style="font-size:10px;color:var(--text2);font-weight:600">${t('linkOn')} ${linked}</div>
+          <div style="font-size:10px;color:var(--text3);font-weight:600">${t('linkOff')} ${loose}</div>
+        </div>
+      </div>
+      <div class="bar"><i style="width:${pctLink}%;background:${linkCol}"></i></div>
+      <div class="sub">${bandOk ? t('linkGood') : t('linkBand')}</div>
+    </div>
     <div class="sum-card"><div class="lbl">Objective</div><div class="val">${cntO}</div><div class="sub">${t('subObj')}</div></div>
     <div class="sum-card"><div class="lbl">Key Result</div><div class="val">${cntKR}</div><div class="sub">${t('subKR')}</div></div>
     <div class="sum-card"><div class="lbl">Team KR</div><div class="val">${cntTK}</div><div class="sub">${t('subTK')}</div></div>
@@ -3622,6 +3653,12 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    linkLbl:'Linked to OKR',
+    linkOn:'linked',
+    linkOff:'own work',
+    linkGood:'Within the 50\u201370% guide',
+    linkBand:'Guide: 50\u201370%',
+    linkTip:'Share of Initiatives and Todos that hang under an OKR. Lamorte: aim for 50\u201370% \u2014 routine work generally should not be part of OKRs.',
     bfNoTOWhy:' has no Team Objective registered \u2014 this is not a filter problem.',
     bfNoTOWho:'Teams that do have one ({n})',
     saveDenied:'Not saved \u2014 you do not have permission to edit this item. The value has been put back.',
@@ -3762,6 +3799,12 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    linkLbl:'OKR 연결',
+    linkOn:'붙음',
+    linkOff:'내 할 일',
+    linkGood:'권장 범위 50~70% 안',
+    linkBand:'권장 범위 50~70%',
+    linkTip:'실행과제와 할 일 중 OKR 에 붙어 있는 비중. 라모르테 — 50~70% 를 목표로 하고 일상 업무는 대체로 OKR 에 넣지 말 것.',
     bfNoTOWhy:' 팀에는 팀 목표(Team Objective)가 등록되어 있지 않습니다 — 걸러내기 문제가 아닙니다.',
     bfNoTOWho:'팀 목표가 있는 팀 ({n}개)',
     saveDenied:'저장되지 않았습니다 — 이 항목을 고칠 권한이 없습니다. 값을 되돌렸습니다.',
@@ -3902,6 +3945,12 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    linkLbl:'Gắn với OKR',
+    linkOn:'đã gắn',
+    linkOff:'việc riêng',
+    linkGood:'Trong khoảng 50\u201370%',
+    linkBand:'Khuyến nghị: 50\u201370%',
+    linkTip:'Tỷ lệ Initiative và Todo gắn vào OKR. Lamorte: nhắm 50\u201370%.',
     bfNoTOWhy:' chưa đăng ký Team Objective — không phải lỗi bộ lọc.',
     bfNoTOWho:'Các nhóm đã có ({n})',
     saveDenied:'Chưa lưu — bạn không có quyền sửa mục này. Giá trị đã được hoàn lại.',
