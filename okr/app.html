@@ -359,8 +359,21 @@ tr.dragging{opacity:.35}
 .atbox button{font:inherit;font-size:11.5px;padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
 .atbox .go{border:none;background:var(--navy,#1D4ED8);color:#fff;font-weight:700}
 .atbox .no{border:1px solid var(--border);background:#fff;color:var(--text2)}
+
+/* ── 팀 목표가 참조하는 KR ── */
+.refbox{border:1px solid var(--border);border-radius:9px;padding:8px 10px;max-height:190px;overflow:auto;background:#fff}
+.refbox label{display:flex;gap:7px;align-items:flex-start;padding:4px 2px;font-size:12px;
+  line-height:1.45;cursor:pointer;border-radius:5px}
+.refbox label:hover{background:var(--bg2,#F8FAFC)}
+.refbox input{margin-top:2px;flex-shrink:0}
+.refbox .lv{font-size:9.5px;font-weight:700;padding:1px 5px;border-radius:4px;flex-shrink:0;
+  background:var(--gray-bg,#F1F5F9);color:var(--text2)}
+.refbox .none{font-size:11.5px;color:var(--text3);padding:4px 2px}
+.refchip{display:inline-block;font-size:9.5px;color:var(--text2);background:var(--gray-bg,#F1F5F9);
+  border-radius:9px;padding:1px 7px;margin:3px 3px 0 0;max-width:100%;overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-6";</script>
 </head>
 <body>
 
@@ -1926,6 +1939,60 @@ function migrateData(){
   if(changed){ saveData(); console.log('Load 마이그레이션 Done'); }
 }
 
+/* ══ 팀 목표가 참조하는 KR ═══════════════════════════════════════════════
+   부모로 매달지 않는다. 팀이 "이걸 보고 정했다" 고 스스로 고르는 참조다.
+   트리 구조는 안 건드리므로 목록·간트·요약에 영향이 없다. */
+
+function refsOf(d){
+  var v = d && d.refs;
+  if(!v) return [];
+  if(typeof v === 'string') { try{ v = JSON.parse(v); }catch(e){ return []; } }
+  return Array.isArray(v) ? v.map(function(x){ return parseInt(x, 10); }).filter(function(x){ return !!x; }) : [];
+}
+
+/* 고를 수 있는 것 — 전사 KR 과 팀 KR. 내 팀 것을 위로 */
+function refPickerHtml(d){
+  var cur = refsOf(d);
+  var team = String((d && d.team) || '').trim();
+  var cands = (DATA || []).filter(function(x){ return x.lv === 'KR' || x.lv === 'TK'; });
+  function mine(x){ return team && x.lv === 'TK' && bfHasTeam(x.team, team); }
+  cands.sort(function(a, b){
+    var ma = mine(a) ? 0 : 1, mb = mine(b) ? 0 : 1;
+    if(ma !== mb) return ma - mb;
+    if(a.lv !== b.lv) return a.lv === 'KR' ? -1 : 1;
+    return a.id - b.id;
+  });
+  if(!cands.length) return '<div class="refbox"><div class="none">' + t('refNone') + '</div></div>';
+  return '<div class="refbox">' + cands.map(function(x){
+    var on = cur.indexOf(x.id) >= 0 ? ' checked' : '';
+    var lab = (x.kr ? x.kr + ' ' : '') + (TL(x.label) || '');
+    if(lab.length > 62) lab = lab.slice(0, 62) + '…';
+    return '<label><input type="checkbox" class="f-ref" value="' + x.id + '"' + on + '>'
+         + '<span class="lv">' + x.lv + '</span>'
+         + '<span>' + bfEsc(lab) + (x.team ? ' <span style="color:var(--text3)">· ' + bfEsc(x.team) + '</span>' : '') + '</span>'
+         + '</label>';
+  }).join('') + '</div>';
+}
+function refPickerVal(){
+  var out = [];
+  document.querySelectorAll('.f-ref').forEach(function(el){
+    if(el.checked) out.push(parseInt(el.value, 10));
+  });
+  return out;
+}
+/* 카드에 붙일 칩 */
+function refChips(d){
+  var ids = refsOf(d);
+  if(!ids.length) return '';
+  return '<div style="margin-top:5px">' + ids.map(function(id){
+    var x = (DATA || []).find(function(y){ return y.id === id; });
+    if(!x) return '';
+    var lab = (x.kr ? x.kr + ' ' : '') + (TL(x.label) || '');
+    if(lab.length > 26) lab = lab.slice(0, 26) + '…';
+    return '<span class="refchip" title="' + bfEsc(TL(x.label)) + '">↗ ' + bfEsc(lab) + '</span>';
+  }).join('') + '</div>';
+}
+
 function renderTOSection(){
   const q=(document.getElementById('searchInput')||{value:''}).value.toLowerCase();
   const fTm=(document.getElementById('filterTeamList')||{value:''}).value;
@@ -1980,6 +2047,7 @@ function renderTOSection(){
         <span style="font-size:10px;font-weight:600;color:${acol};font-family:'IBM Plex Mono',monospace">${pct}%</span>
       </div>`:''}
       <div style="font-size:10px;color:var(--text3);margin-top:5px">${to.period||''}</div>
+      ${refChips(to)}
     </div>`;
   });
   html += '</div></div>';
@@ -3003,6 +3071,9 @@ function openEdit(id){
       <div class="field-group"><div class="field-lbl">${t('fldContent')}</div><input class="field-input" id="f-label" value="${d.label}">${TL(d.label)!==d.label?`<div style="font-size:11px;color:var(--text2);margin-top:4px;padding:5px 8px;background:var(--gray-bg);border-radius:5px">🌐 ${TL(d.label)}</div>`:''}</div>
       <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value="${d.team||''}" ></div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="${d.pic||''}" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div></div>${picListHtml()}
       ${(d.lv==='TD'||d.lv==='IN')?`<div class="field-group"><div class="field-lbl">${t('fldReviewer')} <span style="font-size:10px;color:var(--text3)">${t('fldReviewerHint')}</span></div><input class="field-input" id="f-reviewer" value="${d.reviewer||''}" placeholder="${t('fldReviewerPh')}"></div>`:''}
+      ${d.lv==='TO' ? `<div class="field-group"><div class="field-lbl">${t('refLbl')}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-bottom:5px;line-height:1.5">${t('refHint')}</div>
+        ${refPickerHtml(d)}</div>` : ''}
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml(d)}</div>
     </div>
     <div class="p-sec"><div class="p-sec-title">${t('panelGoal')}</div>
@@ -3286,6 +3357,8 @@ function saveEdit(){
   // 열었다 저장만 눌러도 값이 바뀌던 것을 막는다(737행 중 421행이 영향받았다).
   const _pv = periodPickerVal();
   if(_pv !== _periodAtOpen || !d.period) d.period = _pv;
+  // 팀 목표가 참조하는 KR — 부모가 아니라 참조다. 트리는 안 건드린다
+  if(document.querySelector('.f-ref')) d.refs = refPickerVal();
 
   const tgtEl=document.getElementById('f-target'); if(tgtEl) d.target=parseNumVal(tgtEl.value);
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
@@ -3639,6 +3712,9 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    refLbl:'Key Results this objective looks at',
+    refHint:'Not a parent \u2014 the team picks which KRs it set this objective against. Pick as many as apply.',
+    refNone:'No Company KR or Team KR yet.',
     linkLbl:'Linked to OKR',
     linkTip:'Share of Todos linked to an OKR. Lamorte: aim for 50\u201370% \u2014 routine work generally should not be part of OKRs.',
     bfNoTOWhy:' has no Team Objective registered \u2014 this is not a filter problem.',
@@ -3781,6 +3857,9 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    refLbl:'이 목표가 보고 정한 KR',
+    refHint:'상위가 아니라 참조입니다 — 팀이 어떤 KR 을 보고 이 목표를 정했는지 고릅니다. 여러 개 고를 수 있습니다.',
+    refNone:'전사 KR 과 팀 KR 이 아직 없습니다.',
     linkLbl:'OKR 연결',
     linkTip:'할 일 중 OKR 에 붙어 있는 비중. 라모르테 — 50~70% 를 목표로 하고 일상 업무는 대체로 OKR 에 넣지 말 것.',
     bfNoTOWhy:' 팀에는 팀 목표(Team Objective)가 등록되어 있지 않습니다 — 걸러내기 문제가 아닙니다.',
@@ -3923,6 +4002,9 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    refLbl:'KR mà mục tiêu này tham chiếu',
+    refHint:'Không phải cấp trên — nhóm tự chọn KR đã tham chiếu. Có thể chọn nhiều.',
+    refNone:'Chưa có KR công ty hoặc KR nhóm.',
     linkLbl:'Gắn với OKR',
     linkTip:'Tỷ lệ Todo gắn vào OKR. Lamorte: nhắm 50\u201370%.',
     bfNoTOWhy:' chưa đăng ký Team Objective — không phải lỗi bộ lọc.',
