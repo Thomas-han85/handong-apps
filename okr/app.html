@@ -372,8 +372,19 @@ tr.dragging{opacity:.35}
 .refchip{display:inline-block;font-size:9.5px;color:var(--text2);background:var(--gray-bg,#F1F5F9);
   border-radius:9px;padding:1px 7px;margin:3px 3px 0 0;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
+
+/* ── 부스팅 회의 이력 ── */
+.bf-hist{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  padding:6px 16px;font-size:11.5px;line-height:1.6}
+.bf-hist .k{color:var(--text3);font-weight:600;letter-spacing:.02em}
+.bf-hpin{display:inline-block;padding:2px 9px;border-radius:11px;text-decoration:none;
+  font-size:11px;font-weight:600;color:var(--text2);background:var(--gray-bg,#F1F5F9);
+  border:1px solid transparent;font-variant-numeric:tabular-nums}
+.bf-hpin:hover{background:#E2E8F0}
+.bf-hpin.on{background:#E0ECF8;color:var(--navy);border-color:#B9D3EA}
+.bf-hpin.unsaved{background:transparent;color:var(--text3);border:1px dashed var(--border);cursor:default}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-12";</script>
 </head>
 <body>
 
@@ -492,16 +503,8 @@ tr.dragging{opacity:.35}
   </div>
   <select class="filter-sel" id="bfTeam" onchange="bfRender()" style="width:150px;display:none"></select>
   <div class="divider"></div>
-  <select class="filter-sel" id="bfPType" onchange="bfTypeChanged()" style="width:110px">
-    <option value="year"  data-i18n="bfYear">By year</option>
-    <option value="quarter" data-i18n="bfQuarter">By quarter</option>
-    <option value="month" selected data-i18n="bfMonth">By month</option>
-  </select>
-  <select class="filter-sel" id="bfPKey" onchange="bfRender()" style="width:132px"></select>
-  <label style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2);
-    white-space:nowrap;cursor:pointer;margin-left:4px">
-    <input type="checkbox" id="bfCum" onchange="bfRender()"><span data-i18n="bfCum">Cumulative</span>
-  </label>
+  <span style="font-size:11.5px;color:var(--text2);white-space:nowrap" data-i18n="bfMeetDate">Meeting date</span>
+  <input type="date" class="filter-sel" id="bfDate" onchange="bfDateChanged()" style="width:146px">
   <div style="margin-left:auto;display:flex;gap:5px">
     <button class="btn" onclick="bfReload()" data-i18n="bfReload">↻ Reload</button>
     <button class="btn" onclick="window.print()" data-i18n="bfPrint">🖨 Print</button>
@@ -1243,7 +1246,7 @@ function aiInsert(){
   toAdd.forEach(function(it){ DATA.push(it); });
   refreshTeamFilter(); renderTable();
   (async function(){
-    for(const it of toAdd){ await nasUpdateItem(it); }
+    for(const it of toAdd){ await nasUpdateItem(it, true); }
     window._nasHash=JSON.stringify(DATA);
     toast(toAdd.length+' items added','success');
   })();
@@ -1270,10 +1273,15 @@ async function nasWrite(){
 }
 
 // \ud56d\ubaa9 \ud558\ub098\ub9cc \uc5c5\ub370\uc774\ud2b8 \u2014 \ub3d9\uc2dc\ud3b8\uc9d1 \ucda9\ub3cc(409) \ucc98\ub9ac
-async function nasUpdateItem(item){
+/* isNew — 이 항목을 지금 처음 만드는가.
+   서버는 이것이 true 일 때만 번호 충돌을 의심하고 새 번호를 발급한다.
+   '_uat 가 없으면 새 항목' 으로 짐작하게 두면 안 된다. _uat 는 이 기능이
+   들어온 뒤에 찍히기 시작한 도장이라 한 번도 안 고쳐진 옛 행에는 없고,
+   그런 행을 처음 고칠 때 새 번호가 나가면 수정이 아니라 복제가 된다. */
+async function nasUpdateItem(item, isNew){
   if(!nasMode || !NAS_API) return true;      // 서버를 안 쓰는 상태면 실패로 치지 않는다
   try{
-    const r = await okrApi('update_item',{item:item, baseUat:item._uat});
+    const r = await okrApi('update_item',{item:item, baseUat:item._uat, isNew: !!isNew});
     if(r && r._uat) item._uat = r._uat;
     // 서버가 번호를 새로 발급했으면(두 사람이 같은 번호를 뽑은 경우) 그것으로 고쳐 잡는다.
     // 안 고치면 로컬은 옛 번호를 들고 있어 다음 수정이 남의 항목으로 날아간다.
@@ -2650,7 +2658,7 @@ async function todayAdd(){
       importance: '', urgency: '', review: false
     };
     DATA.push(d);
-    var r = await nasUpdateItem(d);
+    var r = await nasUpdateItem(d, true);
     if(r) ok++; else { fail++; DATA.pop(); }
   }
   saveData();
@@ -3428,7 +3436,9 @@ function onTeamFilterChange(){
 
 function saveEdit(){
   // If this is a new item (pending), add it to DATA first
+  var _wasNew = false;                 // 서버에 '새로 만드는 것' 이라고 알려 줘야 한다
   if(_pendingNew && _pendingNew.id === editId){
+    _wasNew = true;
     DATA.push(_pendingNew);
     _pendingNew = null;
     // 신규 항목은 전체 Save (항목 추가는 구조 변경)
@@ -3483,7 +3493,7 @@ function saveEdit(){
   const isNew = !DATA.find(x=>x.id===editId);
   saveData();
   window._nasHash = JSON.stringify(DATA); // 내 변경이 동기화에 덮어쓰이는 거 방지
-  if(nasMode){ nasUpdateItem(d); }   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사)
+  if(nasMode){ nasUpdateItem(d, _wasNew); }   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사)
   closePanel(); toast(t('toastSaved'),'success');
 }
 /* 지울 것을 미리 세어 본다 — 자손까지 전부 */
@@ -3908,11 +3918,17 @@ const I18N = {
     /* Boosting meeting */
     navBoost:'Boosting Feedback', navSched:'Meeting Slots',
     bfScopeCo:'Company Feedback', bfScopeTeam:'Team Feedback',
-    bfYear:'By year', bfQuarter:'By quarter', bfMonth:'By month',
-    bfCum:'Cumulative', bfReload:'↻ Reload', bfPrint:'🖨 Print',
+    bfReload:'↻ Reload', bfPrint:'🖨 Print',
+    bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
+    bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
+    bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
+    bfThDelta:'vs last', bfNewRow:'new',
+    bfWasBlank:'Nothing was entered at the last meeting.',
+    bfNowBlank:'A number was entered at the last meeting but is blank now.',
+    bfVsPrev:'Since the {p} — {c} items moved · {n} items are new',
+    bfVsNone:'No earlier meeting to compare against. Save this one and the next will compare.',
     bfNoteTitle:'Boosting Meeting Feedback Card',
-    bfNoteCum:'cumulative (everything up to the end of the period)', bfNoteRange:'items falling in this period',
-    bfNoteBody:'OKR data keeps no point-in-time record. <b>Saving freezes the targets and actuals as they are now into this card</b> — reopen it later and you still see the numbers from the meeting.',
+    bfNoteBody:'OKR data keeps no point-in-time record — targets and actuals are one running number, not one per period. <b>Saving freezes them as they are now into this card</b>, so reopening it later still shows the numbers you looked at in the meeting. One card per meeting date, and the Δ column compares against the meeting before it.',
     bfCompany:'Company', bfTeamSuffix:'',
     bfFrozen:'🔒 Frozen figures',
     bfUpdatedAt:'Last edited', bfNotWritten:'Not written yet',
@@ -3922,7 +3938,7 @@ const I18N = {
     bfShowAll:'Show all {n} ▾', bfFold:'Collapse ▴',
     bfHiddenNote:'Showing the {c} Initiatives with the lowest attainment · {h} hidden',
     bfNoTO:'This team has no Team Objective (TO) registered.',
-    bfNoRows:'No items fall in this period.',
+    bfNoRows:'Nothing to show here.',
     bfThLv:'Level', bfThLabel:'Content', bfThTeam:'Team',
     bfFb:'Feedback', bfFbHint:'Challenges that mattered & what we learned',
     bfFf:'Feedforward', bfFfHint:'Goals to take on & key ideas (= what comes next)',
@@ -4069,11 +4085,17 @@ const I18N = {
     /* 부스팅 미팅 */
     navBoost:'부스팅 피드백', navSched:'미팅 일정',
     bfScopeCo:'전사 피드백', bfScopeTeam:'팀별 피드백',
-    bfYear:'연별', bfQuarter:'분기별', bfMonth:'월별',
-    bfCum:'누계로 보기', bfReload:'↻ 새로고침', bfPrint:'🖨 인쇄',
+    bfReload:'↻ 새로고침', bfPrint:'🖨 인쇄',
+    bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
+    bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
+    bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
+    bfThDelta:'지난 회의 대비', bfNewRow:'신규',
+    bfWasBlank:'지난 회의 때는 적힌 값이 없었습니다.',
+    bfNowBlank:'지난 회의 때는 값이 있었는데 지금은 비어 있습니다.',
+    bfVsPrev:'{p} 이후 — 실적이 움직인 항목 {c}건 · 새로 생긴 항목 {n}건',
+    bfVsNone:'비교할 이전 회의가 없습니다. 이번 것을 저장하면 다음 회의부터 비교됩니다.',
     bfNoteTitle:'부스팅 미팅 피드백 카드',
-    bfNoteCum:'누계(기간 종료일까지 전체)', bfNoteRange:'해당 기간에 걸친 항목',
-    bfNoteBody:'OKR 데이터에는 시점별 기록이 없습니다. <b>저장하면 그때의 목표·실적이 카드에 함께 굳습니다</b> — 나중에 이 카드를 다시 열면 회의 당시 숫자가 그대로 보입니다.',
+    bfNoteBody:'OKR 데이터에는 시점별 기록이 없습니다 — 목표·실적은 시점마다 따로 적는 것이 아니라 흘러가는 숫자 하나입니다. <b>저장하면 지금 숫자가 이 카드에 그대로 굳습니다</b> — 나중에 다시 열어도 회의 때 본 숫자가 그대로 있습니다. 회의 날짜마다 카드가 하나씩 쌓이고, 바로 앞 회의와 비교한 증감이 표의 Δ 칸에 나옵니다.',
     bfCompany:'전사', bfTeamSuffix:' 팀',
     bfFrozen:'🔒 저장된 시점의 값',
     bfUpdatedAt:'최종 수정', bfNotWritten:'아직 작성 전',
@@ -4083,7 +4105,7 @@ const I18N = {
     bfShowAll:'전체 {n}건 보기 ▾', bfFold:'접기 ▴',
     bfHiddenNote:'Initiative 는 달성률이 낮은 순으로 {c}건만 보이는 중 · 나머지 {h}건 숨김',
     bfNoTO:'이 팀은 팀 Objective(TO)가 등록돼 있지 않습니다.',
-    bfNoRows:'해당 기간에 해당하는 항목이 없습니다.',
+    bfNoRows:'여기에 낼 항목이 없습니다.',
     bfThLv:'구분', bfThLabel:'내용', bfThTeam:'팀',
     bfFb:'Feedback', bfFbHint:'의미 있었던 도전 & 배운 점',
     bfFf:'Feedforward', bfFfHint:'앞으로 도전할 목표 & 핵심 아이디어 (= 앞으로 할 일)',
@@ -4230,11 +4252,17 @@ const I18N = {
     /* Họp Boosting */
     navBoost:'Phản hồi Boosting', navSched:'Lịch họp',
     bfScopeCo:'Phản hồi toàn công ty', bfScopeTeam:'Phản hồi theo nhóm',
-    bfYear:'Theo năm', bfQuarter:'Theo quý', bfMonth:'Theo tháng',
-    bfCum:'Xem lũy kế', bfReload:'↻ Tải lại', bfPrint:'🖨 In',
+    bfReload:'↻ Tải lại', bfPrint:'🖨 In',
+    bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
+    bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
+    bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
+    bfThDelta:'So kỳ trước', bfNewRow:'mới',
+    bfWasBlank:'Buổi họp trước chưa nhập số nào.',
+    bfNowBlank:'Buổi họp trước có số nhưng giờ để trống.',
+    bfVsPrev:'Từ {p} — {c} mục thay đổi · {n} mục mới',
+    bfVsNone:'Chưa có cuộc họp trước để so sánh. Lưu lần này thì lần sau sẽ so được.',
     bfNoteTitle:'Thẻ phản hồi họp Boosting',
-    bfNoteCum:'lũy kế (toàn bộ đến hết kỳ)', bfNoteRange:'các mục thuộc kỳ này',
-    bfNoteBody:'Dữ liệu OKR không lưu theo mốc thời gian. <b>Khi lưu, chỉ tiêu và thực tế tại thời điểm đó được đóng băng vào thẻ</b> — mở lại sau này vẫn thấy đúng con số của buổi họp.',
+    bfNoteBody:'Dữ liệu OKR không lưu theo mốc thời gian — chỉ tiêu và thực tế là một con số chạy liên tục. <b>Khi lưu, con số hiện tại được đóng băng vào thẻ</b> — mở lại sau vẫn thấy đúng số của buổi họp. Mỗi ngày họp một thẻ, cột Δ so với buổi họp liền trước.',
     bfCompany:'Toàn công ty', bfTeamSuffix:'',
     bfFrozen:'🔒 Số liệu đã đóng băng',
     bfUpdatedAt:'Sửa lần cuối', bfNotWritten:'Chưa viết',
@@ -4244,7 +4272,7 @@ const I18N = {
     bfShowAll:'Xem tất cả {n} mục ▾', bfFold:'Thu gọn ▴',
     bfHiddenNote:'Initiative đang hiện {c} mục có tỷ lệ đạt thấp nhất · ẩn {h} mục còn lại',
     bfNoTO:'Nhóm này chưa đăng ký Team Objective (TO).',
-    bfNoRows:'Không có mục nào thuộc kỳ này.',
+    bfNoRows:'Không có mục nào để hiển thị.',
     bfThLv:'Cấp', bfThLabel:'Nội dung', bfThTeam:'Nhóm',
     bfFb:'Feedback', bfFbHint:'Thử thách có ý nghĩa & bài học rút ra',
     bfFf:'Feedforward', bfFfHint:'Mục tiêu sẽ thử thách & ý tưởng cốt lõi (= việc sắp làm)',
@@ -4538,8 +4566,9 @@ async function connectNas(){
 var BF = {
   scope: 'company',
   team: '',
-  ptype: 'month',
-  pkey: '',
+  ptype: 'date',        // 기간 필터를 없앴다. 남은 것은 회의 날짜 하나
+  pkey: '',             // 'YYYY-MM-DD' (옛 카드는 '2026-Q3' 같은 값이 그대로 있다)
+  delta: null,          // 바로 앞 회의 카드와의 대조표
   cards: null,          // key -> card   (null = 아직 안 불러옴)
   slots: null,
   loading: false,
@@ -4619,6 +4648,12 @@ function bfPLabel(kind, y, v){
 }
 function bfSelRange(){
   var k = BF.pkey || '', m;
+  // 회의 날짜. 범위는 이제 아무것도 거르지 않으므로 라벨만 만든다
+  if((m = k.match(/^(\d{4})-(\d{2})-(\d{2})$/)))
+    return {s:0, e:0, label: t('pD').replace('{y}', m[1])
+                              .replace('{mn}', bfMonName(+m[2]))
+                              .replace('{m}', String(+m[2]))
+                              .replace('{d}', String(+m[3]))};
   if((m = k.match(/^(\d{4})$/)))
     return {s:new Date(+m[1],0,1).getTime(), e:new Date(+m[1],11,31,23,59,59).getTime(),
             label:bfPLabel('pY', m[1])};
@@ -4630,32 +4665,6 @@ function bfSelRange(){
             label:bfPLabel('pM', m[1], +m[2])};
   var y = bfBaseYear();
   return {s:new Date(y,0,1).getTime(), e:new Date(y,11,31,23,59,59).getTime(), label:bfPLabel('pY', y)};
-}
-
-/* 기간 선택 목록 채우기 */
-function bfFillPeriods(keep){
-  var sel = document.getElementById('bfPKey'), y = bfBaseYear(), out = [], i;
-  if(BF.ptype === 'year'){
-    for(i = y + 1; i >= y - 2; i--) out.push([String(i), bfPLabel('pY', i)]);
-  } else if(BF.ptype === 'quarter'){
-    for(i = 4; i >= 1; i--) out.push([y + '-Q' + i, bfPLabel('pQ', y, i)]);
-    for(i = 4; i >= 1; i--) out.push([(y-1) + '-Q' + i, bfPLabel('pQ', y - 1, i)]);
-  } else {
-    for(i = 12; i >= 1; i--){
-      var mm = (i < 10 ? '0' : '') + i;
-      out.push([y + '-' + mm, bfPLabel('pM', y, i)]);
-    }
-  }
-  sel.innerHTML = out.map(function(o){ return '<option value="'+o[0]+'">'+o[1]+'</option>'; }).join('');
-  var want = keep && out.some(function(o){ return o[0] === keep; }) ? keep : bfDefaultKey(out);
-  sel.value = want; BF.pkey = want;
-}
-function bfDefaultKey(out){
-  var n = new Date(), y = bfBaseYear(), mm;
-  if(BF.ptype === 'year')    return String(y);
-  if(BF.ptype === 'quarter') return y + '-Q' + (Math.floor(n.getMonth() / 3) + 1);
-  mm = n.getMonth() + 1;
-  return y + '-' + (mm < 10 ? '0' : '') + mm;
 }
 
 /* ── 팀 / 권한 ───────────────────────────────────────────────────── */
@@ -4691,13 +4700,28 @@ function bfNum(v){
   var n = parseFloat(String(v == null ? '' : v).replace(/[, ]/g, '').replace(/[^\d.\-]/g, ''));
   return isFinite(n) ? n : null;
 }
-function bfPct(t, a){
+/* 목록의 calcPct 와 같은 규칙이다 — 안 맞추면 절감 목표가
+   목록에서는 88%, 부스팅에서는 150% 로 갈린다.
+   r 은 dir(방향) 과 base(시작값) 를 가진 행. 없으면 예전 계산 그대로다. */
+function bfPct(t, a, r){
   var T = bfNum(t), A = bfNum(a);
-  if(T === null || A === null || T === 0) return null;
+  if(T === null || A === null) return null;
+  if(r){
+    var B = (r.base === undefined || r.base === null || String(r.base).trim() === '') ? null : bfNum(r.base);
+    if(B !== null && B !== T){
+      var p = (r.dir === 'dec') ? (B - A) / (B - T) : (A - B) / (T - B);
+      return Math.max(Math.min(Math.round(p * 1000) / 10, 200), -100);
+    }
+    if(r.dir === 'dec'){
+      if(T === 0) return null;
+      return Math.max(Math.min(Math.round(T / (A || T) * 1000) / 10, 200), 0);
+    }
+  }
+  if(T === 0) return null;
   return Math.round(A / T * 1000) / 10;
 }
-function bfBar(t, a){
-  var p = bfPct(t, a);
+function bfBar(t, a, r){
+  var p = bfPct(t, a, r);
   if(p === null) return '<span style="color:var(--text3);font-size:11px">—</span>';
   var w = Math.max(0, Math.min(100, p)), cls = p >= 100 ? 'ok' : (p < 50 ? 'low' : '');
   var col = p >= 100 ? 'var(--green)' : (p < 50 ? 'var(--red)' : 'var(--blue)');
@@ -4748,7 +4772,6 @@ function bfTree(rows){
 }
 
 function bfPick(){
-  var R = bfSelRange(), cum = document.getElementById('bfCum').checked;
   var rows = (DATA || []).filter(function(r){
     if(BF.scope === 'company'){
       if(['O','KR'].indexOf(r.lv) < 0) return false;
@@ -4756,16 +4779,20 @@ function bfPick(){
       if(!bfHasTeam(r.team, BF.team)) return false;
       if(['TO','TK','IN'].indexOf(r.lv) < 0) return false;   // TD 는 너무 잘아서 카드에는 안 올림
     }
-    var pr = bfRange(r.period);
-    if(!pr) return true;                       // 상시·해석불가 = 항상
-    return cum ? pr.s <= R.e : (pr.s <= R.e && pr.e >= R.s);
+    // 기간으로 안 거른다.
+    // period 표기가 고유값 102개에 형식 7가지라(월범위 45% · 날짜범위 23% · 연도만 20%,
+    // 분기 표기는 7건뿐) 무엇이 걸리고 무엇이 빠지는지 아무도 예측할 수 없었다.
+    // 시점은 이제 '언제 저장했는가' 로만 정해진다.
+    return true;
   });
 
   return rows.map(function(r){
     var o = {id:r.id, pid:r.pid, lv:r.lv, kr:r.kr || '', label:r.label || '', team:r.team || '',
              pic:r.pic || '', period:String(r.period == null ? '' : r.period),
              target:String(r.target == null ? '' : r.target), actual:String(r.actual == null ? '' : r.actual),
-             status:r.status || '', secured:!!r.secured};
+             status:r.status || '', secured:!!r.secured,
+             // 방향·시작값도 함께 굳힌다 — 없으면 절감 목표의 달성률이 거꾸로 나온다
+             dir:r.dir || '', base:String(r.base == null ? '' : r.base), conf:r.conf || ''};
     // 전사 KR 은 "어느 팀이 뒤쳐졌나" 를 함께 굳힌다 (회의에서 실제로 보는 값)
     if(BF.scope === 'company' && r.lv === 'KR') o.rollup = bfTeamRoll(r.id);
     return o;
@@ -4829,6 +4856,7 @@ function bfTable(rows, cols){
         + '<th style="width:104px">' + t('thPeriod') + '</th>'
         + '<th style="width:66px;text-align:right">' + t('thTarget') + '</th>'
         + '<th style="width:66px;text-align:right">' + t('thActual') + '</th>'
+        + (BF.delta ? '<th style="width:74px;text-align:right">' + t('bfThDelta') + '</th>' : '')
         + '<th style="width:76px">' + t('thAttain') + '</th>'
         + '<th style="width:62px">' + t('thStatus') + '</th></tr></thead><tbody>';
   rows.forEach(function(r){
@@ -4846,11 +4874,128 @@ function bfTable(rows, cols){
       + '<td style="font-size:11px;color:var(--text2)">'+bfEsc(r.period)+'</td>'
       + '<td class="num">'+bfEsc(r.target)+'</td>'
       + '<td class="num">'+bfEsc(r.actual)+'</td>'
-      + '<td>'+bfBar(r.target, r.actual)+'</td>'
+      + (BF.delta ? '<td class="num">'+bfDeltaCell(r)+'</td>' : '')
+      + '<td>'+bfBar(r.target, r.actual, r)+'</td>'
       + '<td>'+bfStat(r.status)+'</td>'
       + '</tr>';
   });
   return h + '</tbody></table>';
+}
+
+/* ══ 회의 이력 ═══════════════════════════════════════════════════════════
+   기간 필터가 사라진 자리를 이것이 대신한다.
+   저장한 카드 하나가 회의 하나다. 저장한 순간의 숫자가 그 안에 굳어 있다. */
+
+function bfToday(){
+  var n = new Date(), p = function(x){ return (x < 10 ? '0' : '') + x; };
+  return n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+}
+function bfIsDate(k){ return /^\d{4}-\d{2}-\d{2}$/.test(String(k == null ? '' : k)); }
+
+/* 지금 보는 범위(전사 / 이 팀)의 저장된 카드를 최근 회의부터.
+   옛 기간 카드(2026-Q3 등)는 날짜 카드 아래로 내린다 — 지우지는 않는다. */
+function bfMyCards(){
+  var pre = BF.scope === 'company' ? 'company::' : ('team::' + BF.team + '::');
+  var out = [];
+  Object.keys(BF.cards || {}).forEach(function(k){
+    if(k.indexOf(pre) !== 0) return;
+    out.push({key: k, pkey: k.slice(pre.length), card: BF.cards[k]});
+  });
+  out.sort(function(a, b){
+    var sa = (bfIsDate(a.pkey) ? '1' : '0') + a.pkey;
+    var sb = (bfIsDate(b.pkey) ? '1' : '0') + b.pkey;
+    return sa < sb ? 1 : (sa > sb ? -1 : 0);
+  });
+  return out;
+}
+
+/* 지금 보는 회의 바로 앞의 회의 (날짜 카드만) */
+function bfPrevCard(){
+  if(!bfIsDate(BF.pkey)) return null;
+  var list = bfMyCards().filter(function(x){
+    return bfIsDate(x.pkey) && x.pkey < BF.pkey && x.card && x.card.snapshot && x.card.snapshot.length;
+  });
+  return list.length ? list[0] : null;      // 이미 최근 순
+}
+
+function bfMakeDelta(){
+  var p = bfPrevCard();
+  if(!p) return null;
+  var map = {};
+  (p.card.snapshot || []).forEach(function(r){ map[r.id] = r; });
+  return {pkey: p.pkey, label: p.card.periodLabel || p.pkey, map: map};
+}
+
+/* 실적이 얼마나 움직였나. 절감 목표는 줄어든 것이 잘한 것이다. */
+function bfDeltaCell(r){
+  if(!BF.delta) return '';
+  var o = BF.delta.map[r.id];
+  if(!o) return '<span style="color:var(--blue);font-size:10px;font-weight:600">' + t('bfNewRow') + '</span>';
+  var m = bfDeltaOf(r, o);
+  if(!m) return '<span style="color:var(--text3)">—</span>';
+  var good = (r.dir === 'dec') ? (m.d < 0) : (m.d > 0);
+  var n = (Math.round(Math.abs(m.d) * 10) / 10).toLocaleString();
+  return '<span title="' + bfEsc(m.tip) + '" style="font-weight:600;color:'
+       + (good ? '#166534' : '#991B1B') + '">'
+       + (m.d > 0 ? '▲' : '▼') + n + (m.wasBlank ? '<sup style="font-weight:400">*</sup>' : '') + '</span>';
+}
+
+/* 실적이 얼마나 움직였나. null 은 0 이 아니라 '아직 안 적음' 이다.
+   그런데 안 적었다가 적은 것도 분명한 변화다 — 회의에서 제일 보고 싶은 것이기도 하다.
+   그래서 한쪽만 빈 경우는 나머지 값만큼 움직인 것으로 내되 별표로 구분한다. */
+function bfDeltaOf(r, o){
+  var a = bfNum(r.actual), b = bfNum(o.actual);
+  if(a === null && b === null) return null;
+  if(b === null) return {d: a, wasBlank: true,  tip: t('bfWasBlank')};
+  if(a === null) return {d: -b, wasBlank: true, tip: t('bfNowBlank')};
+  if(a === b) return null;
+  return {d: a - b, wasBlank: false, tip: o.actual + ' → ' + r.actual};
+}
+
+/* 툴바 아래 한 줄 — 무엇이 움직였는지 먼저 말한다 */
+function bfDeltaNote(rows){
+  if(!bfIsDate(BF.pkey)) return '';
+  if(!BF.delta) return '<div class="bf-hist"><span class="k">' + t('bfVsNone') + '</span></div>';
+  var moved = 0, fresh = 0;
+  rows.forEach(function(r){
+    var o = BF.delta.map[r.id];
+    if(!o){ fresh++; return; }
+    if(bfDeltaOf(r, o)) moved++;
+  });
+  return '<div class="bf-hist"><span class="k">'
+       + t('bfVsPrev').replace('{p}', bfEsc(BF.delta.label))
+                      .replace('{c}', moved).replace('{n}', fresh)
+       + '</span></div>';
+}
+
+/* 저장된 회의 목록 — 이것이 곧 회의 이력이다 */
+function bfHistBar(){
+  var list = bfMyCards(), cur = BF.pkey, seen = false, h = '';
+  h += '<div class="bf-hist"><span class="k">' + t('bfSavedList') + '</span>';
+  list.forEach(function(x){
+    if(x.pkey === cur) seen = true;
+    h += '<a href="javascript:bfPickCard(\'' + bfEsc(x.pkey) + '\')"'
+       + ' class="bf-hpin' + (x.pkey === cur ? ' on' : '') + '">\u25cf&nbsp;'
+       + bfEsc(bfIsDate(x.pkey) ? x.pkey.slice(5) : x.pkey) + '</a>';
+  });
+  if(!seen && cur){
+    h += '<span class="bf-hpin unsaved">\u25cb&nbsp;'
+       + bfEsc(bfIsDate(cur) ? cur.slice(5) : cur) + ' \u00b7 ' + t('bfUnsaved') + '</span>';
+  }
+  if(!list.length) h += '<span style="font-size:11px;color:var(--text3)">' + t('bfNoCards') + '</span>';
+  return h + '</div>';
+}
+
+function bfPickCard(pkey){
+  BF.pkey = pkey;
+  var el = document.getElementById('bfDate');
+  if(el) el.value = bfIsDate(pkey) ? pkey : '';
+  bfRender();
+}
+function bfDateChanged(){
+  var v = document.getElementById('bfDate').value;
+  if(v) BF.pkey = v;
+  bfRender();
 }
 
 /* ── 카드 그리기 ─────────────────────────────────────────────────── */
@@ -4864,11 +5009,6 @@ function bfSetScope(sc){
   document.getElementById('bfScopeC').className = sc === 'company' ? 'on' : '';
   document.getElementById('bfScopeT').className = sc === 'team' ? 'on' : '';
   document.getElementById('bfTeam').style.display = sc === 'team' ? '' : 'none';
-  bfRender();
-}
-function bfTypeChanged(){
-  BF.ptype = document.getElementById('bfPType').value;
-  bfFillPeriods(null);
   bfRender();
 }
 
@@ -4902,7 +5042,9 @@ async function bfReload(){ BF.cards = null; await bfEnsure(); bfRender(); toast(
 
 async function bfOpen(){
   bfFillTeams();
-  if(!document.getElementById('bfPKey').options.length) bfFillPeriods(null);
+  if(!BF.pkey) BF.pkey = bfToday();
+  var _dt = document.getElementById('bfDate');
+  if(_dt && bfIsDate(BF.pkey)) _dt.value = BF.pkey;
   await bfEnsure();
   bfRender();
 }
@@ -4911,8 +5053,6 @@ function bfRender(){
   var body = document.getElementById('bfBody');
   if(!body) return;
   BF.team  = document.getElementById('bfTeam').value || BF.team;
-  BF.pkey  = document.getElementById('bfPKey').value || BF.pkey;
-  BF.ptype = document.getElementById('bfPType').value;
 
   if(BF.scope === 'team' && !BF.team){
     body.innerHTML = '<div class="bf-empty">' + t('bfPickTeam') + '</div>';
@@ -4920,7 +5060,9 @@ function bfRender(){
   }
   if(!BF.cards){ body.innerHTML = '<div class="bf-empty">' + t('bfLoading') + '</div>'; return; }
 
+  if(!BF.pkey) BF.pkey = bfToday();
   var key = bfKey(), card = BF.cards[key] || null, R = bfSelRange();
+  BF.delta = bfMakeDelta();
   if(BF._lastKey !== key){ BF.insAll = false; BF._lastKey = key; }
   var saved = !!(card && card.snapshot && card.snapshot.length);
   BF.frozen = saved && !BF._forceLive;
@@ -4939,7 +5081,7 @@ function bfRender(){
   var CUT = 12, hidden = 0;
   if(ins.length > CUT && !BF.insAll){
     var rank = ins.slice().sort(function(a, b){
-      var pa = bfPct(a.target, a.actual), pb = bfPct(b.target, b.actual);
+      var pa = bfPct(a.target, a.actual, a), pb = bfPct(b.target, b.actual, b);
       if(pa === null && pb === null) return 0;
       if(pa === null) return 1;
       if(pb === null) return -1;
@@ -4952,17 +5094,18 @@ function bfRender(){
   }
 
   var done = rows.filter(function(r){ return /done|완료/i.test(r.status); }).length;
-  var pcts = rows.map(function(r){ return bfPct(r.target, r.actual); }).filter(function(p){ return p !== null; });
+  var pcts = rows.map(function(r){ return bfPct(r.target, r.actual, r); }).filter(function(p){ return p !== null; });
   var avg  = pcts.length ? Math.round(pcts.reduce(function(a,b){ return a+b; }, 0) / pcts.length) : null;
 
   var canW = bfCanWrite(), priv = AUTH.isPriv();
 
   var h = '';
   h += '<div class="bf-note">'
-     + '<b>' + t('bfNoteTitle') + '</b> — ' + bfEsc(R.label) + ' · '
-     + (document.getElementById('bfCum').checked ? t('bfNoteCum') : t('bfNoteRange'))
+     + '<b>' + t('bfNoteTitle') + '</b> — ' + bfEsc(R.label)
      + '<br>' + t('bfNoteBody')
      + '</div>';
+  h += bfHistBar();
+  h += bfDeltaNote(rows);
 
   h += '<div class="bf-card">';
   h += '<div class="bf-cardhead">'
@@ -5058,12 +5201,12 @@ async function bfSave(){
   var R = bfSelRange();
   var payload = {
     key: bfKey(), scope: BF.scope, team: BF.scope === 'team' ? BF.team : '',
-    periodType: BF.ptype, periodKey: BF.pkey, periodLabel: R.label,
-    cumulative: document.getElementById('bfCum').checked,
+    periodType: 'date', periodKey: BF.pkey, periodLabel: R.label,
     snapshot: BF.rows.map(function(r){
       return {id:r.id, pid:r.pid, lv:r.lv, kr:r.kr, label:r.label, team:r.team, pic:r.pic,
               period:r.period, target:r.target, actual:r.actual, status:r.status,
-              secured:r.secured, rollup:r.rollup || []};
+              secured:r.secured, rollup:r.rollup || [],
+              dir:r.dir || '', base:r.base == null ? '' : String(r.base), conf:r.conf || ''};
     }),
     feedback:    document.getElementById('bfFb').value,
     feedforward: document.getElementById('bfFf').value,
@@ -5084,7 +5227,7 @@ async function bfSaveExec(){
   try{
     var r = await okrApi('bf_exec', {
       key: bfKey(), scope: BF.scope, team: BF.scope === 'team' ? BF.team : '',
-      periodType: BF.ptype, periodKey: BF.pkey, periodLabel: R.label,
+      periodType: 'date', periodKey: BF.pkey, periodLabel: R.label,
       exec: document.getElementById('bfExec').value
     });
     BF.cards[r.card.key] = r.card;
