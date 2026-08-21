@@ -373,7 +373,7 @@ tr.dragging{opacity:.35}
   border-radius:9px;padding:1px 7px;margin:3px 3px 0 0;max-width:100%;overflow:hidden;
   text-overflow:ellipsis;white-space:nowrap;vertical-align:top}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-7";</script>
 </head>
 <body>
 
@@ -546,6 +546,7 @@ tr.dragging{opacity:.35}
           <th style="width:80px;text-align:right" data-i18n="thTarget">Target</th>
           <th style="width:132px" data-i18n="thActual">Actual</th>
           <th style="width:88px" data-i18n="thAttain">Attainment</th>
+          <th id="th-conf" style="width:56px;text-align:center" data-i18n="thConf">Confidence</th>
           <th id="th-imp" style="width:52px;text-align:center" data-i18n="thImp">Priority</th>
           <th id="th-urg" style="width:58px;text-align:center" data-i18n="thUrg">Urgency</th>
           <th id="th-rev" style="width:60px;text-align:center" data-i18n="thRev">Review</th>
@@ -1472,6 +1473,39 @@ function impCell(d){
   if(v==='덜중요') return `<span onclick="event.stopPropagation();cycleImp(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;background:#F1F5F9;color:#64748B">${t('lessImp')}</span>`;
   return `<span onclick="event.stopPropagation();cycleImp(${d.id})" style="cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;color:var(--text3);border:1px dashed var(--border)">${t('setLabel')}</span>`;
 }
+/* 자신감 — 이 결과를 낼 수 있겠는가. 결과를 지는 층(TK·IN)에만 묻는다.
+   할 일(TD)에는 이미 중요도·긴급도가 있고, 할 일은 하면 끝나는 것이다.
+   장영학 5장 — 상중하면 충분하다. 처음에는 가운데에서 시작한다. */
+var CONF_ORDER = ['', 'high', 'mid', 'low'];
+var CONF_STYLE = {
+  high: {bg:'#DCFCE7', fg:'#166534', w:600},
+  mid:  {bg:'#FEF3C7', fg:'#92400E', w:600},
+  low:  {bg:'#FEE2E2', fg:'#991B1B', w:700}
+};
+function confCell(d){
+  if(d.lv!=='IN' && d.lv!=='TK') return '<span style="color:var(--text3);font-size:10px">—</span>';
+  if(d.status==='Done') return '<span style="color:var(--text3);font-size:10px">—</span>';
+  var v = d.conf || '';
+  var base = 'cursor:pointer;display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;';
+  if(CONF_STYLE[v]){
+    var c = CONF_STYLE[v];
+    return '<span onclick="event.stopPropagation();cycleConf(' + d.id + ')" title="' + t('confTip') + '" style="'
+         + base + 'font-weight:' + c.w + ';background:' + c.bg + ';color:' + c.fg + '">' + t('conf_' + v) + '</span>';
+  }
+  return '<span onclick="event.stopPropagation();cycleConf(' + d.id + ')" title="' + t('confTip') + '" style="'
+       + base + 'color:var(--text3);border:1px dashed var(--border)">' + t('setLabel') + '</span>';
+}
+async function cycleConf(id){
+  var d = DATA.find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  var i = CONF_ORDER.indexOf(d.conf || '');
+  d.conf = CONF_ORDER[(i + 1) % CONF_ORDER.length];
+  saveData(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderTable(); }
+}
+
 function urgCell(d){
   if(d.lv!=='TD') return '<span style="color:var(--text3);font-size:10px">—</span>';
   if(d.status==='Done'||d.review===true||d.review==='true') return '<span style="color:var(--text3);font-size:10px">—</span>';
@@ -2111,6 +2145,7 @@ function renderTable(){
         </div>`:`<span style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text2);display:block;text-align:right;padding-right:4px">${fmt(d.actual)}</span>`}
       </td>
       <td>${aCell}</td>
+      <td style="text-align:center" onclick="event.stopPropagation()">${confCell(d)}</td>
       <td style="text-align:center;${filterTab==='rev'?'opacity:.25;pointer-events:none':''}">${impCell(d)}</td>
       <td style="text-align:center;${filterTab==='rev'?'opacity:.25;pointer-events:none':''}">${urgCell(d)}</td>
       <td style="text-align:center" onclick="event.stopPropagation()">${reviewCell(d)}</td>
@@ -3089,6 +3124,15 @@ function openEdit(id){
         <input class="field-input" type="text" inputmode="decimal" id="f-actual" value="${d.actual}">
       </div>
     </div>
+      ${(d.lv==='IN'||d.lv==='TK') ? `<div class="field-group">
+        <div class="field-lbl">${t('thConf')}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-bottom:5px;line-height:1.5">${t('confTip')}</div>
+        <select class="field-sel" id="f-conf">
+          <option value=""${!d.conf?' selected':''}>${t('setLabel')}</option>
+          <option value="high"${d.conf==='high'?' selected':''}>${t('conf_high')}</option>
+          <option value="mid"${d.conf==='mid'?' selected':''}>${t('conf_mid')}</option>
+          <option value="low"${d.conf==='low'?' selected':''}>${t('conf_low')}</option>
+        </select></div>` : ''}
       <div class="field-group"><div class="field-lbl">${t('fldStatus')}</div><select class="field-sel" id="f-status">${stO}</select></div>
       ${(d.lv==='TD')?`<div class="field-row">
         <div class="field-group"><div class="field-lbl">${t('fldImp')}</div><select class="field-sel" id="f-imp">
@@ -3170,6 +3214,15 @@ function openNew(){
           <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>
         </div>
       </div>
+      ${(d.lv==='IN'||d.lv==='TK') ? `<div class="field-group" style="margin-top:10px">
+        <div class="field-lbl">${t('thConf')}</div>
+        <div style="font-size:10.5px;color:var(--text3);margin-bottom:5px;line-height:1.5">${t('confTip')}</div>
+        <select class="field-sel" id="f-conf">
+          <option value=""${!d.conf?' selected':''}>${t('setLabel')}</option>
+          <option value="high"${d.conf==='high'?' selected':''}>${t('conf_high')}</option>
+          <option value="mid"${d.conf==='mid'?' selected':''}>${t('conf_mid')}</option>
+          <option value="low"${d.conf==='low'?' selected':''}>${t('conf_low')}</option>
+        </select></div>` : ''}
       <div class="field-group" style="margin-top:10px"><div class="field-lbl">${t('fldStatus')}</div>
         <select class="field-sel" id="f-status">
           <option>Not Started</option><option>In Progress</option><option>Done</option>
@@ -3364,6 +3417,7 @@ function saveEdit(){
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
   const stEl=document.getElementById('f-status');  if(stEl)  d.status=stEl.value;
 
+  const confEl=document.getElementById('f-conf'); if(confEl) d.conf=confEl.value;
   if(document.getElementById('f-imp')) d.importance=document.getElementById('f-imp').value;
   if(document.getElementById('f-urg')) d.urgency=document.getElementById('f-urg').value;
   const fb=document.getElementById('f-fb');
@@ -3712,6 +3766,11 @@ const I18N = {
     toastTodoSwitch:'Switched to Todo', toastInitSwitch:'Switched to Initiative',
     confirmImport:'Load {n} items?\nCurrent data will be overwritten. Continue?',
     confirmReset:'Reset all data to initial state?',
+    thConf:'Confidence',
+    conf_high:'High',
+    conf_mid:'Mid',
+    conf_low:'Low',
+    confTip:'Can we land this result? Start at Mid and update it as you go. Low items become the meeting agenda.',
     refLbl:'Key Results this objective looks at',
     refHint:'Not a parent \u2014 the team picks which KRs it set this objective against. Pick as many as apply.',
     refNone:'No Company KR or Team KR yet.',
@@ -3857,6 +3916,11 @@ const I18N = {
     toastTodoSwitch:'할 일로 바꿨습니다', toastInitSwitch:'실행과제로 바꿨습니다',
     confirmImport:'{n}건을 불러올까요?\n지금 데이터를 덮어씁니다. 계속할까요?',
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
+    thConf:'자신감',
+    conf_high:'상',
+    conf_mid:'중',
+    conf_low:'하',
+    confTip:'이 결과를 낼 수 있겠는가. 처음에는 중 에서 시작해 가면서 고칩니다. 하 인 것이 회의 안건이 됩니다.',
     refLbl:'이 목표가 보고 정한 KR',
     refHint:'상위가 아니라 참조입니다 — 팀이 어떤 KR 을 보고 이 목표를 정했는지 고릅니다. 여러 개 고를 수 있습니다.',
     refNone:'전사 KR 과 팀 KR 이 아직 없습니다.',
@@ -4002,6 +4066,11 @@ const I18N = {
     toastTodoSwitch:'Đã chuyển thành Việc cần làm', toastInitSwitch:'Đã chuyển thành Initiative',
     confirmImport:'Tải {n} mục?\nDữ liệu hiện tại sẽ bị ghi đè. Tiếp tục?',
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
+    thConf:'Mức tự tin',
+    conf_high:'Cao',
+    conf_mid:'Trung bình',
+    conf_low:'Thấp',
+    confTip:'Có đạt được kết quả này không? Bắt đầu từ Trung bình. Mục Thấp trở thành nội dung họp.',
     refLbl:'KR mà mục tiêu này tham chiếu',
     refHint:'Không phải cấp trên — nhóm tự chọn KR đã tham chiếu. Có thể chọn nhiều.',
     refNone:'Chưa có KR công ty hoặc KR nhóm.',
