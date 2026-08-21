@@ -310,8 +310,40 @@ tr.dragging{opacity:.35}
 .sc-chip.mine{border-color:#86EFAC;background:#F0FDF4;color:#14532D}
 .sc-chip .ok{color:#16A34A}
 @media (max-width:720px){ .sc-cell{min-height:64px} .sc-chip{font-size:9.5px} }
+
+/* ── 오늘 할 일 ── */
+#todayBox{border:1px solid var(--border);border-radius:12px;background:#fff;
+  padding:14px 16px 12px;margin-bottom:14px}
+#todayBox .cap{display:flex;gap:8px;align-items:flex-start}
+#todayBox textarea{flex:1;border:1.5px solid var(--border);border-radius:9px;padding:9px 11px;
+  font:inherit;font-size:14px;line-height:1.5;resize:vertical;min-height:40px;max-height:180px;
+  outline:none;transition:border-color .13s}
+#todayBox textarea:focus{border-color:var(--navy,#1D4ED8)}
+#todayBox .cap button{padding:9px 18px;border-radius:9px;border:none;background:var(--navy,#1D4ED8);
+  color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+#todayBox .cap button:disabled{opacity:.45;cursor:default}
+#todayBox .hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
+#todayGroups{margin-bottom:14px}
+.tg{border:1px solid var(--border);border-radius:11px;background:#fff;margin-bottom:8px;overflow:hidden}
+.tg>h4{margin:0;padding:9px 13px;font-size:12.5px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:8px;background:var(--bg2,#F8FAFC);border-bottom:1px solid var(--border)}
+.tg>h4 .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);font-weight:500}
+.tg>h4 .ar{margin-left:auto;color:var(--text3);font-size:11px}
+.tg.shut>h4{border-bottom:none}
+.tg.shut .tgb{display:none}
+.tg.over>h4{background:#FEF2F2;color:#991B1B}
+.tg.today>h4{background:#FFFBEB;color:#92400E}
+.tgb{padding:4px 0}
+.tr1{display:flex;align-items:center;gap:9px;padding:7px 13px;border-bottom:1px solid var(--bg2,#F1F5F9);font-size:13px}
+.tr1:last-child{border-bottom:none}
+.tr1 .ck{width:17px;height:17px;border:1.6px solid var(--border);border-radius:5px;cursor:pointer;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent}
+.tr1 .ck:hover{border-color:var(--navy,#1D4ED8);color:#CBD5E1}
+.tr1 .lb{flex:1;line-height:1.45;min-width:0}
+.tr1 .mt{font-size:10.5px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tr1.dn .lb{text-decoration:line-through;color:var(--text3)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.20-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-1";</script>
 </head>
 <body>
 
@@ -2388,6 +2420,148 @@ function renderGantt(){
 }
 
 // ══ MATRIX (아이젠하워) ══
+/* ══ 오늘 할 일 — 적는 칸과 보는 칸 ══════════════════════════════════════
+   적을 때는 아무것도 묻지 않는다(GTD). 보는 것은 기한으로 나눈다(Things 3). */
+
+/* 이 계정이 데이터에서 쓰는 담당자 표기.
+   계정명을 그대로 넣으면 담당자 목록에 없던 이름이 새로 생겨 오염된다. */
+function myPicName(){
+  var u = (AUTH.user && AUTH.user.username) || '';
+  if(!u) return '';
+  try{
+    var k = Object.keys(PIC_ALIAS).filter(function(a){ return a.toLowerCase() === u.toLowerCase(); })[0];
+    if(k && PIC_ALIAS[k] && PIC_ALIAS[k].length) return PIC_ALIAS[k][0];
+  }catch(e){}
+  return u;
+}
+/* 팀이 비면 api.php can_edit 이 팀원에게 403 을 준다. 계정의 팀에서 채운다. */
+function myTeamName(){
+  try{
+    var ts = (AUTH.user && AUTH.user.teams) || [];
+    return ts.length === 1 ? ts[0] : (ts.length ? ts[0] : '');
+  }catch(e){ return ''; }
+}
+/* 여러 사람이 같은 순간에 만들어도 안 겹치게. nextId 는 로컬 최대값이라 겹친다. */
+function newTodoId(){
+  var uid = 0;
+  try{ uid = (AUTH.user && AUTH.user.id) || 0; }catch(e){}
+  return Date.now() * 10 + (uid % 10);
+}
+
+async function todayAdd(){
+  var ta = document.getElementById('todayIn');
+  if(!ta) return;
+  var lines = String(ta.value || '').split('\n')
+        .map(function(x){ return x.trim(); }).filter(Boolean);
+  if(!lines.length) return;
+  if(!nasMode){ toast('서버에 연결된 뒤에 적어 주세요.','error'); return; }
+
+  var team = myTeamName();
+  if(!team && !AUTH.isPriv()){
+    toast('계정에 팀이 없어 저장할 수 없습니다. 계정 메뉴에서 팀을 지정해 주세요.','error');
+    return;
+  }
+  var btn = document.getElementById('todayBtn');
+  if(btn) btn.disabled = true;
+
+  var ok = 0, fail = 0;
+  for(var i = 0; i < lines.length; i++){
+    var d = {
+      id: newTodoId(), pid: 0, lv: 'TD', kr: '', label: lines[i],
+      team: team, pic: myPicName(), reviewer: '', period: todayPeriod(),
+      target: 0, actual: 0, status: 'Not Started', feedbacks: [],
+      importance: '', urgency: '', review: false
+    };
+    DATA.push(d);
+    var r = await nasUpdateItem(d);
+    if(r) ok++; else { fail++; DATA.pop(); }
+  }
+  saveData();
+  ta.value = '';
+  if(btn) btn.disabled = false;
+  refreshTeamFilter(); renderTable(); renderMatrix();
+  toast(fail ? ('적음 ' + ok + '건 · 실패 ' + fail + '건') : ('적었습니다 — ' + ok + '건'),
+        fail ? 'error' : 'success');
+  ta.focus();
+}
+/* 오늘 하루짜리 기간. 기간을 안 물어도 '오늘' 칸에 들어오게 한다. */
+function todayPeriod(){
+  var t = new Date();
+  var y = t.getFullYear(), m = ('0'+(t.getMonth()+1)).slice(-2), d = ('0'+t.getDate()).slice(-2);
+  return y + '/' + m + '/' + d + '~' + y + '/' + m + '/' + d;
+}
+
+/* 기한으로 네 칸으로 나눈다. 미완료 108건 중 80건이 이미 기한이 지났으므로
+   기한순으로 그냥 쏟으면 빨간 밭이 된다. 나누고 접을 수 있게 한다. */
+var _tgShut = {};
+function todayToggle(k){ _tgShut[k] = !_tgShut[k]; renderMatrix(); }
+
+function todayHtml(pic){
+  var mine = DATA.filter(function(d){
+    if(d.lv !== 'TD' || d.status === 'Done') return false;
+    var ps = String(d.pic || '').split(/[,+&\/]/).map(function(x){ return x.trim(); });
+    return ps.indexOf(pic) >= 0;
+  });
+  var t0 = new Date(); t0.setHours(0,0,0,0);
+  var wk = new Date(t0.getTime() + 7*86400000);
+  var G = { over:[], today:[], week:[], none:[] };
+  mine.forEach(function(d){
+    var e = parseDate(d.period, true);
+    if(!e){ G.none.push(d); return; }
+    var ed = new Date(e.getFullYear(), e.getMonth(), e.getDate());
+    if(ed < t0) G.over.push(d);
+    else if(ed.getTime() === t0.getTime()) G.today.push(d);
+    else if(ed < wk) G.week.push(d);
+    else G.none.push(d);
+  });
+  function ago(d){
+    var e = parseDate(d.period, true); if(!e) return '';
+    var n = Math.round((t0 - new Date(e.getFullYear(),e.getMonth(),e.getDate()))/86400000);
+    if(n > 0) return n + '일 지남';
+    if(n === 0) return '오늘';
+    return (-n) + '일 남음';
+  }
+  var defs = [
+    ['over','기한 지남','over'], ['today','오늘','today'],
+    ['week','이번 주',''], ['none','기한 없음·나중','']
+  ];
+  var h = '<div id="todayGroups">';
+  defs.forEach(function(x){
+    var k = x[0], list = G[k];
+    if(!list.length) return;
+    // 기한 지난 것은 기본으로 접는다 — 열자마자 빨간 밭이 되지 않게
+    var shut = (_tgShut[k] === undefined) ? (k === 'over' || k === 'none') : _tgShut[k];
+    list.sort(function(a,b){
+      var ea = parseDate(a.period,true), eb = parseDate(b.period,true);
+      return (ea?ea.getTime():9e15) - (eb?eb.getTime():9e15);
+    });
+    h += '<div class="tg ' + x[2] + (shut ? ' shut' : '') + '">'
+      +  '<h4 onclick="todayToggle(\'' + k + '\')">' + x[1]
+      +  ' <span class="n">' + list.length + '</span><span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
+      +  '<div class="tgb">';
+    list.forEach(function(d){
+      h += '<div class="tr1" data-id="' + d.id + '">'
+        +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
+        +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
+        +  '<div class="mt">' + bfEsc(ago(d)) + '</div></div>';
+    });
+    h += '</div></div>';
+  });
+  h += '</div>';
+  return h;
+}
+
+async function todayDone(id){
+  var d = DATA.find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  d.status = 'Done';
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  toast('완료했습니다.');
+}
+
 function renderMatrix(){
   // Assignee 목록 갱신
   const pics = [...new Set(
@@ -2398,16 +2572,31 @@ function renderMatrix(){
   const cur = sel.value;
   sel.innerHTML = '<option value="">-- Select --</option>' + pics.map(p=>`<option${p===cur?' selected':''}>${p}</option>`).join('');
 
-  const pic = sel.value;
+  var pic = sel.value;
   const el  = document.getElementById('matrixContent');
 
+  // 로그인한 사람으로 자동 선택 — 56개 이름 중에서 고르게 하지 않는다(Asana)
+  if(!pic && AUTH.user){
+    var me = pics.filter(function(p){ return nameMatch(p, AUTH.user.username); })[0];
+    if(me){ sel.value = me; pic = me; }
+  }
+
+  // 적는 칸 — 담당자를 고르기 전에도 보인다. 적을 때는 아무것도 묻지 않는다(GTD)
+  var capH = '<div id="todayBox"><div class="cap">'
+    + '<textarea id="todayIn" rows="1" placeholder="오늘 할 일을 한 줄씩 적으세요. 여러 줄을 붙여넣으면 줄마다 한 건이 됩니다."'
+    + ' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();todayAdd();}"></textarea>'
+    + '<button id="todayBtn" onclick="todayAdd()">추가</button></div>'
+    + '<div class="hint">Enter 로 추가 · Shift+Enter 로 줄바꿈 · 상위·팀·기간을 묻지 않습니다 '
+    + '(오늘 날짜로 들어가고, 나중에 항목을 눌러 실행과제에 붙일 수 있습니다)</div></div>';
+
   if(!pic){
-    el.innerHTML=`<div style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:40px 20px;text-align:center">
+    el.innerHTML = capH + `<div style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:34px 20px;text-align:center">
       <div style="font-size:28px;margin-bottom:10px">👤</div>
-      <div style="font-size:13px;color:var(--text2)">Select an Assignee above to display their Todos in the matrix.</div>
+      <div style="font-size:13px;color:var(--text2)">위에서 담당자를 고르면 그 사람의 할 일이 보입니다.</div>
     </div>`;
     return;
   }
+  window._todayCapH = capH;
 
   // 이 Assignee의 Initiative 필터
   // 내가 Assignee(pic)이거나 Reviewer(reviewer)인 TD 항목 모두 포함
@@ -2497,7 +2686,7 @@ function renderMatrix(){
     </div>`;
   }
 
-  el.innerHTML = `
+  el.innerHTML = capH + todayHtml(pic) + `
     <!-- 요약 바 -->
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 16px">
       <div style="font-size:14px;font-weight:600;color:var(--text)">${pic}</div>
