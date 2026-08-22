@@ -377,6 +377,7 @@ tr.dragging{opacity:.35}
 .tr1 .ck:hover{border-color:var(--navy,#1D4ED8);color:#CBD5E1}
 .tr1 .lb{flex:1;line-height:1.45;min-width:0}
 .tr1 .mt{font-size:10.5px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.tr1 .tm{font-size:10.5px;color:var(--text3);white-space:nowrap;flex-shrink:0}
 .tr1.dn .lb{text-decoration:line-through;color:var(--text3)}
 
 /* ── 붙이기 ── */
@@ -417,8 +418,19 @@ tr.dragging{opacity:.35}
 .bf-hpin:hover{background:#E2E8F0}
 .bf-hpin.on{background:#E0ECF8;color:var(--navy);border-color:#B9D3EA}
 .bf-hpin.unsaved{background:transparent;color:var(--text3);border:1px dashed var(--border);cursor:default}
+
+/* ── 할 일의 팀 ── */
+#todayBox .tteam{border:1.5px solid var(--border);border-radius:9px;padding:9px 10px;
+  font:inherit;font-size:13px;font-weight:600;color:var(--text2);background:#fff;
+  outline:none;cursor:pointer;max-width:130px}
+#todayBox select.tteam:focus{border-color:var(--navy,#1D4ED8)}
+#todayBox .tteam.one{display:inline-flex;align-items:center;background:var(--bg2,#F8FAFC);cursor:default}
+.mt-team{cursor:pointer;border-bottom:1px dashed var(--border)}
+.mt-team:hover{color:var(--navy,#1D4ED8);border-bottom-color:var(--navy,#1D4ED8)}
+.mt-teamsel{font:inherit;font-size:10px;padding:1px 3px;border:1px solid var(--navy,#1D4ED8);
+  border-radius:4px;background:#fff;color:var(--text);outline:none;max-width:110px}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.22-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.22-5";</script>
 </head>
 <body>
 
@@ -2655,12 +2667,49 @@ function myPicName(){
   }catch(e){}
   return u;
 }
-/* 팀이 비면 api.php can_edit 이 팀원에게 403 을 준다. 계정의 팀에서 채운다. */
-function myTeamName(){
+/* 적을 때 고를 수 있는 팀.
+   팀원은 자기 계정에 등록된 팀에서, 관리자·경영진은 데이터에 있는 팀 전부에서 고른다. */
+function todoTeamList(){
   try{
-    var ts = (AUTH.user && AUTH.user.teams) || [];
-    return ts.length === 1 ? ts[0] : (ts.length ? ts[0] : '');
-  }catch(e){ return ''; }
+    var mine = bfMyTeams();
+    if(AUTH.isPriv()){
+      var all = bfAllTeams();
+      // 내 팀을 위로 — 관리자도 대개 자기 팀에 적는다
+      return mine.concat(all.filter(function(t){
+        return !mine.some(function(m){ return m.toLowerCase() === t.toLowerCase(); });
+      }));
+    }
+    return mine;
+  }catch(e){ return []; }
+}
+
+/* 지금 고른 팀. 마지막에 고른 것을 기억한다.
+   예전에는 계정 팀 목록의 첫 번째를 묻지도 않고 박았다 —
+   여러 팀을 보는 계정은 늘 엉뚱한 팀으로 들어갔다. */
+var TODO_TEAM_KEY = 'okr_todo_team';
+function myTeamName(){
+  var list = todoTeamList();
+  var saved = '';
+  try{ saved = localStorage.getItem(TODO_TEAM_KEY) || ''; }catch(e){}
+  if(saved && list.some(function(t){ return t === saved; })) return saved;
+  return list[0] || '';
+}
+function todoTeamPick(v){
+  try{ localStorage.setItem(TODO_TEAM_KEY, v || ''); }catch(e){}
+}
+/* 적는 칸 옆의 팀 고르개. 고를 것이 하나뿐이면 고르개 대신 그냥 보여 준다. */
+function todoTeamHtml(){
+  var list = todoTeamList(), cur = myTeamName();
+  if(!list.length) return '';
+  if(list.length === 1){
+    return '<span class="tteam one" title="' + bfEsc(t('todoTeamOne')) + '">' + bfEsc(list[0]) + '</span>';
+  }
+  return '<select class="tteam" id="todayTeam" onchange="todoTeamPick(this.value)" title="'
+       + bfEsc(t('todoTeamTip')) + '">'
+       + list.map(function(x){
+           return '<option value="' + bfEsc(x) + '"' + (x === cur ? ' selected' : '') + '>' + bfEsc(x) + '</option>';
+         }).join('')
+       + '</select>';
 }
 /* 번호는 작게 유지한다 — CSV 의 No 칸에 그대로 나가기 때문이다.
    두 사람이 같은 번호를 뽑는 경우는 서버가 막고 새 번호를 발급한다
@@ -2675,7 +2724,8 @@ async function todayAdd(){
   if(!lines.length) return;
   if(!nasMode){ toast('서버에 연결된 뒤에 적어 주세요.','error'); return; }
 
-  var team = myTeamName();
+  var teamEl = document.getElementById('todayTeam');
+  var team = teamEl ? teamEl.value : myTeamName();
   if(!team && !AUTH.isPriv()){
     toast('계정에 팀이 없어 저장할 수 없습니다. 계정 메뉴에서 팀을 지정해 주세요.','error');
     return;
@@ -2774,6 +2824,7 @@ function todayHtml(pic){
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  up
         +  (atPending(d) ? '<div class="at" onclick="atToggle(' + d.id + ')">↳ 붙이기</div>' : '')
+        +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
         +  '<div class="mt">' + bfEsc(ago(d)) + '</div></div>';
       if(_atOpen === d.id){
         h += '<div class="atbox">'
@@ -2873,6 +2924,44 @@ async function todayDone(id){
   toast('완료했습니다.');
 }
 
+/* 카드에 찍힌 팀을 눌러서 바꾼다.
+   편집창을 열어 고치는 것보다 빠르다 — 잘못 박힌 것이 여러 건이면 더 그렇다. */
+function mtTeamHtml(d){
+  var lab = d.team || '—';
+  return '<span class="mt-team" onclick="event.stopPropagation();mtTeamEdit(' + d.id + ',this)"'
+       + ' title="' + bfEsc(t('todoTeamTip')) + '">' + bfEsc(lab) + '</span>';
+}
+function mtTeamEdit(id, el){
+  var d = (DATA || []).find(function(x){ return x.id === id; });
+  if(!d || !el || el.querySelector('select')) return;
+  var list = todoTeamList();
+  if(!list.length){ toast(t('todoNoTeam'), 'error'); return; }
+  // 지금 팀이 고를 수 있는 목록에 없으면(남의 팀 것이면) 그것도 넣어 준다
+  if(d.team && !list.some(function(x){ return x === d.team; })) list = [d.team].concat(list);
+
+  var sel = document.createElement('select');
+  sel.className = 'mt-teamsel';
+  sel.innerHTML = list.map(function(x){
+    return '<option value="' + bfEsc(x) + '"' + (x === d.team ? ' selected' : '') + '>' + bfEsc(x) + '</option>';
+  }).join('');
+  sel.onclick = function(e){ e.stopPropagation(); };
+  sel.onchange = async function(e){
+    e.stopPropagation();
+    var v = sel.value;
+    if(v === d.team){ renderMatrix(); return; }
+    var snap = snapItem(d);
+    d.team = v;
+    saveData(); renderMatrix(); renderTable();
+    var ok = await nasUpdateItem(d);
+    if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+    toast(t('todoTeamMoved').replace('{t}', v));
+  };
+  sel.onblur = function(){ renderMatrix(); };
+  el.textContent = '';
+  el.appendChild(sel);
+  sel.focus();
+}
+
 function renderMatrix(){
   // Assignee 목록 갱신
   const pics = [...new Set(
@@ -2896,9 +2985,9 @@ function renderMatrix(){
   var capH = '<div id="todayBox"><div class="cap">'
     + '<textarea id="todayIn" rows="1" placeholder="오늘 할 일을 한 줄씩 적으세요. 여러 줄을 붙여넣으면 줄마다 한 건이 됩니다."'
     + ' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();todayAdd();}"></textarea>'
+    + todoTeamHtml()
     + '<button id="todayBtn" onclick="todayAdd()">추가</button></div>'
-    + '<div class="hint">Enter 로 추가 · Shift+Enter 로 줄바꿈 · 상위·팀·기간을 묻지 않습니다 '
-    + '(오늘 날짜로 들어가고, 나중에 항목을 눌러 실행과제에 붙일 수 있습니다)</div></div>';
+    + '<div class="hint">' + t('todoHint') + '</div></div>';
 
   if(!pic){
     el.innerHTML = capH + `<div style="background:#fff;border:1px dashed var(--border);border-radius:10px;padding:34px 20px;text-align:center">
@@ -2970,7 +3059,7 @@ function renderMatrix(){
         <div onclick="openEdit(${d.id})" style="cursor:pointer">
           <div style="font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};line-height:1.4;margin-bottom:6px">${TL(d.label)}${dueTag}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-            <span style="font-size:10px;color:var(--text2)">${d.team||'—'} · ${d.period||'—'}</span>
+            <span style="font-size:10px;color:var(--text2)">${mtTeamHtml(d)} · ${d.period||'—'}</span>
             <div style="display:flex;align-items:center;gap:5px">
               ${pct!==null?`<span style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:${ac(pct)}">${pct}%</span>`:''}
               <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500">${stLabel}</span>
@@ -3062,7 +3151,7 @@ function renderMatrix(){
           <div style="flex:1;min-width:0">
             <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">${TL(d.label)}${dueTag}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-              <span style="font-size:10px;color:var(--text2)">${d.team||'—'} · ${d.period||'—'}</span>
+              <span style="font-size:10px;color:var(--text2)">${mtTeamHtml(d)} · ${d.period||'—'}</span>
               ${impLabel?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEE2E2;color:#991B1B">${impLabel}</span>`:''}
               ${urgLabel?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#FEF3C7;color:#92400E">${urgLabel}</span>`:''}
               <span style="font-size:10px;padding:1px 6px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500">${stLabel}</span>
@@ -3100,7 +3189,7 @@ function renderMatrix(){
           <span style="font-size:13px;flex-shrink:0">✅</span>
           <div style="flex:1;min-width:0">
             <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through;cursor:pointer">${TL(d.label)}</div>
-            <div style="font-size:10px;color:var(--text3);margin-top:2px">${d.team||'—'} · ${d.period||'—'} ${pct!==null?'· '+pct+'%':''}</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px">${mtTeamHtml(d)} · ${d.period||'—'} ${pct!==null?'· '+pct+'%':''}</div>
           </div>
           <div class="mt-done-actions" style="display:none;gap:4px;flex-shrink:0">
             <button onclick="event.stopPropagation();mtMove(${d.id},'undone')" style="font-size:9px;padding:2px 6px;border-radius:5px;border:1px solid #FDE68A;background:#FEF9C3;color:#92400E;cursor:pointer;white-space:nowrap">↩ Undo</button>
@@ -3956,6 +4045,11 @@ const I18N = {
     bfPrtEmpty:'(nothing written)',
     bfPrtFile:'Boosting_{who}_{when}',
     bfPrtTip:'In the print dialog, set Destination to “Save as PDF”.',
+    todoHint:'Enter to add \u00b7 Shift+Enter for a new line \u00b7 goes in under the team you picked, dated today. Parent and period are not asked \u2014 you can attach it to an Initiative later.',
+    todoTeamTip:'Which team this task belongs to. Click to change.',
+    todoTeamOne:'Your account belongs to this team only.',
+    todoNoTeam:'Your account has no team. Set one from the account menu.',
+    todoTeamMoved:'Moved to {t}.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4126,6 +4220,11 @@ const I18N = {
     bfPrtEmpty:'(적은 내용 없음)',
     bfPrtFile:'부스팅_{who}_{when}',
     bfPrtTip:'인쇄 창에서 대상을 「PDF로 저장」으로 고르세요.',
+    todoHint:'Enter \ub85c \ucd94\uac00 \u00b7 Shift+Enter \ub85c \uc904\ubc14\uafc8 \u00b7 \uace0\ub978 \ud300\uc73c\ub85c \uc624\ub298 \ub0a0\uc9dc\uc5d0 \ub4e4\uc5b4\uac11\ub2c8\ub2e4. \uc0c1\uc704\uc640 \uae30\uac04\uc740 \uc548 \ubb3b\uc2b5\ub2c8\ub2e4 \u2014 \ub098\uc911\uc5d0 \ud56d\ubaa9\uc744 \ub20c\ub7ec \uc2e4\ud589\uacfc\uc81c\uc5d0 \ubd99\uc77c \uc218 \uc788\uc2b5\ub2c8\ub2e4.',
+    todoTeamTip:'\uc774 \ud560 \uc77c\uc774 \uc18d\ud55c \ud300. \ub20c\ub7ec\uc11c \ubc14\uafc9\ub2c8\ub2e4.',
+    todoTeamOne:'\uacc4\uc815\uc5d0 \uc774 \ud300 \ud558\ub098\ub9cc \ub4f1\ub85d\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.',
+    todoNoTeam:'\uacc4\uc815\uc5d0 \ud300\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uacc4\uc815 \uba54\ub274\uc5d0\uc11c \ud300\uc744 \uc9c0\uc815\ud574 \uc8fc\uc138\uc694.',
+    todoTeamMoved:'{t} \ub85c \uc62e\uacbc\uc2b5\ub2c8\ub2e4.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4296,6 +4395,11 @@ const I18N = {
     bfPrtEmpty:'(chưa ghi gì)',
     bfPrtFile:'Boosting_{who}_{when}',
     bfPrtTip:'Trong hộp thoại in, chọn Đích đến là “Lưu dưới dạng PDF”.',
+    todoHint:'Enter \u0111\u1ec3 th\u00eam \u00b7 Shift+Enter \u0111\u1ec3 xu\u1ed1ng d\u00f2ng \u00b7 v\u00e0o nh\u00f3m \u0111\u00e3 ch\u1ecdn, ng\u00e0y h\u00f4m nay. Kh\u00f4ng h\u1ecfi c\u1ea5p tr\u00ean v\u00e0 k\u1ef3 \u2014 c\u00f3 th\u1ec3 g\u1eafn v\u00e0o Initiative sau.',
+    todoTeamTip:'Nh\u00f3m c\u1ee7a vi\u1ec7c n\u00e0y. B\u1ea5m \u0111\u1ec3 \u0111\u1ed5i.',
+    todoTeamOne:'T\u00e0i kho\u1ea3n ch\u1ec9 thu\u1ed9c nh\u00f3m n\u00e0y.',
+    todoNoTeam:'T\u00e0i kho\u1ea3n ch\u01b0a c\u00f3 nh\u00f3m. H\u00e3y ch\u1ecdn trong menu t\u00e0i kho\u1ea3n.',
+    todoTeamMoved:'\u0110\u00e3 chuy\u1ec3n sang {t}.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
