@@ -259,13 +259,47 @@ tr.dragging{opacity:.35}
   font-family:inherit;background:var(--bg);color:var(--text)}
 .sc-f input:focus{outline:none;border-color:var(--blue);background:#fff}
 
+@page{size:A4;margin:13mm 11mm}
 @media print{
-  .topnav,.toolbar,.bf-foot,.bf-seg,#toast{display:none!important}
+  /* 화면에서만 쓰는 것들 — 종이에는 안 나간다 */
+  .topnav,.toolbar,.bf-foot,.bf-seg,#toast,.bf-hist,#dueOverlay,#authOverlay{display:none!important}
+  .bf-sec>h4 a{display:none!important}          /* 접기/펼치기 링크 */
+  #bfBody button{display:none!important}        /* 「경영진 피드백 저장」 — 종이에 버튼은 없어야 한다 */
+  .bf-cardhead{display:none!important}          /* 인쇄 머리말이 같은 말을 더 잘 한다 */
+  .bf-hint{display:none!important}              /* 적는 사람을 돕는 안내 — 회의록에서는 잡음이다 */
+
+  body{background:#fff;color:#111}
   .bf-wrap{padding:0;max-width:none}
-  .bf-card{border:none;box-shadow:none}
-  .bf-ta{border:1px solid #ccc;background:#fff;min-height:0;height:auto}
-  body{background:#fff}
+  .bf-card{border:none;box-shadow:none;border-radius:0}
+  .bf-note{display:none!important}              /* 화면 안내문 — 종이에는 머리말이 대신한다 */
+
+  /* 색이 곧 정보인 칸들 — 기본값이면 인쇄에서 전부 흰색이 된다 */
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+  /* 표 — 장이 넘어가도 머리가 따라오고 한 줄이 반으로 안 잘린다 */
+  .bf-tbl{page-break-inside:auto;font-size:10.5px}
+  .bf-tbl thead{display:table-header-group}
+  .bf-tbl tr{page-break-inside:avoid;page-break-after:auto}
+  .bf-tbl th,.bf-tbl td{padding:4px 7px}
+  .bf-sec>h4{page-break-after:avoid;padding:8px 0 5px}
+  .bf-sec{border-top:1px solid #ccc}
+  .bf-w2>div,.bf-exec{padding:10px 0 12px}
+  .bf-w2{gap:0 14px;background:none}
+
+  /* 피드백 — textarea 는 보이는 만큼만 인쇄된다. 옮겨 담은 div 를 대신 낸다 */
+  .bf-ta{display:none!important}
+  .bf-prt{display:block!important;border:1px solid #ccc;border-radius:6px;
+    padding:8px 10px;font-size:11.5px;line-height:1.7;white-space:pre-wrap;
+    word-break:break-word;min-height:34px;background:#fff;page-break-inside:avoid}
+  .bf-prt:empty::before{content:attr(data-empty);color:#999}
+
+  /* 인쇄 전용 머리말 */
+  .bf-phead{display:block!important;border-bottom:2px solid #1D3A5F;padding-bottom:7px;margin-bottom:11px}
+  .bf-phead .co{font-size:10px;letter-spacing:.16em;color:#5A7391;font-weight:700}
+  .bf-phead .ti{font-size:18px;font-weight:700;color:#1D3A5F;margin-top:2px}
+  .bf-phead .su{font-size:11px;color:#5A7391;margin-top:3px}
 }
+.bf-prt,.bf-phead{display:none}
 
 
 /* 언어 토글 */
@@ -384,7 +418,7 @@ tr.dragging{opacity:.35}
 .bf-hpin.on{background:#E0ECF8;color:var(--navy);border-color:#B9D3EA}
 .bf-hpin.unsaved{background:transparent;color:var(--text3);border:1px dashed var(--border);cursor:default}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.21-12";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.22-3";</script>
 </head>
 <body>
 
@@ -507,7 +541,7 @@ tr.dragging{opacity:.35}
   <input type="date" class="filter-sel" id="bfDate" onchange="bfDateChanged()" style="width:146px">
   <div style="margin-left:auto;display:flex;gap:5px">
     <button class="btn" onclick="bfReload()" data-i18n="bfReload">↻ Reload</button>
-    <button class="btn" onclick="window.print()" data-i18n="bfPrint">🖨 Print</button>
+    <button class="btn" onclick="bfPrint()" data-i18n="bfPrint">🖨 PDF</button>
   </div>
 </div>
 <!-- BOOSTING VIEW -->
@@ -3918,7 +3952,10 @@ const I18N = {
     /* Boosting meeting */
     navBoost:'Boosting Feedback', navSched:'Meeting Slots',
     bfScopeCo:'Company Feedback', bfScopeTeam:'Team Feedback',
-    bfReload:'↻ Reload', bfPrint:'🖨 Print',
+    bfReload:'↻ Reload', bfPrint:'🖨 PDF',
+    bfPrtEmpty:'(nothing written)',
+    bfPrtFile:'Boosting_{who}_{when}',
+    bfPrtTip:'In the print dialog, set Destination to “Save as PDF”.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4085,7 +4122,10 @@ const I18N = {
     /* 부스팅 미팅 */
     navBoost:'부스팅 피드백', navSched:'미팅 일정',
     bfScopeCo:'전사 피드백', bfScopeTeam:'팀별 피드백',
-    bfReload:'↻ 새로고침', bfPrint:'🖨 인쇄',
+    bfReload:'↻ 새로고침', bfPrint:'🖨 PDF',
+    bfPrtEmpty:'(적은 내용 없음)',
+    bfPrtFile:'부스팅_{who}_{when}',
+    bfPrtTip:'인쇄 창에서 대상을 「PDF로 저장」으로 고르세요.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4252,7 +4292,10 @@ const I18N = {
     /* Họp Boosting */
     navBoost:'Phản hồi Boosting', navSched:'Lịch họp',
     bfScopeCo:'Phản hồi toàn công ty', bfScopeTeam:'Phản hồi theo nhóm',
-    bfReload:'↻ Tải lại', bfPrint:'🖨 In',
+    bfReload:'↻ Tải lại', bfPrint:'🖨 PDF',
+    bfPrtEmpty:'(chưa ghi gì)',
+    bfPrtFile:'Boosting_{who}_{when}',
+    bfPrtTip:'Trong hộp thoại in, chọn Đích đến là “Lưu dưới dạng PDF”.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
@@ -5192,6 +5235,86 @@ function bfRender(){
   h += '</div>';
 
   body.innerHTML = h;
+}
+
+/* ══ PDF 로 뽑기 ═════════════════════════════════════════════════════════
+   브라우저 인쇄 대화상자에서 '대상 → PDF 로 저장' 을 고르면 파일이 된다.
+   그 전에 종이에 맞게 손을 봐야 할 것이 넷이다. */
+
+function bfPrintPrep(){
+  var body = document.getElementById('bfBody');
+  if(!body) return;
+
+  // ① textarea 는 '보이는 만큼' 만 인쇄된다. 내용을 정적인 div 로 옮겨 담는다.
+  //    폼 요소라 height:auto 로도 안 되고, 길게 쓴 피드백이 첫 서너 줄만 남는다.
+  body.querySelectorAll('textarea.bf-ta').forEach(function(ta){
+    var d = document.createElement('div');
+    d.className = 'bf-prt';
+    d.setAttribute('data-empty', t('bfPrtEmpty'));
+    d.textContent = ta.value || '';
+    ta.parentNode.insertBefore(d, ta.nextSibling);
+  });
+
+  // ② 무슨 회의인지 종이에 적는다 — 화면에서는 툴바에만 있던 정보다
+  var R = bfSelRange();
+  var who = BF.scope === 'company' ? t('bfCompany') : (BF.team + t('bfTeamSuffix'));
+  var card = BF.cards ? BF.cards[bfKey()] : null;
+  var h = document.createElement('div');
+  h.className = 'bf-phead';
+  h.innerHTML = '<div class="co">HANDONG</div>'
+              + '<div class="ti">' + bfEsc(t('bfNoteTitle')) + '</div>'
+              + '<div class="su">' + bfEsc(who) + ' \u00b7 ' + bfEsc(R.label)
+              + (card && card.updatedAt
+                  ? ' \u00b7 ' + bfEsc(t('bfUpdatedAt')) + ' ' + bfEsc(card.updatedAt)
+                    + ' ' + bfEsc(card.updatedBy || '')
+                  : ' \u00b7 ' + bfEsc(t('bfNotWritten')))
+              + '</div>';
+  body.insertBefore(h, body.firstChild);
+
+  // ③ 파일 이름 — 브라우저는 document.title 을 PDF 기본 이름으로 쓴다
+  bfPrintPrep._title = document.title;
+  document.title = t('bfPrtFile')
+      .replace('{who}', who.replace(/[\\/:*?"<>|]/g, ''))
+      .replace('{when}', (BF.pkey || '').replace(/[\\/:*?"<>|]/g, ''));
+}
+
+function bfPrintDone(){
+  var body = document.getElementById('bfBody');
+  if(body){
+    body.querySelectorAll('.bf-prt,.bf-phead').forEach(function(e){ e.remove(); });
+  }
+  if(bfPrintPrep._title){ document.title = bfPrintPrep._title; bfPrintPrep._title = null; }
+  // ④ 접어 뒀던 Initiative 를 원래대로
+  if(bfPrint._folded){ BF.insAll = false; bfPrint._folded = false; bfRender(); }
+}
+
+function bfPrint(){
+  // ④ 화면에서는 달성률 낮은 12건만 보여 주는 것이 맞다(회의에서 보는 것은 위쪽 몇 줄이다).
+  //    그런데 문서로 남길 때 잘린 채 남으면 나중에 읽는 사람이 그것이 전부인 줄 안다.
+  if(!BF.insAll){ BF.insAll = true; bfPrint._folded = true; bfRender(); }
+  bfPrintPrep();
+  // 프린터가 잡혀 있는 컴퓨터는 대화상자 기본 대상이 프린터다. 어디를 골라야 하는지 알려 준다.
+  toast(t('bfPrtTip'));
+  window.print();
+}
+
+/* 대화상자를 Ctrl+P 로 직접 연 경우에도 같은 준비를 한다.
+   Safari 는 beforeprint 가 없어 matchMedia 로 받는다. */
+window.addEventListener('beforeprint', function(){
+  if(!document.querySelector('#bfBody .bf-phead') && isTabBoost()) bfPrintPrep();
+});
+window.addEventListener('afterprint', bfPrintDone);
+try{
+  var _mq = window.matchMedia('print');
+  if(_mq && _mq.addListener) _mq.addListener(function(m){
+    if(m.matches){ if(!document.querySelector('#bfBody .bf-phead') && isTabBoost()) bfPrintPrep(); }
+    else bfPrintDone();
+  });
+}catch(_){}
+
+function isTabBoost(){
+  var v = document.getElementById('boostView');
+  return !!(v && v.style.display !== 'none');
 }
 
 function bfLive(){ BF._forceLive = true; bfRender(); BF._forceLive = false; }
