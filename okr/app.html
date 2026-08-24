@@ -378,6 +378,9 @@ tr.dragging{opacity:.35}
 .tr1 .lb{flex:1;line-height:1.45;min-width:0}
 .tr1 .mt{font-size:10.5px;color:var(--text3);white-space:nowrap;font-variant-numeric:tabular-nums}
 .tr1 .tm{font-size:10.5px;color:var(--text3);white-space:nowrap;flex-shrink:0}
+.tr1 .pull{font-size:11px;padding:3px 9px;border-radius:14px;border:1px solid #FCA5A5;
+  background:#fff;color:#B91C1C;cursor:pointer;white-space:nowrap;flex-shrink:0;font-weight:600}
+.tr1 .pull:hover{background:#B91C1C;border-color:#B91C1C;color:#fff}
 .tr1.dn .lb{text-decoration:line-through;color:var(--text3)}
 
 /* ── 붙이기 ── */
@@ -430,7 +433,7 @@ tr.dragging{opacity:.35}
 .mt-teamsel{font:inherit;font-size:10px;padding:1px 3px;border:1px solid var(--navy,#1D4ED8);
   border-radius:4px;background:#fff;color:var(--text);outline:none;max-width:110px}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.22-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.24-1";</script>
 </head>
 <body>
 
@@ -2824,6 +2827,8 @@ function todayHtml(pic){
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  up
         +  (atPending(d) ? '<div class="at" onclick="atToggle(' + d.id + ')">↳ 붙이기</div>' : '')
+        +  (k === 'over' ? '<div class="pull" onclick="todayPull(' + d.id + ')" title="'
+             + bfEsc(t('todayPullTip')) + '">' + t('todayPull') + '</div>' : '')
         +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
         +  '<div class="mt">' + bfEsc(ago(d)) + '</div></div>';
       if(_atOpen === d.id){
@@ -2911,6 +2916,25 @@ async function atUndoSkip(id){
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
   if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); }
+}
+
+/* 기한 지난 것을 오늘로 당긴다. 기한만 바꾼다 — 상태·담당자·상위는 안 건드린다. */
+function pullWasLabel(p){
+  var e = parseDate(p, true);
+  if(!e) return String(p || '');
+  return (e.getMonth() + 1) + '/' + e.getDate();
+}
+async function todayPull(id){
+  var d = DATA.find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  var was = pullWasLabel(d.period);
+  d.period = todayPeriod();
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  // 원래 기한을 알려 준다 — 잘못 눌렀을 때 편집창에서 되돌릴 수 있어야 한다
+  toast(t('todayPulled').replace('{was}', was));
 }
 
 async function todayDone(id){
@@ -4050,6 +4074,8 @@ const I18N = {
     todoTeamOne:'Your account belongs to this team only.',
     todoNoTeam:'Your account has no team. Set one from the account menu.',
     todoTeamMoved:'Moved to {t}.',
+    todayPull:'\u2192 Today', todayPullTip:'Move the due date to today.',
+    todayPulled:'Moved from {was} to today.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4225,6 +4251,8 @@ const I18N = {
     todoTeamOne:'\uacc4\uc815\uc5d0 \uc774 \ud300 \ud558\ub098\ub9cc \ub4f1\ub85d\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.',
     todoNoTeam:'\uacc4\uc815\uc5d0 \ud300\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uacc4\uc815 \uba54\ub274\uc5d0\uc11c \ud300\uc744 \uc9c0\uc815\ud574 \uc8fc\uc138\uc694.',
     todoTeamMoved:'{t} \ub85c \uc62e\uacbc\uc2b5\ub2c8\ub2e4.',
+    todayPull:'\u2192 \uc624\ub298', todayPullTip:'\uae30\ud55c\uc744 \uc624\ub298\ub85c \uc62e\uae41\ub2c8\ub2e4.',
+    todayPulled:'{was} \u2192 \uc624\ub298\ub85c \uc62e\uacbc\uc2b5\ub2c8\ub2e4.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4400,6 +4428,8 @@ const I18N = {
     todoTeamOne:'T\u00e0i kho\u1ea3n ch\u1ec9 thu\u1ed9c nh\u00f3m n\u00e0y.',
     todoNoTeam:'T\u00e0i kho\u1ea3n ch\u01b0a c\u00f3 nh\u00f3m. H\u00e3y ch\u1ecdn trong menu t\u00e0i kho\u1ea3n.',
     todoTeamMoved:'\u0110\u00e3 chuy\u1ec3n sang {t}.',
+    todayPull:'\u2192 H\u00f4m nay', todayPullTip:'\u0110\u1ed5i h\u1ea1n sang h\u00f4m nay.',
+    todayPulled:'\u0110\u00e3 chuy\u1ec3n t\u1eeb {was} sang h\u00f4m nay.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
