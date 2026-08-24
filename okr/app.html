@@ -365,6 +365,9 @@ tr.dragging{opacity:.35}
   display:flex;align-items:center;gap:8px;background:var(--bg2,#F8FAFC);border-bottom:1px solid var(--border)}
 .tg>h4 .n{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text3);font-weight:500}
 .tg>h4 .ar{margin-left:auto;color:var(--text3);font-size:11px}
+/* 줄 어디든 누르면 열린다는 것이 보이게 */
+.tg>h4:hover{filter:brightness(.97)}
+.tg>h4:hover .ar{color:var(--text2)}
 .tg.shut>h4{border-bottom:none}
 .tg.shut .tgb{display:none}
 .tg.over>h4{background:#FEF2F2;color:#991B1B}
@@ -433,7 +436,7 @@ tr.dragging{opacity:.35}
 .mt-teamsel{font:inherit;font-size:10px;padding:1px 3px;border:1px solid var(--navy,#1D4ED8);
   border-radius:4px;background:#fff;color:var(--text);outline:none;max-width:110px}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.24-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.24-2";</script>
 </head>
 <body>
 
@@ -458,6 +461,10 @@ tr.dragging{opacity:.35}
     </div>
     <span id="trChip" class="tr-chip" style="display:none" onclick="trChipClick()"></span>
     <span class="save-ind" id="saveInd">Saved</span>
+    <span id="updBtn" onclick="appUpdate()" style="font-size:11px;color:#9BB8D4;cursor:pointer;
+      border:1px solid #2A4F78;border-radius:6px;padding:3px 8px;white-space:nowrap;transition:all .15s"
+      onmouseover="this.style.borderColor='#F5A623';this.style.color='#F5A623'"
+      onmouseout="this.style.borderColor='#2A4F78';this.style.color='#9BB8D4'"></span>
     <span id="nas-status" style="font-size:11px;color:#9BB8D4;cursor:default" title="NAS connecting...">🔄 NAS</span>
     <button id="secBtn" onclick="openUserMenu()" title="Account" style="background:none;border:1.5px solid #2A4F78;border-radius:6px;color:#9BB8D4;font-size:13px;cursor:pointer;padding:3px 8px;transition:all .15s" onmouseover="this.style.borderColor='#F5A623';this.style.color='#F5A623'" onmouseout="if(!secUnlocked){this.style.borderColor='#2A4F78';this.style.color='#9BB8D4';}">🔑</button>
     <span style="font-size:11px;color:#9BB8D4">User</span>
@@ -2766,7 +2773,13 @@ function todayPeriod(){
 /* 기한으로 네 칸으로 나눈다. 미완료 108건 중 80건이 이미 기한이 지났으므로
    기한순으로 그냥 쏟으면 빨간 밭이 된다. 나누고 접을 수 있게 한다. */
 var _tgShut = {};
-function todayToggle(k){ _tgShut[k] = !_tgShut[k]; renderMatrix(); }
+/* 기본으로 접히는 그룹은 over 와 none 이다. 그 기본값이 _tgShut 에는 안 들어 있어서
+   처음 누르면 !undefined 가 true 라 '접힘' 그대로였다 — 첫 클릭이 먹통이었다.
+   기본값 판정을 여기 한 곳으로 모은다. */
+function tgShut(k){
+  return (_tgShut[k] === undefined) ? (k === 'over' || k === 'none') : _tgShut[k];
+}
+function todayToggle(k){ _tgShut[k] = !tgShut(k); renderMatrix(); }
 
 function todayHtml(pic){
   var mine = DATA.filter(function(d){
@@ -2802,7 +2815,7 @@ function todayHtml(pic){
     var k = x[0], list = G[k];
     if(!list.length) return;
     // 기한 지난 것은 기본으로 접는다 — 열자마자 빨간 밭이 되지 않게
-    var shut = (_tgShut[k] === undefined) ? (k === 'over' || k === 'none') : _tgShut[k];
+    var shut = tgShut(k);
     list.sort(function(a,b){
       var ea = parseDate(a.period,true), eb = parseDate(b.period,true);
       return (ea?ea.getTime():9e15) - (eb?eb.getTime():9e15);
@@ -4076,6 +4089,12 @@ const I18N = {
     todoTeamMoved:'Moved to {t}.',
     todayPull:'\u2192 Today', todayPullTip:'Move the due date to today.',
     todayPulled:'Moved from {was} to today.',
+    updTip:'Now on {v}. Click to fetch the newest version right away.',
+    updChecking:'\u27f3 \u2026',
+    updLatest:'Already on the newest version ({v}).',
+    updApplying:'Got {v} \u2014 reloading\u2026',
+    updNoLoader:'This page was opened directly, so there is nothing to update from. Open it through the NAS address.',
+    updFail:'Could not check for a new version.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4253,6 +4272,12 @@ const I18N = {
     todoTeamMoved:'{t} \ub85c \uc62e\uacbc\uc2b5\ub2c8\ub2e4.',
     todayPull:'\u2192 \uc624\ub298', todayPullTip:'\uae30\ud55c\uc744 \uc624\ub298\ub85c \uc62e\uae41\ub2c8\ub2e4.',
     todayPulled:'{was} \u2192 \uc624\ub298\ub85c \uc62e\uacbc\uc2b5\ub2c8\ub2e4.',
+    updTip:'\uc9c0\uae08 {v} \uc785\ub2c8\ub2e4. \ub204\ub974\uba74 \uc0c8 \ubc84\uc804\uc744 \ubc14\ub85c \ubc1b\uc2b5\ub2c8\ub2e4.',
+    updChecking:'\u27f3 \u2026',
+    updLatest:'\uc774\ubbf8 \ucd5c\uc2e0\uc785\ub2c8\ub2e4 ({v}).',
+    updApplying:'{v} \uc744 \ubc1b\uc558\uc2b5\ub2c8\ub2e4 \u2014 \ub2e4\uc2dc \uc5ec\ub294 \uc911\u2026',
+    updNoLoader:'\ud30c\uc77c\uc744 \uc9c1\uc811 \uc5f4\uc5b4\uc11c \ubc1b\uc544\uc62c \ub370\uac00 \uc5c6\uc2b5\ub2c8\ub2e4. NAS \uc8fc\uc18c\ub85c \uc5f4\uc5b4 \uc8fc\uc138\uc694.',
+    updFail:'\uc0c8 \ubc84\uc804\uc744 \ud655\uc778\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4430,6 +4455,12 @@ const I18N = {
     todoTeamMoved:'\u0110\u00e3 chuy\u1ec3n sang {t}.',
     todayPull:'\u2192 H\u00f4m nay', todayPullTip:'\u0110\u1ed5i h\u1ea1n sang h\u00f4m nay.',
     todayPulled:'\u0110\u00e3 chuy\u1ec3n t\u1eeb {was} sang h\u00f4m nay.',
+    updTip:'\u0110ang d\u00f9ng {v}. B\u1ea5m \u0111\u1ec3 t\u1ea3i b\u1ea3n m\u1edbi nh\u1ea5t ngay.',
+    updChecking:'\u27f3 \u2026',
+    updLatest:'\u0110\u00e3 l\u00e0 b\u1ea3n m\u1edbi nh\u1ea5t ({v}).',
+    updApplying:'\u0110\u00e3 t\u1ea3i {v} \u2014 \u0111ang m\u1edf l\u1ea1i\u2026',
+    updNoLoader:'Trang \u0111\u01b0\u1ee3c m\u1edf tr\u1ef1c ti\u1ebfp n\u00ean kh\u00f4ng c\u00f3 ngu\u1ed3n c\u1eadp nh\u1eadt. H\u00e3y m\u1edf qua \u0111\u1ecba ch\u1ec9 NAS.',
+    updFail:'Kh\u00f4ng ki\u1ec3m tra \u0111\u01b0\u1ee3c b\u1ea3n m\u1edbi.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
@@ -4662,6 +4693,7 @@ function setLang(lang){
   document.querySelectorAll('.lang-btn').forEach(function(b){
     b.className = 'lang-btn' + (b.getAttribute('data-lang') === lang ? ' on' : '');
   });
+  try{ updLabel(); }catch(e){}
 
   // 캐시에 이미 있는 만큼 즉시 반영하고, 모자란 것은 뒤에서 채운다
   if(TR.lang !== lang){ TR.lang = ''; TR.map = {}; TR.missing = 0; TR.err = ''; }
@@ -4702,6 +4734,45 @@ window.addEventListener('resize', updateThTop);
 // 언어 초기 적용
 setLang(currentLang);
 // ══ NAS 접속 (로그인 성공 후 호출) ══
+/* ══ 새 버전 받기 ════════════════════════════════════════════════════════
+   loader.html 은 새 버전을 받아 두기만 하고 '다음 접속' 에 적용한다
+   (쓰는 도중에 화면이 갈리지 않게 하려는 것이다).
+   확인은 앱이 뜨고 4초 뒤 한 번, 그 뒤 5분마다다.
+   그래서 push 한 것을 보려면 새로고침하고 배너를 기다렸다가 눌러야 했다.
+   loader 가 window.__hdUpdate 로 check()·apply() 를 열어 두었으니 여기서 바로 부른다. */
+
+function updLabel(txt){
+  var el = document.getElementById('updBtn');
+  if(!el) return;
+  el.textContent = txt || ('\u27f3 ' + APP_VERSION);
+  el.title = t('updTip').replace('{v}', APP_VERSION);
+}
+var _updBusy = false;
+async function appUpdate(){
+  if(_updBusy) return;
+  var U = window.__hdUpdate;
+  // loader 없이 파일을 직접 연 경우 — 받아 올 데가 없다
+  if(!U || typeof U.check !== 'function'){ toast(t('updNoLoader'), 'error'); return; }
+  // loader 가 이미 받아 뒀으면 확인할 것 없이 바로 적용한다
+  if(U.pending){ toast(t('updApplying').replace('{v}', U.pending)); setTimeout(U.apply, 500); return; }
+
+  _updBusy = true;
+  updLabel(t('updChecking'));
+  var r;
+  try{ r = await U.check(); }catch(e){ r = {status:'error', message:String(e && e.message || e)}; }
+  _updBusy = false;
+
+  if(r && r.status === 'updated'){
+    updLabel(t('updChecking'));
+    toast(t('updApplying').replace('{v}', r.version));
+    setTimeout(U.apply, 700);
+    return;
+  }
+  updLabel();
+  if(r && r.status === 'latest') toast(t('updLatest').replace('{v}', APP_VERSION));
+  else toast((r && r.message) || t('updFail'), 'error');
+}
+
 async function connectNas(){
   const statusEl=document.getElementById('nas-status');
   if(!NAS_API){ if(statusEl) statusEl.textContent=''; return; }
