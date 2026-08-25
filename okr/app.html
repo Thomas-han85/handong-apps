@@ -435,8 +435,22 @@ tr.dragging{opacity:.35}
 .mt-team:hover{color:var(--navy,#1D4ED8);border-bottom-color:var(--navy,#1D4ED8)}
 .mt-teamsel{font:inherit;font-size:10px;padding:1px 3px;border:1px solid var(--navy,#1D4ED8);
   border-radius:4px;background:#fff;color:var(--text);outline:none;max-width:110px}
+
+/* ── My Tasks 카드의 완료 동그라미 · 사분면 번호 ── */
+.mt-ck{width:17px;height:17px;border:1.6px solid var(--border);border-radius:5px;cursor:pointer;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;
+  color:transparent;margin-top:1px;transition:all .13s}
+.mt-ck:hover{border-color:#16A34A;background:#DCFCE7;color:#15803D}
+.tr1 .qd,.qd{display:inline-flex;gap:2px;flex-shrink:0}
+.qd b{width:17px;height:17px;border-radius:5px;border:1px solid var(--border);background:#fff;
+  color:var(--text3);font-size:10px;font-weight:700;cursor:pointer;display:flex;
+  align-items:center;justify-content:center;line-height:1;transition:all .12s;
+  font-family:'IBM Plex Mono',monospace}
+.qd b:hover{border-color:var(--navy,#1D4ED8);color:var(--navy,#1D4ED8)}
+.qd b.on{color:#fff;border-color:transparent}
+.qd b.on:hover{color:#fff;filter:brightness(1.12)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.24-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-1";</script>
 </head>
 <body>
 
@@ -1617,6 +1631,58 @@ function toggleInTd(id){
   toast(d.lv==='TD' ? t('toastTodoSwitch') : t('toastInitSwitch'), 'success');
 }
 // My Tasks 카드에서 직접 이동
+/* ══ 사분면 ═══════════════════════════════════════════════════════════════
+   화면의 사분면 순서 그대로다.
+     1 먼저 하기 (중요+긴급) · 2 계획하기 (중요) · 3 넘기기 (긴급) · 4 덜어내기
+   renderMatrix 의 분류와 같은 규칙을 쓴다 — 한 곳에서만 정한다. */
+var QUAD_COLOR = {1:'#DC2626', 2:'#1565C0', 3:'#EA580C', 4:'#9E9E9E'};
+
+function quadOf(d){
+  var iN = flagNorm(d.importance), uN = flagNorm(d.urgency);
+  if(!iN && !uN) return 0;                       // 아직 어느 칸에도 없다
+  var imp = (iN === 'Important'), urg = (uN === 'Urgent');
+  return imp ? (urg ? 1 : 2) : (urg ? 3 : 4);
+}
+function quadName(n){ return t('q' + n + 'Title'); }
+
+/* 줄에서 바로 사분면으로 보낸다. 같은 번호를 다시 누르면 해제한다. */
+async function mtQuad(id, n){
+  var d = (DATA || []).find(function(x){ return x.id === id; });
+  if(!d) return;
+  var snap = snapItem(d);
+  var was = quadOf(d);
+  if(was === n){                                 // 다시 누르면 빼낸다
+    d.importance = ''; d.urgency = '';
+  }else{
+    d.importance = (n === 1 || n === 2) ? 'Important' : '덜중요';
+    d.urgency    = (n === 1 || n === 3) ? 'Urgent'    : '덜긴급';
+  }
+  saveData(); renderMatrix(); renderTable();
+  var ok = await nasUpdateItem(d);
+  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  toast(was === n ? t('quadCleared') : t('quadMoved').replace('{n}', quadName(n)));
+}
+
+/* 줄에 붙는 1·2·3·4 */
+function quadBtns(d){
+  var cur = quadOf(d), h = '<span class="qd">';
+  for(var n = 1; n <= 4; n++){
+    var on = (cur === n);
+    h += '<b onclick="event.stopPropagation();mtQuad(' + d.id + ',' + n + ')"'
+       + ' title="' + bfEsc(t('q' + n + 'Title') + ' \u00b7 ' + t('q' + n + 'Sub')) + '"'
+       + (on ? ' class="on" style="background:' + QUAD_COLOR[n] + '"' : '')
+       + '>' + n + '</b>';
+  }
+  return h + '</span>';
+}
+
+/* 카드 왼쪽의 완료 동그라미 — 「오늘」 목록 줄의 ✓ 와 같은 것.
+   지금까지는 마우스를 올려야 나타나는 버튼뿐이라 두 단계였다. */
+function mtCk(d){
+  return '<div class="mt-ck" onclick="event.stopPropagation();mtMove(' + d.id + ',\'done\')"'
+       + ' title="' + bfEsc(t('mtDoneTip')) + '">\u2713</div>';
+}
+
 async function mtMove(id, action){
   const d = DATA.find(x=>x.id===id); if(!d) return;
   const _snap = snapItem(d);
@@ -2840,6 +2906,7 @@ function todayHtml(pic){
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  up
         +  (atPending(d) ? '<div class="at" onclick="atToggle(' + d.id + ')">↳ 붙이기</div>' : '')
+        +  ((k === 'over' || k === 'today') ? quadBtns(d) : '')
         +  (k === 'over' ? '<div class="pull" onclick="todayPull(' + d.id + ')" title="'
              + bfEsc(t('todayPullTip')) + '">' + t('todayPull') + '</div>' : '')
         +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
@@ -3060,9 +3127,11 @@ function renderMatrix(){
     if(d.review===true||d.review==='true') return;
     // Reviewer로만 지정된 항목도 4사분면 제외 (점검 섹션으로)
     if(reviewerOnlyIds.has(d.id)) return;
-    const imp = d.importance||''; const urg = d.urgency||'';
-    if(!imp&&!urg){ Q.unset.push(d); return; }
-    const isImp = imp==='Important'; const isUrg = urg==='Urgent';
+    // '중요'/'Important' 처럼 두 벌로 갈린 값을 눕혀서 본다.
+    // 직접 견주면 '중요' 로 찍은 13건이 중요로 안 쳐져 3·4 사분면으로 떨어진다.
+    const iN = flagNorm(d.importance), uN = flagNorm(d.urgency);
+    if(!iN&&!uN){ Q.unset.push(d); return; }
+    const isImp = iN==='Important'; const isUrg = uN==='Urgent';
     if(isImp&&isUrg)       Q.imp_urg.push(d);
     else if(isImp&&!isUrg) Q.imp_noturg.push(d);
     else if(!isImp&&isUrg) Q.notimp_urg.push(d);
@@ -3093,7 +3162,9 @@ function renderMatrix(){
       return `<div style="background:${cardBg};border:1px solid ${cardBd};border-radius:8px;padding:9px 11px;transition:box-shadow .15s;margin-bottom:6px;position:relative"
         onmouseover="this.querySelector('.mt-actions').style.display='flex';this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'"
         onmouseout="this.querySelector('.mt-actions').style.display='none';this.style.boxShadow='none'">
-        <div onclick="openEdit(${d.id})" style="cursor:pointer">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+        ${mtCk(d)}
+        <div onclick="openEdit(${d.id})" style="cursor:pointer;flex:1;min-width:0">
           <div style="font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};line-height:1.4;margin-bottom:6px">${TL(d.label)}${dueTag}</div>
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
             <span style="font-size:10px;color:var(--text2)">${mtTeamHtml(d)} · ${d.period||'—'}</span>
@@ -3102,6 +3173,7 @@ function renderMatrix(){
               <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500">${stLabel}</span>
             </div>
           </div>
+        </div>
         </div>
         <!-- Hover action buttons -->
         <div class="mt-actions" style="display:none;gap:4px;flex-wrap:wrap;margin-top:7px;padding-top:7px;border-top:1px solid var(--border-light)">
@@ -3185,6 +3257,7 @@ function renderMatrix(){
           onmouseover="this.querySelector('.mt-rev-actions').style.display='flex';this.style.boxShadow='0 2px 8px rgba(109,40,217,.12)'"
           onmouseout="this.querySelector('.mt-rev-actions').style.display='none';this.style.boxShadow='none'">
           <span style="font-size:14px;flex-shrink:0;margin-top:1px">👁</span>
+          ${mtCk(d)}
           <div style="flex:1;min-width:0">
             <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer">${TL(d.label)}${dueTag}</div>
             <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
@@ -3221,14 +3294,14 @@ function renderMatrix(){
       const cards = doneItems.map(d=>{
         const pct=calcPct(d);
         return `<div style="background:#fff;border:1px solid #BBF7D0;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:10px;transition:all .15s;opacity:.8"
-          onmouseover="this.querySelector('.mt-done-actions').style.display='flex';this.style.opacity='1';this.style.boxShadow='0 2px 6px rgba(0,0,0,.07)'"
-          onmouseout="this.querySelector('.mt-done-actions').style.display='none';this.style.opacity='.8';this.style.boxShadow='none'">
+          onmouseover="this.style.opacity='1';this.style.boxShadow='0 2px 6px rgba(0,0,0,.07)'"
+          onmouseout="this.style.opacity='.8';this.style.boxShadow='none'">
           <span style="font-size:13px;flex-shrink:0">✅</span>
           <div style="flex:1;min-width:0">
             <div onclick="openEdit(${d.id})" style="font-size:12px;font-weight:500;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-decoration:line-through;cursor:pointer">${TL(d.label)}</div>
             <div style="font-size:10px;color:var(--text3);margin-top:2px">${mtTeamHtml(d)} · ${d.period||'—'} ${pct!==null?'· '+pct+'%':''}</div>
           </div>
-          <div class="mt-done-actions" style="display:none;gap:4px;flex-shrink:0">
+          <div class="mt-done-actions" style="display:flex;gap:4px;flex-shrink:0">
             <button onclick="event.stopPropagation();mtMove(${d.id},'undone')" style="font-size:9px;padding:2px 6px;border-radius:5px;border:1px solid #FDE68A;background:#FEF9C3;color:#92400E;cursor:pointer;white-space:nowrap">↩ Undo</button>
           </div>
         </div>`;
@@ -4095,6 +4168,8 @@ const I18N = {
     updApplying:'Got {v} \u2014 reloading\u2026',
     updNoLoader:'This page was opened directly, so there is nothing to update from. Open it through the NAS address.',
     updFail:'Could not check for a new version.',
+    mtDoneTip:'Click to mark it done.',
+    quadMoved:'Moved to {n}.', quadCleared:'Taken out of the matrix.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4278,6 +4353,8 @@ const I18N = {
     updApplying:'{v} \uc744 \ubc1b\uc558\uc2b5\ub2c8\ub2e4 \u2014 \ub2e4\uc2dc \uc5ec\ub294 \uc911\u2026',
     updNoLoader:'\ud30c\uc77c\uc744 \uc9c1\uc811 \uc5f4\uc5b4\uc11c \ubc1b\uc544\uc62c \ub370\uac00 \uc5c6\uc2b5\ub2c8\ub2e4. NAS \uc8fc\uc18c\ub85c \uc5f4\uc5b4 \uc8fc\uc138\uc694.',
     updFail:'\uc0c8 \ubc84\uc804\uc744 \ud655\uc778\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.',
+    mtDoneTip:'\ub204\ub974\uba74 \uc644\ub8cc\ub429\ub2c8\ub2e4.',
+    quadMoved:'{n} \ub85c \ubcf4\ub0c8\uc2b5\ub2c8\ub2e4.', quadCleared:'\uc0ac\ubd84\uba74\uc5d0\uc11c \ube80\uc2b5\ub2c8\ub2e4.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4461,6 +4538,8 @@ const I18N = {
     updApplying:'\u0110\u00e3 t\u1ea3i {v} \u2014 \u0111ang m\u1edf l\u1ea1i\u2026',
     updNoLoader:'Trang \u0111\u01b0\u1ee3c m\u1edf tr\u1ef1c ti\u1ebfp n\u00ean kh\u00f4ng c\u00f3 ngu\u1ed3n c\u1eadp nh\u1eadt. H\u00e3y m\u1edf qua \u0111\u1ecba ch\u1ec9 NAS.',
     updFail:'Kh\u00f4ng ki\u1ec3m tra \u0111\u01b0\u1ee3c b\u1ea3n m\u1edbi.',
+    mtDoneTip:'B\u1ea5m \u0111\u1ec3 \u0111\u00e1nh d\u1ea5u ho\u00e0n th\u00e0nh.',
+    quadMoved:'\u0110\u00e3 chuy\u1ec3n sang {n}.', quadCleared:'\u0110\u00e3 b\u1ecf kh\u1ecfi ma tr\u1eadn.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
