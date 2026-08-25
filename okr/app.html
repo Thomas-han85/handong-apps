@@ -374,6 +374,11 @@ tr.dragging{opacity:.35}
 .tg.today>h4{background:#FFFBEB;color:#92400E}
 .tgb{padding:4px 0}
 .tg-sent{font-size:11.5px;color:var(--text3);padding:7px 4px 2px;line-height:1.5}
+.wt{width:17px;height:17px;border-radius:5px;border:1px solid var(--border);background:#fff;
+  font-size:10px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+  line-height:1;flex-shrink:0;filter:grayscale(1);opacity:.5;transition:all .12s}
+.wt:hover{filter:none;opacity:1;border-color:#C4B5FD}
+.wt.on{filter:none;opacity:1;background:#EDE9FE;border-color:#C4B5FD}
 .tr1{display:flex;align-items:center;gap:9px;padding:7px 13px;border-bottom:1px solid var(--bg2,#F1F5F9);font-size:13px}
 .tr1:last-child{border-bottom:none}
 .tr1 .ck{width:17px;height:17px;border:1.6px solid var(--border);border-radius:5px;cursor:pointer;
@@ -456,7 +461,7 @@ tr.dragging{opacity:.35}
 .qd b.on{color:#fff;border-color:transparent}
 .qd b.on:hover{color:#fff;filter:brightness(1.12)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-6";</script>
 </head>
 <body>
 
@@ -1682,6 +1687,17 @@ function quadBtns(d){
   return h + '</span>';
 }
 
+/* 끝날 때까지 지켜볼 것으로 보낸다.
+   사분면 카드의 버튼은 마우스를 올려야 나오는데, 아직 사분면에 없는 항목은
+   그 카드에 나오지도 않는다. 그래서 「오늘」에 있는 일을 지켜보기로 보낼
+   길이 사실상 없었다. */
+function watchBtn(d){
+  var on = (d.review === true || d.review === 'true');
+  return '<span class="wt' + (on ? ' on' : '') + '"'
+       + ' onclick="event.stopPropagation();mtMove(' + d.id + ',\'' + (on ? 'unreview' : 'review') + '\')"'
+       + ' title="' + bfEsc(t(on ? 'watchOffTip' : 'watchOnTip')) + '">\ud83d\udc41</span>';
+}
+
 /* 카드 왼쪽의 완료 동그라미 — 「오늘」 목록 줄의 ✓ 와 같은 것.
    지금까지는 마우스를 올려야 나타나는 버튼뿐이라 두 단계였다. */
 function mtCk(d){
@@ -1695,6 +1711,7 @@ async function mtMove(id, action){
   switch(action){
     case 'review':    d.review=true;  break;
     case 'unreview':  d.review=false; break;
+    /* 위 둘은 아래에서 토스트로 알린다 — 「오늘」 목록에서 빠지고 들어오기 때문이다 */
     case 'done':      d.status='Done'; d.review=false; break;
     case 'undone':    d.status='In Progress'; break;
     case 'toggleImp':
@@ -1708,7 +1725,9 @@ async function mtMove(id, action){
   renderTable();   // Refresh OKR List
   renderMatrix();  // Re-render My Tasks
   const _ok = await nasUpdateItem(d);
-  if(!_ok){ restoreItem(d, _snap); saveData(); renderTable(); renderMatrix(); }
+  if(!_ok){ restoreItem(d, _snap); saveData(); renderTable(); renderMatrix(); return; }
+  if(action === 'review')   toast(t('watchOn'));
+  if(action === 'unreview') toast(t('watchOff'));
 }
 function toggleReview(id){
   const d=DATA.find(x=>x.id===id); if(!d)return;
@@ -2862,6 +2881,8 @@ function todayHtml(pic){
     // 사분면에 넣은 것은 '오늘은 안 한다' 는 뜻이다. 여기서는 뺀다.
     // 같은 번호를 다시 누르면 사분면에서 빠지고 이 목록으로 돌아온다.
     if(quadOf(d) > 0){ sent++; return false; }
+    // 지켜보는 것도 '오늘 내가 할 일' 은 아니다 — 끝날 때까지 눈만 두는 것이다.
+    if(d.review === true || d.review === 'true'){ sent++; return false; }
     return true;
   });
   var t0 = new Date(); t0.setHours(0,0,0,0);
@@ -2909,7 +2930,7 @@ function todayHtml(pic){
         +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  atSelHtml(d)
-        +  ((k === 'over' || k === 'today') ? quadBtns(d) : '')
+        +  ((k === 'over' || k === 'today') ? quadBtns(d) + watchBtn(d) : '')
         +  (k === 'over' ? '<div class="pull" onclick="todayPull(' + d.id + ')" title="'
              + bfEsc(t('todayPullTip')) + '">' + t('todayPull') + '</div>' : '')
         +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
@@ -4105,17 +4126,17 @@ const I18N = {
     new:'+ New', expand:'▼ Expand', collapse:'▶ Collapse',
     search:'🔍 Search...', level:'Level', allTeam:'All Teams',
     inProgress:'In Progress', notStarted:'Not Started', done:'Done',
-    all:'All', important:'Important', urgent:'Urgent', review:'👁 Review',
+    all:'All', important:'Important', urgent:'Urgent', review:'👁 Watching',
     hideDone:'✓ Hide Done', hideDoneOn:'✓ Show Done', hideDoneOff:'✓ Hide Done',
     save:'💾 Save', load:'📂 Load', reset:'Reset',
     thLevel:'Level', thContent:'Goal / Content', thPic:'Assignee', thReviewer:'Reviewer',
     thPeriod:'Period', thTarget:'Target', thActual:'Actual', thAttain:'Attainment',
-    thImp:'Priority', thUrg:'Urgency', thRev:'Review', thStatus:'Status',
+    thImp:'Priority', thUrg:'Urgency', thRev:'Watching', thStatus:'Status',
     saveInd:'Saved',
     stDone:'Done', stInProgress:'In Progress', stNotStarted:'Not Started',
     clickTo:'Click: change to ', changeToSuffix:'',
     imp:'Important', lessImp:'Less Imp.', urg:'Urgent', lessUrg:'Less Urg.', setLabel:'Set',
-    reviewLabel:'Review', reviewTitle:'Mark as review item',
+    reviewLabel:'Watching', reviewTitle:'Keep an eye on this until it is done',
     subObj:'Company Goals', subKR:'Company KR', subTK:'Team KR',
     subIN:'Team Tasks', subTD:'Personal Tasks',
     lblKRRate:'KR Rate', subKRAvg:'Company KR Avg', cardDone:'Done',
@@ -4125,9 +4146,9 @@ const I18N = {
     q4Title:'Later', q4Sub:'Less Imp + Less Urgent',
     q1Empty:'None — Great job!', qEmpty:'None',
     impAxis:'Priority', urgAxisHigh:'Urgent →', urgAxisLow:'← Less Urgent',
-    btnReview:'👁 Review', btnUnreview:'👁 Unreview', btnDone:'✓ Done',
+    btnReview:'👁 Watch', btnUnreview:'👁 Stop watching', btnDone:'✓ Done',
     impUp:'↑Imp', impDown:'↓Imp', urgUp:'↑Urg', urgDown:'↓Urg',
-    reviewEmpty:'No review items. Click <b>+Review</b> in OKR List.',
+    reviewEmpty:'Nothing being watched. Press <b>👁</b> on a task to keep an eye on it until it is done.',
     doneCount:'Done', ipCount:'In Progress',
     lg1:'Imp+Urg', lg2:'Imp+Less Urg', lg3:'Less Imp+Urg', lg4:'Less Imp+Less Urg',
     toastSaved:'Saved', toastDeleted:'Deleted',
@@ -4213,7 +4234,11 @@ const I18N = {
     mtDoneTip:'Click to mark it done.',
     quadMoved:'Moved to {n} \u2014 off today\u2019s list.',
     quadCleared:'Back on today\u2019s list.',
-    todaySent:'{n} more are in the matrix below \u2014 not for today. \u2193',
+    todaySent:'{n} more below \u2014 in the matrix or being watched, not for today. \u2193',
+    watchOnTip:'Keep an eye on this until it is done. It leaves today\u2019s list.',
+    watchOffTip:'Stop watching \u2014 back on today\u2019s list.',
+    watchOn:'Watching until it is done \u2014 off today\u2019s list.',
+    watchOff:'Back on today\u2019s list.',
     atNone:'\u21b3 attach to\u2026', atMine:'my own task (not OKR)', atOther:'other teams',
     atTip:'Which Team KR or Initiative this belongs under. Pick one to attach it.',
     atDone:'Attached under {p}.', atCleared:'Detached.',
@@ -4295,17 +4320,17 @@ const I18N = {
     new:'+ 새로 만들기', expand:'▼ 펼치기', collapse:'▶ 접기',
     search:'🔍 검색...', level:'레벨', allTeam:'전체 팀',
     inProgress:'진행 중', notStarted:'미착수', done:'완료',
-    all:'전체', important:'중요', urgent:'긴급', review:'👁 검토',
+    all:'전체', important:'중요', urgent:'긴급', review:'👁 지켜보기',
     hideDone:'✓ 완료 숨기기', hideDoneOn:'✓ 완료 보기', hideDoneOff:'✓ 완료 숨기기',
     save:'💾 저장', load:'📂 불러오기', reset:'초기화',
     thLevel:'레벨', thContent:'목표 / 내용', thPic:'담당', thReviewer:'검토자',
     thPeriod:'기간', thTarget:'목표', thActual:'실적', thAttain:'달성률',
-    thImp:'중요도', thUrg:'긴급도', thRev:'검토', thStatus:'상태',
+    thImp:'중요도', thUrg:'긴급도', thRev:'지켜봄', thStatus:'상태',
     saveInd:'저장됨',
     stDone:'완료', stInProgress:'진행 중', stNotStarted:'미착수',
     clickTo:'클릭: 바꾸기 → ', changeToSuffix:'',
     imp:'중요', lessImp:'덜 중요', urg:'긴급', lessUrg:'덜 긴급', setLabel:'설정',
-    reviewLabel:'검토', reviewTitle:'검토 항목으로 표시',
+    reviewLabel:'지켜보기', reviewTitle:'끝날 때까지 계속 볼 일로 둔다',
     subObj:'전사 목표', subKR:'전사 KR', subTK:'팀 KR',
     subIN:'팀 실행과제', subTD:'개인 할 일',
     lblKRRate:'KR 달성률', subKRAvg:'전사 KR 평균', cardDone:'완료',
@@ -4315,9 +4340,9 @@ const I18N = {
     q4Title:'나중에', q4Sub:'덜 중요 + 덜 긴급',
     q1Empty:'없음 — 좋습니다!', qEmpty:'없음',
     impAxis:'중요도', urgAxisHigh:'긴급 →', urgAxisLow:'← 덜 긴급',
-    btnReview:'👁 검토', btnUnreview:'👁 검토 해제', btnDone:'✓ 완료',
+    btnReview:'👁 지켜보기', btnUnreview:'👁 그만 보기', btnDone:'✓ 완료',
     impUp:'↑중요', impDown:'↓중요', urgUp:'↑긴급', urgDown:'↓긴급',
-    reviewEmpty:'검토 항목이 없습니다. OKR List 에서 <b>👁 검토</b> 를 누르세요.',
+    reviewEmpty:'지켜보는 일이 없습니다. 할 일 줄의 <b>👁</b> 를 누르면 끝날 때까지 여기서 봅니다.',
     doneCount:'완료', ipCount:'진행 중',
     lg1:'중요+긴급', lg2:'중요+덜 긴급', lg3:'덜 중요+긴급', lg4:'덜 중요+덜 긴급',
     toastSaved:'저장했습니다', toastDeleted:'삭제했습니다',
@@ -4403,7 +4428,11 @@ const I18N = {
     mtDoneTip:'\ub204\ub974\uba74 \uc644\ub8cc\ub429\ub2c8\ub2e4.',
     quadMoved:'{n} \ub85c \ubcf4\ub0c8\uc2b5\ub2c8\ub2e4 \u2014 \uc624\ub298 \ubaa9\ub85d\uc5d0\uc11c \ube60\uc9d1\ub2c8\ub2e4.',
     quadCleared:'\uc624\ub298 \ubaa9\ub85d\uc73c\ub85c \ub3cc\uc544\uc654\uc2b5\ub2c8\ub2e4.',
-    todaySent:'\uc544\ub798 \uc0ac\ubd84\uba74\uc5d0 {n}\uac74 \ub354 \uc788\uc2b5\ub2c8\ub2e4 \u2014 \uc624\ub298 \ud560 \uc77c\uc740 \uc544\ub2d9\ub2c8\ub2e4. \u2193',
+    todaySent:'\uc544\ub798\uc5d0 {n}\uac74 \ub354 \uc788\uc2b5\ub2c8\ub2e4 \u2014 \uc0ac\ubd84\uba74\uc774\uac70\ub098 \uc9c0\ucf1c\ubcf4\ub294 \uc77c\ub85c, \uc624\ub298 \ud560 \uc77c\uc740 \uc544\ub2d9\ub2c8\ub2e4. \u2193',
+    watchOnTip:'\ub05d\ub0a0 \ub54c\uae4c\uc9c0 \uacc4\uc18d \ubd05\ub2c8\ub2e4. \uc624\ub298 \ubaa9\ub85d\uc5d0\uc11c\ub294 \ube60\uc9d1\ub2c8\ub2e4.',
+    watchOffTip:'\uadf8\ub9cc \ubcf4\uae30 \u2014 \uc624\ub298 \ubaa9\ub85d\uc73c\ub85c \ub3cc\uc544\uac11\ub2c8\ub2e4.',
+    watchOn:'\ub05d\ub0a0 \ub54c\uae4c\uc9c0 \uc9c0\ucf1c\ubd05\ub2c8\ub2e4 \u2014 \uc624\ub298 \ubaa9\ub85d\uc5d0\uc11c \ube60\uc9d1\ub2c8\ub2e4.',
+    watchOff:'\uc624\ub298 \ubaa9\ub85d\uc73c\ub85c \ub3cc\uc544\uc654\uc2b5\ub2c8\ub2e4.',
     atNone:'\u21b3 \uc5b4\ub514\uc5d0 \ubd99\uc77c\uae4c\uc694\u2026', atMine:'\ub0b4 \ud560 \uc77c (OKR \ubb34\uad00)', atOther:'\ub2e4\ub978 \ud300',
     atTip:'\uc5b4\ub290 \ud300 KR \u00b7 \uc2e4\ud589\uacfc\uc81c \uc5d0 \ub538\ub9b0 \uc77c\uc778\uc9c0. \uace0\ub974\uba74 \ubc14\ub85c \ubd99\uc2b5\ub2c8\ub2e4.',
     atDone:'{p} \uc5d0 \ubd99\uc600\uc2b5\ub2c8\ub2e4.', atCleared:'\ub5bc\uc5c8\uc2b5\ub2c8\ub2e4.',
@@ -4485,17 +4514,17 @@ const I18N = {
     new:'+ Thêm mới', expand:'▼ Mở rộng', collapse:'▶ Thu gọn',
     search:'🔍 Tìm kiếm...', level:'Cấp', allTeam:'Tất cả nhóm',
     inProgress:'Đang làm', notStarted:'Chưa bắt đầu', done:'Hoàn thành',
-    all:'Tất cả', important:'Quan trọng', urgent:'Khẩn cấp', review:'👁 Xem xét',
+    all:'Tất cả', important:'Quan trọng', urgent:'Khẩn cấp', review:'👁 Đang theo dõi',
     hideDone:'✓ Ẩn mục hoàn thành', hideDoneOn:'✓ Hiện mục hoàn thành', hideDoneOff:'✓ Ẩn mục hoàn thành',
     save:'💾 Lưu', load:'📂 Tải lên', reset:'Đặt lại',
     thLevel:'Cấp', thContent:'Nội dung', thPic:'Ph.trách', thReviewer:'Duyệt',
     thPeriod:'Thời gian', thTarget:'Chỉ tiêu', thActual:'Thực tế', thAttain:'Tỷ lệ đạt',
-    thImp:'Ưu tiên', thUrg:'Khẩn', thRev:'Xem xét', thStatus:'Trạng thái',
+    thImp:'Ưu tiên', thUrg:'Khẩn', thRev:'Theo dõi', thStatus:'Trạng thái',
     saveInd:'Đã lưu',
     stDone:'Hoàn thành', stInProgress:'Đang làm', stNotStarted:'Chưa bắt đầu',
     clickTo:'Nhấn: đổi thành ', changeToSuffix:'',
     imp:'Quan trọng', lessImp:'Ít quan trọng', urg:'Khẩn cấp', lessUrg:'Ít khẩn cấp', setLabel:'Đặt',
-    reviewLabel:'Xem xét', reviewTitle:'Đánh dấu là mục cần xem xét',
+    reviewLabel:'Đang theo dõi', reviewTitle:'Theo dõi cho đến khi xong',
     subObj:'Mục tiêu công ty', subKR:'KR công ty', subTK:'KR nhóm',
     subIN:'Công việc nhóm', subTD:'Việc cá nhân',
     lblKRRate:'Tỷ lệ KR', subKRAvg:'TB KR công ty', cardDone:'Hoàn thành',
@@ -4505,9 +4534,9 @@ const I18N = {
     q4Title:'Để sau', q4Sub:'Ít quan trọng + Ít khẩn cấp',
     q1Empty:'Không có — Tốt lắm!', qEmpty:'Không có',
     impAxis:'Mức ưu tiên', urgAxisHigh:'Khẩn cấp →', urgAxisLow:'← Ít khẩn cấp',
-    btnReview:'👁 Xem xét', btnUnreview:'👁 Bỏ xem xét', btnDone:'✓ Hoàn thành',
+    btnReview:'👁 Theo dõi', btnUnreview:'👁 Thôi theo dõi', btnDone:'✓ Hoàn thành',
     impUp:'↑Q.trọng', impDown:'↓Q.trọng', urgUp:'↑K.cấp', urgDown:'↓K.cấp',
-    reviewEmpty:'Chưa có mục xem xét. Nhấn <b>👁 Xem xét</b> trong OKR List.',
+    reviewEmpty:'Chưa theo dõi mục nào. Nhấn <b>👁</b> trên một việc để theo dõi đến khi xong.',
     doneCount:'Hoàn thành', ipCount:'Đang làm',
     lg1:'Q.trọng+K.cấp', lg2:'Q.trọng+Ít k.cấp', lg3:'Ít q.trọng+K.cấp', lg4:'Ít q.trọng+Ít k.cấp',
     toastSaved:'Đã lưu', toastDeleted:'Đã xóa',
@@ -4593,7 +4622,11 @@ const I18N = {
     mtDoneTip:'B\u1ea5m \u0111\u1ec3 \u0111\u00e1nh d\u1ea5u ho\u00e0n th\u00e0nh.',
     quadMoved:'\u0110\u00e3 chuy\u1ec3n sang {n} \u2014 kh\u00f4ng c\u00f2n trong h\u00f4m nay.',
     quadCleared:'\u0110\u00e3 tr\u1edf l\u1ea1i danh s\u00e1ch h\u00f4m nay.',
-    todaySent:'C\u00f2n {n} m\u1ee5c trong ma tr\u1eadn b\u00ean d\u01b0\u1edbi \u2014 kh\u00f4ng ph\u1ea3i vi\u1ec7c h\u00f4m nay. \u2193',
+    todaySent:'C\u00f2n {n} m\u1ee5c b\u00ean d\u01b0\u1edbi \u2014 trong ma tr\u1eadn ho\u1eb7c \u0111ang theo d\u00f5i, kh\u00f4ng ph\u1ea3i vi\u1ec7c h\u00f4m nay. \u2193',
+    watchOnTip:'Theo d\u00f5i cho \u0111\u1ebfn khi xong. S\u1ebd r\u1eddi danh s\u00e1ch h\u00f4m nay.',
+    watchOffTip:'Th\u00f4i theo d\u00f5i \u2014 tr\u1edf l\u1ea1i h\u00f4m nay.',
+    watchOn:'\u0110ang theo d\u00f5i \u2014 kh\u00f4ng c\u00f2n trong h\u00f4m nay.',
+    watchOff:'\u0110\u00e3 tr\u1edf l\u1ea1i danh s\u00e1ch h\u00f4m nay.',
     atNone:'\u21b3 g\u1eafn v\u00e0o\u2026', atMine:'vi\u1ec7c ri\u00eang (kh\u00f4ng OKR)', atOther:'nh\u00f3m kh\u00e1c',
     atTip:'Thu\u1ed9c KR nh\u00f3m ho\u1eb7c Initiative n\u00e0o. Ch\u1ecdn \u0111\u1ec3 g\u1eafn ngay.',
     atDone:'\u0110\u00e3 g\u1eafn v\u00e0o {p}.', atCleared:'\u0110\u00e3 g\u1ee1 ra.',
