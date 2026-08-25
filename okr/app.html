@@ -393,6 +393,11 @@ tr.dragging{opacity:.35}
 .tr1 .up{font-size:10.5px;color:var(--text3);white-space:nowrap;max-width:190px;
   overflow:hidden;text-overflow:ellipsis;flex-shrink:0}
 .tr1 .up.keep{color:#94A3B8;font-style:italic}
+.tr1 .atsel{font:inherit;font-size:11px;padding:3px 6px;border-radius:6px;border:1px solid var(--border);
+  background:#fff;color:var(--text3);cursor:pointer;flex-shrink:0;max-width:186px;outline:none}
+.tr1 .atsel:hover{border-color:var(--navy,#1D4ED8)}
+.tr1 .atsel.on{color:var(--text2);border-color:#BFDBFE;background:#F0F7FF}
+.tr1 .atsel.none{color:var(--text3);font-style:italic}
 .atbox{display:flex;gap:6px;align-items:center;padding:7px 13px 9px 39px;background:var(--bg2,#F8FAFC);
   border-bottom:1px solid var(--bg2,#F1F5F9)}
 .atbox select{flex:1;min-width:0;font:inherit;font-size:12px;padding:5px 8px;
@@ -450,7 +455,7 @@ tr.dragging{opacity:.35}
 .qd b.on{color:#fff;border-color:transparent}
 .qd b.on:hover{color:#fff;filter:brightness(1.12)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-2";</script>
 </head>
 <body>
 
@@ -2894,31 +2899,15 @@ function todayHtml(pic){
       +  '<span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
       +  '<div class="tgb">';
     list.forEach(function(d){
-      var up = '';
-      if(d.pid){
-        var par = DATA.find(function(x){ return x.id === d.pid; });
-        if(par) up = '<div class="up" title="' + bfEsc(TL(par.label)) + '">↳ ' + bfEsc(TL(par.label)) + '</div>';
-      } else if(d.noOkr){
-        up = '<div class="up keep" onclick="atUndoSkip(' + d.id + ')" title="누르면 다시 붙일 수 있습니다">내 할 일</div>';
-      }
       h += '<div class="tr1" data-id="' + d.id + '">'
         +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
-        +  up
-        +  (atPending(d) ? '<div class="at" onclick="atToggle(' + d.id + ')">↳ 붙이기</div>' : '')
+        +  atSelHtml(d)
         +  ((k === 'over' || k === 'today') ? quadBtns(d) : '')
         +  (k === 'over' ? '<div class="pull" onclick="todayPull(' + d.id + ')" title="'
              + bfEsc(t('todayPullTip')) + '">' + t('todayPull') + '</div>' : '')
         +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
         +  '<div class="mt">' + bfEsc(ago(d)) + '</div></div>';
-      if(_atOpen === d.id){
-        h += '<div class="atbox">'
-          +  '<select id="at-' + d.id + '">' + atOptions() + '</select>'
-          +  '<button class="go" onclick="atApply(' + d.id + ')">붙이기</button>'
-          +  '<button class="no" onclick="atSkip(' + d.id + ')">붙일 데 없음</button>'
-          +  '<button class="no" onclick="atToggle(' + d.id + ')">닫기</button>'
-          +  '</div>';
-      }
     });
     h += '</div></div>';
   });
@@ -2930,59 +2919,101 @@ function todayHtml(pic){
    적을 때는 안 묻고, 붙일 것만 나중에 붙인다.
    안 붙이는 것도 정상이다 — 일상 업무는 원래 OKR 에 안 붙는다(라모트 #14). */
 
-var _atOpen = null;                 /* 지금 열려 있는 붙이기 줄 */
-function atToggle(id){ _atOpen = (_atOpen === id) ? null : id; renderMatrix(); }
-
-/* 아직 안 붙었고, 붙이지 않기로 표시하지도 않은 줄 */
+/* 아직 어디에도 안 붙었고 '내 할 일' 로도 안 정한 것 */
 function atPending(d){
   return d && d.lv === 'TD' && !d.pid && !d.noOkr;
 }
 
-/* 고를 수 있는 실행과제 — 내 팀 것을 위로 */
-function atOptions(){
-  var mine = bfMyTeams();
-  var ins = (DATA || []).filter(function(d){ return d.lv === 'IN'; });
-  function isMine(d){
-    if(!mine.length) return false;
-    return mine.some(function(t){ return bfHasTeam(d.team, t); });
+/* 고를 수 있는 상위 — 팀 KR(TK)과 실행과제(IN).
+   지금까지 IN 만 담았는데 실측에서 TK 밑에 TD 가 이미 6건 붙어 있고,
+   IN 145건 중 82건(57%)은 자식이 없어 붙일 IN 자체가 없는 팀 KR 이 많다.
+   기준 팀은 로그인한 사람이 아니라 '그 할 일의 팀' 이다 —
+   관리자는 여러 팀 것을 보고 할 일마다 팀이 다르기 때문이다. */
+function atOptionsFor(d){
+  var myTeam = String((d && d.team) || '').trim();
+  var rows = (DATA || []).filter(function(x){ return x.lv === 'TK' || x.lv === 'IN'; });
+  function inTeam(x){ return myTeam ? bfHasTeam(x.team, myTeam) : false; }
+
+  /* TK 를 축으로 놓고 그 아래 IN 을 들여쓴다. 부모 없는 IN 은 뒤에 따로. */
+  function order(list){
+    var tks = list.filter(function(x){ return x.lv === 'TK'; });
+    var ins = list.filter(function(x){ return x.lv === 'IN'; });
+    var out = [], used = {};
+    tks.sort(function(a, b){ return a.id - b.id; }).forEach(function(tk){
+      out.push({d: tk, dep: 0});
+      ins.filter(function(i){ return i.pid === tk.id; })
+         .sort(function(a, b){ return a.id - b.id; })
+         .forEach(function(i){ out.push({d: i, dep: 1}); used[i.id] = 1; });
+    });
+    ins.filter(function(i){ return !used[i.id]; })
+       .sort(function(a, b){ return a.id - b.id; })
+       .forEach(function(i){ out.push({d: i, dep: 0}); });
+    return out;
   }
-  var a = ins.filter(isMine), b = ins.filter(function(d){ return !isMine(d); });
-  function lab(d){
-    var s = TL(d.label) || '';
-    return (d.team ? '[' + d.team + '] ' : '') + (s.length > 46 ? s.slice(0, 46) + '…' : s);
+  function lab(x, dep){
+    var s = TL(x.label) || '';
+    if(s.length > 38) s = s.slice(0, 38) + '\u2026';
+    return (dep ? '\u2007\u2007\u21b3 ' : '') + '[' + x.lv + '] ' + s
+         + (dep ? '' : (x.team ? ' \u00b7 ' + x.team : ''));
   }
-  var h = '<option value="">어디에 붙일까요…</option>';
-  if(a.length) h += '<optgroup label="내 팀">' + a.map(function(d){
-    return '<option value="' + d.id + '">' + bfEsc(lab(d)) + '</option>'; }).join('') + '</optgroup>';
-  if(b.length) h += '<optgroup label="그 밖">' + b.map(function(d){
-    return '<option value="' + d.id + '">' + bfEsc(lab(d)) + '</option>'; }).join('') + '</optgroup>';
+  function opts(list){
+    return order(list).map(function(o){
+      return '<option value="' + o.d.id + '"' + (d.pid === o.d.id ? ' selected' : '') + '>'
+           + bfEsc(lab(o.d, o.dep)) + '</option>';
+    }).join('');
+  }
+
+  var mine = rows.filter(inTeam), rest = rows.filter(function(x){ return !inTeam(x); });
+  var h = '<option value=""' + (!d.pid && !d.noOkr ? ' selected' : '') + '>' + t('atNone') + '</option>'
+        + '<option value="none"' + (d.noOkr ? ' selected' : '') + '>' + t('atMine') + '</option>';
+  if(mine.length) h += '<optgroup label="' + bfEsc(myTeam) + '">' + opts(mine) + '</optgroup>';
+  if(rest.length) h += '<optgroup label="' + t('atOther') + '">' + opts(rest) + '</optgroup>';
   return h;
 }
 
-async function atApply(id){
-  var sel = document.getElementById('at-' + id);
-  if(!sel || !sel.value){ toast('붙일 실행과제를 고르세요.','error'); return; }
-  var d = DATA.find(function(x){ return x.id === id; });
-  var p = DATA.find(function(x){ return x.id === parseInt(sel.value, 10); });
-  if(!d || !p) return;
+/* 팀 고르는 칸과 같은 방식이다 — 줄에 그냥 있고, 고르면 그 자리에서 붙는다 */
+function atSelHtml(d){
+  var on = !!d.pid, none = !!d.noOkr;
+  return '<select class="atsel' + (on ? ' on' : (none ? ' none' : '')) + '"'
+       + ' onclick="event.stopPropagation()"'
+       + ' onchange="event.stopPropagation();atPick(' + d.id + ',this.value)"'
+       + ' title="' + bfEsc(t('atTip')) + '">' + atOptionsFor(d) + '</select>';
+}
+
+async function atPick(id, v){
+  if(v === 'none'){ await atSkip(id); return; }
+  var d = (DATA || []).find(function(x){ return x.id === id; });
+  if(!d) return;
   var snap = snapItem(d);
-  d.pid  = p.id;
-  d.team = p.team || d.team;          /* 팀·KR 코드는 상위에서 물려받는다 */
-  d.kr   = p.kr || d.kr;
-  _atOpen = null;
+
+  if(v === ''){                       // 아무 데도 안 붙임으로 되돌린다
+    if(!d.pid && !d.noOkr) return;
+    d.pid = 0; d.noOkr = false;
+    saveData(); renderMatrix(); renderTable();
+    var ok0 = await nasUpdateItem(d);
+    if(!ok0){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+    toast(t('atCleared'));
+    return;
+  }
+
+  var p = (DATA || []).find(function(x){ return x.id === parseInt(v, 10); });
+  if(!p) return;
+  d.pid   = p.id;
+  d.noOkr = false;
+  d.team  = p.team || d.team;         /* 팀·KR 코드는 상위에서 물려받는다 */
+  d.kr    = p.kr || d.kr;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
   if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
-  toast('붙였습니다 — ' + (TL(p.label) || '').slice(0, 24));
+  toast(t('atDone').replace('{p}', (TL(p.label) || '').slice(0, 24)));
 }
 
-/* 붙일 데 없음 — 오류가 아니라 정상 경로다. 다시 안 묻는다. */
 async function atSkip(id){
   var d = DATA.find(function(x){ return x.id === id; });
   if(!d) return;
   var snap = snapItem(d);
   d.noOkr = true;
-  _atOpen = null;
+  d.pid = 0;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
   if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
@@ -4170,6 +4201,9 @@ const I18N = {
     updFail:'Could not check for a new version.',
     mtDoneTip:'Click to mark it done.',
     quadMoved:'Moved to {n}.', quadCleared:'Taken out of the matrix.',
+    atNone:'\u21b3 attach to\u2026', atMine:'my own task (not OKR)', atOther:'other teams',
+    atTip:'Which Team KR or Initiative this belongs under. Pick one to attach it.',
+    atDone:'Attached under {p}.', atCleared:'Detached.',
     bfMeetDate:'Meeting date', pD:'{mn} {d}, {y} meeting',
     bfSavedList:'Saved meetings', bfUnsaved:'not saved yet',
     bfNoCards:'Nothing saved yet — save today and the next meeting can compare against it.',
@@ -4355,6 +4389,9 @@ const I18N = {
     updFail:'\uc0c8 \ubc84\uc804\uc744 \ud655\uc778\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.',
     mtDoneTip:'\ub204\ub974\uba74 \uc644\ub8cc\ub429\ub2c8\ub2e4.',
     quadMoved:'{n} \ub85c \ubcf4\ub0c8\uc2b5\ub2c8\ub2e4.', quadCleared:'\uc0ac\ubd84\uba74\uc5d0\uc11c \ube80\uc2b5\ub2c8\ub2e4.',
+    atNone:'\u21b3 \uc5b4\ub514\uc5d0 \ubd99\uc77c\uae4c\uc694\u2026', atMine:'\ub0b4 \ud560 \uc77c (OKR \ubb34\uad00)', atOther:'\ub2e4\ub978 \ud300',
+    atTip:'\uc5b4\ub290 \ud300 KR \u00b7 \uc2e4\ud589\uacfc\uc81c \uc5d0 \ub538\ub9b0 \uc77c\uc778\uc9c0. \uace0\ub974\uba74 \ubc14\ub85c \ubd99\uc2b5\ub2c8\ub2e4.',
+    atDone:'{p} \uc5d0 \ubd99\uc600\uc2b5\ub2c8\ub2e4.', atCleared:'\ub5bc\uc5c8\uc2b5\ub2c8\ub2e4.',
     bfMeetDate:'회의 날짜', pD:'{y}년 {m}월 {d}일 회의',
     bfSavedList:'저장된 회의', bfUnsaved:'아직 저장 안 함',
     bfNoCards:'저장된 회의가 없습니다 — 오늘 저장하면 다음 회의에서 비교할 수 있습니다.',
@@ -4540,6 +4577,9 @@ const I18N = {
     updFail:'Kh\u00f4ng ki\u1ec3m tra \u0111\u01b0\u1ee3c b\u1ea3n m\u1edbi.',
     mtDoneTip:'B\u1ea5m \u0111\u1ec3 \u0111\u00e1nh d\u1ea5u ho\u00e0n th\u00e0nh.',
     quadMoved:'\u0110\u00e3 chuy\u1ec3n sang {n}.', quadCleared:'\u0110\u00e3 b\u1ecf kh\u1ecfi ma tr\u1eadn.',
+    atNone:'\u21b3 g\u1eafn v\u00e0o\u2026', atMine:'vi\u1ec7c ri\u00eang (kh\u00f4ng OKR)', atOther:'nh\u00f3m kh\u00e1c',
+    atTip:'Thu\u1ed9c KR nh\u00f3m ho\u1eb7c Initiative n\u00e0o. Ch\u1ecdn \u0111\u1ec3 g\u1eafn ngay.',
+    atDone:'\u0110\u00e3 g\u1eafn v\u00e0o {p}.', atCleared:'\u0110\u00e3 g\u1ee1 ra.',
     bfMeetDate:'Ngày họp', pD:'Họp ngày {d}/{m}/{y}',
     bfSavedList:'Các cuộc họp đã lưu', bfUnsaved:'chưa lưu',
     bfNoCards:'Chưa lưu cuộc họp nào — lưu hôm nay để lần sau so sánh được.',
