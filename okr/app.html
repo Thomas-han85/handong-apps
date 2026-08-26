@@ -461,7 +461,7 @@ tr.dragging{opacity:.35}
 .qd b.on{color:#fff;border-color:transparent}
 .qd b.on:hover{color:#fff;filter:brightness(1.12)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-8";</script>
 </head>
 <body>
 
@@ -4942,6 +4942,44 @@ async function appUpdate(){
   else toast((r && r.message) || t('updFail'), 'error');
 }
 
+/* ══ 남의 저장을 받아 그리는 시점 ═══════════════════════════════════════
+   10초 폴링이 표를 통째로 다시 그리는데, 그때 내가 인라인 칸에 숫자를 치고
+   있으면 그 input 이 새로 만들어져 치던 값이 사라진다.
+   데이터는 바로 받고 그리는 것만 손을 뗄 때까지 미룬다. */
+
+function uiBusy(){
+  try{
+    var e = document.activeElement;
+    // SELECT 는 뺀다 — 필터·팀·붙이기 고르개가 전부 SELECT 라, 한 번 만지면
+    // 포커스가 거기 남아 남의 저장이 영영 화면에 안 나타난다.
+    // 고르는 순간 반영되므로 다시 그려도 잃을 글자가 없다.
+    if(e && /^(INPUT|TEXTAREA)$/.test(e.tagName)
+         && e.type !== 'button' && e.type !== 'submit'
+         && e.type !== 'checkbox' && e.type !== 'radio') return true;
+    // 편집창이 열려 있으면 그 안의 값이 날아간다.
+    // editId 로는 판단할 수 없다 — closePanel 이 그것을 안 비운다.
+    var p = document.getElementById('editPanel');
+    if(p && p.classList.contains('open')) return true;
+  }catch(_){}
+  return false;
+}
+
+function nasRepaint(){
+  window._nasDirty = false;
+  try{ renderTable(); }catch(_){}
+  // 지금까지 표만 다시 그리고 My Tasks 는 안 그렸다.
+  // 그래서 그 화면을 열어 둔 채로는 남이 바꾼 것이 안 보였다.
+  try{ renderMatrix(); }catch(_){}
+  toast(t('toastNasSync'), 'success');
+}
+
+/* 손을 떼면 밀어 뒀던 것을 그린다. 다음 칸으로 옮겨 가는 중일 수 있어 조금 기다린다. */
+document.addEventListener('focusout', function(){
+  setTimeout(function(){
+    if(window._nasDirty && !uiBusy()) nasRepaint();
+  }, 400);
+});
+
 async function connectNas(){
   const statusEl=document.getElementById('nas-status');
   if(!NAS_API){ if(statusEl) statusEl.textContent=''; return; }
@@ -4962,7 +5000,12 @@ async function connectNas(){
         const latest=await nasRead();
         if(!latest) return;
         const h=JSON.stringify(latest);
-        if(h!==(window._nasHash||'')){ DATA=latest; window._nasHash=h; refreshTeamFilter(); renderTable(); toast(t('toastNasSync'),'success'); }
+        if(h===(window._nasHash||'')) return;
+        // 데이터는 바로 받는다. 그리는 것만 미룬다 —
+        // 지금 치고 있는데 다시 그리면 그 글자가 날아간다.
+        DATA=latest; window._nasHash=h; refreshTeamFilter();
+        if(uiBusy()){ window._nasDirty=true; return; }
+        nasRepaint();
       }, 10000);
     }
   } else {
