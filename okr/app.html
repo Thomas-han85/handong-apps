@@ -461,7 +461,7 @@ tr.dragging{opacity:.35}
 .qd b.on{color:#fff;border-color:transparent}
 .qd b.on:hover{color:#fff;filter:brightness(1.12)}
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.25-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.29-1";</script>
 </head>
 <body>
 
@@ -3519,6 +3519,9 @@ function openNew(){
   _pendingNew = {id, pid:0, lv:'TK', kr:'', label:'', team:'', pic:'', reviewer:'', period:'', target:0, actual:0, status:'Not Started', feedbacks:[], importance:'', urgency:'', review:false};
 
   editId = id;
+  // 아래 템플릿이 d 를 쓴다(자신감 칸). selectNewLv 와 같은 이름으로 잡아 준다 —
+  // 이것이 없어서 ReferenceError 로 편집창이 통째로 안 열렸다.
+  const d = _pendingNew;
   document.getElementById('panelTitle').textContent = t('panelNew');
   document.getElementById('deleteBtn').style.display = 'block';
   document.getElementById('deleteBtn').textContent = t('btnDelete');
