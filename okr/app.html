@@ -364,6 +364,9 @@ tr.dragging{opacity:.35}
 #todayBox .cap button{padding:9px 18px;border-radius:9px;border:none;background:var(--navy,#1D4ED8);
   color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
 #todayBox .cap button:disabled{opacity:.45;cursor:default}
+#todayBox .cap .tdue{border:1.5px solid var(--border);border-radius:9px;padding:8px 9px;
+  font:inherit;font-size:13px;color:var(--text);background:#fff;outline:none;cursor:pointer;white-space:nowrap}
+#todayBox .cap .tdue:focus{border-color:var(--navy,#1D4ED8)}
 #todayBox .hint{font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5}
 #todayGroups{margin-bottom:14px}
 .tg{border:1px solid var(--border);border-radius:11px;background:#fff;margin-bottom:8px;overflow:hidden}
@@ -502,7 +505,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.08.29-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.09.16-1";</script>
 </head>
 <body>
 
@@ -2874,12 +2877,13 @@ async function todayAdd(){
   }
   var btn = document.getElementById('todayBtn');
   if(btn) btn.disabled = true;
+  var _due = (document.getElementById('todayDue') || {}).value || '';
 
   var ok = 0, fail = 0;
   for(var i = 0; i < lines.length; i++){
     var d = {
       id: newTodoId(), pid: 0, lv: 'TD', kr: '', label: lines[i],
-      team: team, pic: myPicName(), reviewer: '', period: todayPeriod(),
+      team: team, pic: myPicName(), reviewer: '', period: todoPeriodFor(_due),
       target: 0, actual: 0, status: 'Not Started', feedbacks: [],
       importance: '', urgency: '', review: false
     };
@@ -2889,6 +2893,7 @@ async function todayAdd(){
   }
   saveData();
   ta.value = '';
+  var _dd = document.getElementById('todayDue'); if(_dd) _dd.value = todayISO();
   if(btn) btn.disabled = false;
   refreshTeamFilter(); renderTable(); renderMatrix();
   toast(fail ? ('적음 ' + ok + '건 · 실패 ' + fail + '건') : ('적었습니다 — ' + ok + '건'),
@@ -2900,6 +2905,22 @@ function todayPeriod(){
   var t = new Date();
   var y = t.getFullYear(), m = ('0'+(t.getMonth()+1)).slice(-2), d = ('0'+t.getDate()).slice(-2);
   return y + '/' + m + '/' + d + '~' + y + '/' + m + '/' + d;
+}
+/* date input 이 쓰는 YYYY-MM-DD (오늘). */
+function todayISO(){
+  var t = new Date();
+  return t.getFullYear() + '-' + ('0'+(t.getMonth()+1)).slice(-2) + '-' + ('0'+t.getDate()).slice(-2);
+}
+/* 고른 마감일(YYYY-MM-DD) 을 period(YYYY/MM/DD~YYYY/MM/DD) 로. 비었으면 오늘 하루.
+   시작=min(오늘,마감) 이라 미래 마감은 오늘→마감으로 걸치고, 지난 날짜면 그 날 하루로 둔다.
+   YYYY/MM/DD 문자열은 사전순이 곧 날짜순이라 그냥 비교한다. */
+function todoPeriodFor(dueISO){
+  if(!dueISO) return todayPeriod();
+  var due = dueISO.replace(/-/g, '/');
+  var t = new Date();
+  var today = t.getFullYear() + '/' + ('0'+(t.getMonth()+1)).slice(-2) + '/' + ('0'+t.getDate()).slice(-2);
+  var start = (due < today) ? due : today;
+  return start + '~' + due;
 }
 
 /* 기한으로 네 칸으로 나눈다. 미완료 108건 중 80건이 이미 기한이 지났으므로
@@ -3193,6 +3214,7 @@ function renderMatrix(){
     + '<textarea id="todayIn" rows="1" placeholder="오늘 할 일을 한 줄씩 적으세요. 여러 줄을 붙여넣으면 줄마다 한 건이 됩니다."'
     + ' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();todayAdd();}"></textarea>'
     + todoTeamHtml()
+    + '<input type="date" id="todayDue" class="tdue" value="' + todayISO() + '" title="이 할 일들의 마감일 (기본: 오늘). 바꾸면 그 날 마감으로 들어갑니다">'
     + '<button id="todayBtn" onclick="todayAdd()">추가</button></div>'
     + '<div class="hint">' + t('todoHint') + '</div></div>';
 
