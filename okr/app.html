@@ -1644,7 +1644,7 @@ async function cycleConf(id){
   d.conf = CONF_ORDER[(i + 1) % CONF_ORDER.length];
   saveData(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderTable(); }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderTable(); }
 }
 
 function urgCell(d){
@@ -1714,7 +1714,7 @@ async function mtQuad(id, n){
   }
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
   toast(was === n ? t('quadCleared') : t('quadMoved').replace('{n}', quadName(n)));
 }
 
@@ -3097,7 +3097,7 @@ async function atPick(id, v){
   d.kr    = p.kr || d.kr;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
   toast(t('atDone').replace('{p}', (TL(p.label) || '').slice(0, 24)));
 }
 
@@ -3109,7 +3109,7 @@ async function atSkip(id){
   d.pid = 0;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
   toast('그냥 내 할 일로 두었습니다.');
 }
 async function atUndoSkip(id){
@@ -3119,7 +3119,7 @@ async function atUndoSkip(id){
   d.noOkr = false;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); }
 }
 
 /* 기한 지난 것을 오늘로 당긴다. 기한만 바꾼다 — 상태·담당자·상위는 안 건드린다. */
@@ -3136,7 +3136,7 @@ async function todayPull(id){
   d.period = todayPeriod();
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
   // 원래 기한을 알려 준다 — 잘못 눌렀을 때 편집창에서 되돌릴 수 있어야 한다
   toast(t('todayPulled').replace('{was}', was));
 }
@@ -3148,7 +3148,7 @@ async function todayDone(id){
   d.status = 'Done';
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
   toast('완료했습니다.');
 }
 
@@ -3181,7 +3181,7 @@ function mtTeamEdit(id, el){
     d.team = v;
     saveData(); renderMatrix(); renderTable();
     var ok = await nasUpdateItem(d);
-    if(!ok){ restoreItem(d, snap); saveData(); renderMatrix(); renderTable(); return; }
+    if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
     toast(t('todoTeamMoved').replace('{t}', v));
   };
   sel.onblur = function(){ renderMatrix(); };
@@ -4028,7 +4028,7 @@ function onDrop(e, tgtId){
   if(mode === 'child'){
     const _snap = snapItem(srcD);
     nasUpdateItem(srcD).then(function(ok){
-      if(!ok){ restoreItem(srcD, _snap); saveData(); renderTable(); }
+      if(!ok){ restoreItem(srcD, _snap); saveData(); toast(t('saveFailed'),'error'); renderTable(); }
     });
   } else {
     toast(t('orderNotSaved'));
@@ -4184,6 +4184,90 @@ function secCell(d){
   return `<span onclick="toggleSec(${d.id})" title="${on?'Remove security':'Mark as secured'}" style="cursor:pointer;display:inline-block;padding:2px 6px;border-radius:8px;font-size:12px;transition:all .15s;${on?'background:#FEF3C7;color:#92400E':'background:#F1F5F9;color:#9CA3AF;border:1px dashed #D1D5DB'}">${on?'🔒':'🔓'}</span>`;
 }
 
+
+/* ── Ctrl+Z 되돌리기 ──────────────────────────────────────────────
+   누르기 직전의 DATA 를 통째로 담아 두었다가, 그 상태로 되돌린다.
+   바뀐 것·지워진 것·새로 생긴 것을 가려 서버에도 그대로 반영한다. */
+var UNDO = [];
+var UNDO_MAX = 30;
+var _undoBusy = false;
+
+function undoSnapshot(label){
+  try{
+    var s = JSON.stringify(DATA);
+    var last = UNDO.length ? UNDO[UNDO.length-1] : null;
+    if(last && last.snap === s) return;          // 바뀐 게 없으면 쌓지 않는다
+    UNDO.push({ t: Date.now(), label: (label||'').slice(0,30), snap: s });
+    if(UNDO.length > UNDO_MAX) UNDO.shift();
+  }catch(e){}
+}
+
+/* 누르기 '직전' 을 담아야 하므로 mousedown 에서, 그것도 캡처 단계에서 받는다 */
+document.addEventListener('mousedown', function(e){
+  try{
+    var el = e.target && e.target.closest ? e.target.closest('[onclick]') : null;
+    if(!el) return;
+    var oc = el.getAttribute('onclick') || '';
+    if(!/todayDone|todayAdd|todayPull|mtQuad|mtMove|mtTeamEdit|cycleStatus|cycleImp|cycleUrg|saveActual|savePanel|delItem|atUndoSkip|atDone/.test(oc)) return;
+    undoSnapshot(el.getAttribute('title') || (el.innerText||'').trim());
+  }catch(_){}
+}, true);
+
+/* 편집창 저장처럼 버튼이 아닌 경로도 담는다 */
+function undoMark(label){ undoSnapshot(label); }
+
+async function doUndo(){
+  if(_undoBusy) return;
+  var ent = UNDO.pop();
+  if(!ent){ toast(t('undoNone'),'error'); return; }
+  _undoBusy = true;
+  try{
+    var before = JSON.parse(ent.snap);
+    var beforeById = {}; before.forEach(function(x){ beforeById[x.id] = x; });
+    var nowById = {};    DATA.forEach(function(x){ nowById[x.id] = x; });
+    var changed = [], revive = [], remove = [];
+    before.forEach(function(b){
+      var n = nowById[b.id];
+      if(!n) revive.push(b);
+      else if(JSON.stringify(n) !== JSON.stringify(b)) changed.push(b);
+    });
+    DATA.forEach(function(n){ if(!beforeById[n.id]) remove.push(n); });
+
+    if(!changed.length && !revive.length && !remove.length){
+      toast(t('undoNone'),'error'); _undoBusy = false; return;
+    }
+    // 화면 먼저 되돌린다
+    DATA.length = 0;
+    before.forEach(function(x){ DATA.push(x); });
+    saveData(); renderTable(); renderMatrix();
+
+    // 서버에도 반영
+    var fail = 0;
+    for(var i=0;i<changed.length;i++){ if(!(await nasUpdateItem(changed[i]))) fail++; }
+    for(var j=0;j<revive.length;j++){  if(!(await nasUpdateItem(revive[j], true))) fail++; }
+    if(remove.length){
+      try{ await nasDeleteItems(remove.map(function(x){ return x.id; })); }
+      catch(e){ fail++; }
+    }
+    var cnt = changed.length + revive.length + remove.length;
+    if(fail) toast(t('undoPartial').replace('{n}', String(fail)), 'error');
+    else     toast(t('undoDone').replace('{n}', String(cnt)) + (ent.label ? ' — ' + ent.label : ''));
+  }catch(e){
+    toast(t('undoFailed'),'error');
+  }
+  _undoBusy = false;
+}
+
+document.addEventListener('keydown', function(e){
+  var z = (e.key === 'z' || e.key === 'Z' || e.keyCode === 90);
+  if(!z || !(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+  // 글자를 치고 있는 중이면 브라우저 기본 되돌리기를 살려 둔다
+  var a = document.activeElement;
+  if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.isContentEditable)) return;
+  e.preventDefault();
+  doUndo();
+});
+
 function toast(msg,type='success'){const e=document.getElementById('toast');e.textContent=msg;e.className=`toast ${type} show`;setTimeout(()=>e.classList.remove('show'),2500);}
 
 // ══ 언어 설정 ══
@@ -4231,6 +4315,11 @@ const I18N = {
     confirmReset:'Reset all data to initial state?',
     delWithKids:'Delete \u201c{label}\u201d and its {n} sub-items?',
     delNoUndo:'This cannot be undone.',
+    saveFailed:"Could not save. Check your connection.",
+    undoNone:"Nothing to undo.",
+    undoDone:"Undone ({n} item(s))",
+    undoPartial:"Undone, but {n} item(s) did not reach the server.",
+    undoFailed:"Undo failed.",
     fldDir:'Direction',
     dirInc:'Higher is better',
     dirDec:'Lower is better',
@@ -4425,6 +4514,11 @@ const I18N = {
     confirmReset:'모든 데이터를 처음 상태로 되돌릴까요?',
     delWithKids:'“{label}” 와 하위 {n}건을 함께 지우니다.',
     delNoUndo:'되돌릴 수 없습니다. 계속할까요?',
+    saveFailed:"저장하지 못했습니다. 연결을 확인해 주세요.",
+    undoNone:"되돌릴 것이 없습니다.",
+    undoDone:"되돌렸습니다 ({n}건)",
+    undoPartial:"되돌렸지만 {n}건은 서버에 반영되지 않았습니다.",
+    undoFailed:"되돌리지 못했습니다.",
     fldDir:'방향',
     dirInc:'늘리는 목표',
     dirDec:'줄이는 목표',
@@ -4619,6 +4713,11 @@ const I18N = {
     confirmReset:'Đặt lại toàn bộ dữ liệu về ban đầu?',
     delWithKids:'Xóa “{label}” và {n} mục con?',
     delNoUndo:'Không thể hoàn tác.',
+    saveFailed:"Không lưu được. Vui lòng kiểm tra kết nối.",
+    undoNone:"Không có gì để hoàn tác.",
+    undoDone:"Đã hoàn tác ({n} mục)",
+    undoPartial:"Đã hoàn tác, nhưng {n} mục chưa lên máy chủ.",
+    undoFailed:"Hoàn tác thất bại.",
     fldDir:'Hướng',
     dirInc:'Càng cao càng tốt',
     dirDec:'Càng thấp càng tốt',
