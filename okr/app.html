@@ -505,7 +505,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-5";</script>
 </head>
 <body>
 
@@ -2010,7 +2010,8 @@ async function runPicMerge(n){
   /* 폴링이 방금 고친 것을 덮어쓰지 않게 해시를 다시 잡는다 */
   try{ window._nasHash = JSON.stringify(DATA); }catch(e){}
   refreshTeamFilter(); renderTable();
-  toast(fail ? ('합침 ' + ok + '행 · 실패 ' + fail + '행') : ('합쳤습니다 — ' + ok + '행'),
+  toast(fail ? L3('Merged ' + ok + ' rows · failed ' + fail, '합침 ' + ok + '행 · 실패 ' + fail + '행', 'Đã gộp ' + ok + ' dòng · lỗi ' + fail)
+             : L3('Merged — ' + ok + ' rows', '합쳤습니다 — ' + ok + '행', 'Đã gộp — ' + ok + ' dòng'),
         fail ? 'error' : 'success');
 }
 
@@ -2027,7 +2028,7 @@ function picOptions(){
   });
   var known = Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; });
   /* 계정과 이어지는 이름을 위로 올린다 */
-  var accs = Object.keys(PIC_ALIAS);
+  var accs = knownAccounts();
   function acctOf(name){
     for(var i = 0; i < accs.length; i++) if(nameMatch(name, accs[i])) return accs[i];
     return '';
@@ -2056,6 +2057,15 @@ function picListHtml(){
        + '</datalist>';
 }
 
+/* 아는 계정 — 별명표(PIC_ALIAS)만 보면 그 뒤에 생긴 계정(nguyenthiep 등)을 「새 이름」으로 잘못 알린다 (2026-10-02).
+   팀원은 사용자 목록을 못 받으므로, 로그인한 나와 항목을 저장한 적 있는 계정(_uby)을 더한다. */
+function knownAccounts(){
+  var set = {};
+  Object.keys(PIC_ALIAS).forEach(function(a){ set[a] = 1; });
+  try{ if(AUTH && AUTH.user && AUTH.user.username) set[AUTH.user.username] = 1; }catch(e){}
+  (DATA || []).forEach(function(d){ if(d && d._uby) set[d._uby] = 1; });
+  return Object.keys(set);
+}
 /* 친 이름이 계정과 이어지는지 칸 밑에 조용히 알려 준다. 막지는 않는다. */
 function picHint(){
   var el = document.getElementById('f-pic'), box = document.getElementById('f-pic-hint');
@@ -2063,15 +2073,17 @@ function picHint(){
   var v = (el.value || '').trim();
   if(!v){ box.textContent = ''; return; }
   var hit = '';
-  Object.keys(PIC_ALIAS).forEach(function(a){ if(!hit && nameMatch(v, a)) hit = a; });
+  knownAccounts().forEach(function(a){ if(!hit && nameMatch(v, a)) hit = a; });
   if(hit){
-    box.textContent = '계정 ' + hit + ' 과 이어집니다';
+    box.textContent = L3('Linked to account ' + hit, '계정 ' + hit + ' 과 이어집니다', 'Đã liên kết với tài khoản ' + hit);
     box.style.color = '#16A34A';
   } else {
     var used = (DATA || []).filter(function(d){ return (d.pic || '').trim() === v; }).length;
     box.textContent = used
-      ? ('계정 없음 — 이 표기로 ' + used + '건 쓰였습니다')
-      : '새 이름입니다. 계정과 안 이어져 마이태스크·마감알림을 못 받습니다';
+      ? L3('No account — this name is used in ' + used + ' item(s)', '계정 없음 — 이 표기로 ' + used + '건 쓰였습니다', 'Chưa có tài khoản — tên này đang dùng ở ' + used + ' mục')
+      : L3('New name — not linked to any account, so it will not appear in My Tasks or due-date alerts. Use the account name (e.g. your login ID).',
+           '새 이름입니다. 계정과 안 이어져 마이태스크·마감알림을 못 받습니다',
+           'Tên mới — chưa liên kết tài khoản nên không hiện trong My Tasks và không nhận nhắc hạn. Hãy dùng tên tài khoản (ID đăng nhập).');
     box.style.color = used ? 'var(--text3)' : '#B7791F';
   }
 }
@@ -2088,7 +2100,9 @@ var PIC_ALIAS = {
   'nam.mai':    ['Mr.Nam', 'Mr. Nam'],                  //  4행
   'Phat':       ['Ms.Phat', 'Mr.Phat'],                 //  1행
   'khang.tran': ['Khang', 'Mr.Khang'],                  //  1행
-  'Thomas':     ['Thomas', 'Tom']                       // 43행
+  'Thomas':     ['Thomas', 'Tom'],                      // 43행
+  'nguyenthiep': ['Mr. Thiep', 'Mr.Thiep', 'Thiep'],      // 2026-10-02 추가
+  'Thien.tr':   ['Mr. Thien', 'Mr.Thien', 'Thien']      // 2026-10-02 추가
 };
 /* 계정 아이디로 그 사람의 별명 목록을 준다(자기 아이디 포함) */
 function picAliases(uname){
