@@ -1423,6 +1423,7 @@ async function nasUpdateItem(item, isNew){
     try{ window._nasHash = JSON.stringify(DATA); }catch(_){}
     return true;
   }catch(e){
+    window._saveToastAt = Date.now();          // 여기서 사유를 알린다 — 호출부가 일반 문구로 덮지 않게
     if(e.status===409 && e.data && e.data.current){
       toast('\u26a0 Someone edited this first. Refreshing to the latest version.','error');
       const cur=e.data.current, i=DATA.findIndex(x=>x.id===cur.id);
@@ -1439,6 +1440,8 @@ async function nasUpdateItem(item, isNew){
    409 는 위에서 DATA[i] 를 통째로 바꿔치운 뒤라 여기서 되돌리면 안 된다 —
    그래서 nasUpdateItem 이 409 에서도 false 를 주지만, 호출부는 이미 새 값을 받은 상태다.
    되돌릴 값을 미리 떠 두고 실패했을 때만 쓴다. */
+/* 저장 실패 알림 — nasUpdateItem 이 방금 사유(권한 없음·충돌 등)를 띄웠으면 그것을 덮지 않는다 */
+function saveFailToast(){ if(Date.now() - (window._saveToastAt || 0) > 1500) toast(t('saveFailed'),'error'); }
 function snapItem(d){ try{ return JSON.parse(JSON.stringify(d)); }catch(e){ return null; } }
 function restoreItem(d, snap){
   if(!d || !snap) return;
@@ -1644,7 +1647,7 @@ async function cycleConf(id){
   d.conf = CONF_ORDER[(i + 1) % CONF_ORDER.length];
   saveData(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderTable(); }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderTable(); }
 }
 
 function urgCell(d){
@@ -1714,7 +1717,7 @@ async function mtQuad(id, n){
   }
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
   toast(was === n ? t('quadCleared') : t('quadMoved').replace('{n}', quadName(n)));
 }
 
@@ -3097,7 +3100,7 @@ async function atPick(id, v){
   d.kr    = p.kr || d.kr;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
   toast(t('atDone').replace('{p}', (TL(p.label) || '').slice(0, 24)));
 }
 
@@ -3109,7 +3112,7 @@ async function atSkip(id){
   d.pid = 0;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
   toast('그냥 내 할 일로 두었습니다.');
 }
 async function atUndoSkip(id){
@@ -3119,7 +3122,7 @@ async function atUndoSkip(id){
   d.noOkr = false;
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); }
 }
 
 /* 기한 지난 것을 오늘로 당긴다. 기한만 바꾼다 — 상태·담당자·상위는 안 건드린다. */
@@ -3136,7 +3139,7 @@ async function todayPull(id){
   d.period = todayPeriod();
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
   // 원래 기한을 알려 준다 — 잘못 눌렀을 때 편집창에서 되돌릴 수 있어야 한다
   toast(t('todayPulled').replace('{was}', was));
 }
@@ -3148,7 +3151,7 @@ async function todayDone(id){
   d.status = 'Done';
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
-  if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+  if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
   toast('완료했습니다.');
 }
 
@@ -3181,7 +3184,7 @@ function mtTeamEdit(id, el){
     d.team = v;
     saveData(); renderMatrix(); renderTable();
     var ok = await nasUpdateItem(d);
-    if(!ok){ restoreItem(d, snap); saveData(); toast(t('saveFailed'),'error'); renderMatrix(); renderTable(); return; }
+    if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
     toast(t('todoTeamMoved').replace('{t}', v));
   };
   sel.onblur = function(){ renderMatrix(); };
@@ -4042,7 +4045,7 @@ function onDrop(e, tgtId){
   if(mode === 'child'){
     const _snap = snapItem(srcD);
     nasUpdateItem(srcD).then(function(ok){
-      if(!ok){ restoreItem(srcD, _snap); saveData(); toast(t('saveFailed'),'error'); renderTable(); }
+      if(!ok){ restoreItem(srcD, _snap); saveData(); saveFailToast(); renderTable(); }
     });
   } else {
     toast(t('orderNotSaved'));
