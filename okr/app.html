@@ -505,7 +505,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.09.16-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-1";</script>
 </head>
 <body>
 
@@ -2504,7 +2504,7 @@ function renderGantt(){
   // 다중팀 표기(B14+BenTre, B14,KO 등) 분해해서 팀 목록 생성
   const allTeams = [...new Set(
     DATA.filter(d=>(d.lv==='IN'||d.lv==='TD')&&d.team)
-      .flatMap(d=>d.team.split(/[+,&]/).map(t=>t.trim()).filter(Boolean))
+      .flatMap(d=>bfTeamsOf(d.team))
   )].sort();
   const tSel = document.getElementById('ganttTeam');
   const curT = tSel.value;
@@ -2562,7 +2562,7 @@ function renderGantt(){
     // 방법 1: team 필드가 filterTeam인 TO
     // 방법 2: filterTeam Initiative의 조상 중 TO
     // 다중팀 표기에서 filterTeam 포함 여부로 필터
-  function teamMatch(team){ return team && team.split(/[+,&]/).map(t=>t.trim()).includes(filterTeam); }
+  function teamMatch(team){ return bfHasTeam(team, filterTeam); }
   const teamINs = DATA.filter(d=>d.lv==='IN'&&teamMatch(d.team));
     const teamTDs = DATA.filter(d=>d.lv==='TD'&&teamMatch(d.team));
     const teamInis = [...teamINs, ...teamTDs];
@@ -2602,7 +2602,7 @@ function renderGantt(){
         const col = OBJ_COLORS[((oIdx%OBJ_COLORS.length)+OBJ_COLORS.length)%OBJ_COLORS.length];
 
         // 이 TO 아래 Initiative 중 해당 팀 것
-        const toInis = getChildren(to.id).filter(x=>(x.lv==='IN'||x.lv==='TD')&&x.team===filterTeam);
+        const toInis = getChildren(to.id).filter(x=>(x.lv==='IN'||x.lv==='TD')&&bfHasTeam(x.team, filterTeam));
         const done = toInis.filter(d=>d.status==='Done').length;
         const ip   = toInis.filter(d=>d.status==='In Progress').length;
         const ns   = toInis.filter(d=>d.status==='Not Started').length;
@@ -2657,7 +2657,7 @@ function renderGantt(){
   }
 
   // 다중팀 포함 여부 체크 (B14+BenTre 형식 지원)
-  function teamMatch(team){ if(!filterTeam) return true; return team && team.split(/[+,&]/).map(t=>t.trim()).includes(filterTeam); }
+  function teamMatch(team){ if(!filterTeam) return true; return bfHasTeam(team, filterTeam); }
 
   let allInis = DATA.filter(d=>d.lv==='IN'||d.lv==='TD');
   if(filterTeam) allInis = allInis.filter(d=>teamMatch(d.team));
@@ -3699,7 +3699,7 @@ function selectNewLv(lv){
       // 팀 필터 표시: TK에서 팀 목록 추출
       if(teamFilterRow && teamFilterSel){
         teamFilterRow.style.display='block';
-        const teams = [...new Set(DATA.filter(d=>d.lv==='TK' && d.team).map(d=>d.team))].sort();
+        const teams = [...new Set(DATA.filter(d=>d.lv==='TK' && d.team).flatMap(d=>bfTeamsOf(d.team)))].sort();
         teamFilterSel.innerHTML = `<option value="">${t('selectTeam')}</option>` +
           teams.map(tm=>`<option value="${tm}">${tm}</option>`).join('');
       }
@@ -3708,7 +3708,7 @@ function selectNewLv(lv){
       // TD: 팀 먼저 선택 → 해당 팀 Initiative 필터링
       if(teamFilterRow && teamFilterSel){
         teamFilterRow.style.display='block';
-        const teams = [...new Set(DATA.filter(d=>d.lv==='IN' && d.team).map(d=>d.team))].sort();
+        const teams = [...new Set(DATA.filter(d=>d.lv==='IN' && d.team).flatMap(d=>bfTeamsOf(d.team)))].sort();
         teamFilterSel.innerHTML = `<option value="">${t('selectTeam')}</option>` +
           teams.map(tm=>`<option value="${tm}">${tm}</option>`).join('');
         const lbl = document.getElementById('new-parent-lbl');
@@ -3777,7 +3777,7 @@ function onTeamFilterChange(){
 
   if(curLv === 'TD'){
     // TD: 선택한 팀의 Initiative(IN)만 표시
-    const ins = DATA.filter(d=>d.lv==='IN' && d.team===selectedTeam);
+    const ins = DATA.filter(d=>d.lv==='IN' && bfHasTeam(d.team, selectedTeam));   // 'Div2 HO, C&C2' 도 C&C2 에 나온다
     if(!ins.length){
       pidSel.innerHTML = '<option value="0">No Initiatives for this team</option>';
       return;
@@ -3786,7 +3786,7 @@ function onTeamFilterChange(){
       ins.map(c=>`<option value="${c.id}">${TL(c.label).slice(0,55)}</option>`).join('');
   } else {
     // IN: 선택한 팀의 Team KR(TK)만 표시
-    const tks = DATA.filter(d=>d.lv==='TK' && d.team===selectedTeam);
+    const tks = DATA.filter(d=>d.lv==='TK' && bfHasTeam(d.team, selectedTeam));
     if(!tks.length){
       pidSel.innerHTML = '<option value="0">No Team KRs for this team</option>';
       return;
@@ -3796,7 +3796,14 @@ function onTeamFilterChange(){
   }
 }
 
-function saveEdit(){
+async function saveEdit(){
+  // 권한 먼저 — 지금 팀과 바꾸려는 팀 둘 다 내 팀이어야 서버가 받는다
+  var _teamEl0 = document.getElementById('f-team');
+  var _cur0 = (_pendingNew && _pendingNew.id === editId) ? null : DATA.find(function(x){ return x.id === editId; });
+  var _newTeam0 = _teamEl0 ? _teamEl0.value : (_cur0 ? _cur0.team : '');
+  if(_cur0 && !canEditTeam(_cur0.team)){ toast(denyTeamMsg(_cur0.team), 'error'); return; }
+  if(!canEditTeam(_newTeam0)){ toast(denyTeamMsg(_newTeam0), 'error'); return; }
+  var _snap0 = _cur0 ? snapItem(_cur0) : null;
   // If this is a new item (pending), add it to DATA first
   var _wasNew = false;                 // 서버에 '새로 만드는 것' 이라고 알려 줘야 한다
   if(_pendingNew && _pendingNew.id === editId){
@@ -3855,8 +3862,15 @@ function saveEdit(){
   const isNew = !DATA.find(x=>x.id===editId);
   saveData();
   window._nasHash = JSON.stringify(DATA); // 내 변경이 동기화에 덮어쓰이는 거 방지
-  if(nasMode){ nasUpdateItem(d, _wasNew); }   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사)
-  closePanel(); toast(t('toastSaved'),'success');
+  closePanel();
+  if(!nasMode){ toast(t('toastSaved'),'success'); return; }
+  // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사). 「저장됨」은 서버가 받은 뒤에만 띄운다
+  const _ok = await nasUpdateItem(d, _wasNew);
+  if(_ok){ toast(t('toastSaved'),'success'); return; }
+  // 서버가 거절 — 10초 뒤 동기화가 몰래 되돌리기 전에 지금 되돌린다 (거절 사유 알림은 nasUpdateItem 이 띄움)
+  if(_wasNew){ const _i = DATA.indexOf(d); if(_i >= 0) DATA.splice(_i, 1); }
+  else restoreItem(d, _snap0);
+  saveData(); window._nasHash = JSON.stringify(DATA); renderTable();
 }
 /* 지울 것을 미리 세어 본다 — 자손까지 전부 */
 function delPreview(id){
@@ -4342,6 +4356,7 @@ const I18N = {
     bfNoTOWhy:' has no Team Objective registered \u2014 this is not a filter problem.',
     bfNoTOWho:'Teams that do have one ({n})',
     saveDenied:'Not saved \u2014 you do not have permission to edit this item. The value has been put back.',
+    denyTeam:'Not saved \u2014 this item belongs to team \u300c{team}\u300d. Your account {me} is in {mine}, so it cannot edit it. Ask that team or an admin.',
     saveFailed:'Not saved \u2014 the server did not accept the change. The value has been put back.',
     orderNotSaved:'Moved on screen only \u2014 row order is not saved to the server.',
     resetBlocked:'Blocked while connected to the NAS \u2014 this would erase the server data, not restore it.',
@@ -4541,6 +4556,7 @@ const I18N = {
     bfNoTOWhy:' 팀에는 팀 목표(Team Objective)가 등록되어 있지 않습니다 — 걸러내기 문제가 아닙니다.',
     bfNoTOWho:'팀 목표가 있는 팀 ({n}개)',
     saveDenied:'저장되지 않았습니다 — 이 항목을 고칠 권한이 없습니다. 값을 되돌렸습니다.',
+    denyTeam:'저장하지 않았습니다 — 이 항목은 「{team}」 팀 것입니다. 지금 계정 {me} 은(는) {mine} 팀이라 고칠 수 없습니다. 그 팀이나 관리자에게 요청하세요.',
     saveFailed:'저장되지 않았습니다 — 서버가 받아들이지 않았습니다. 값을 되돌렸습니다.',
     orderNotSaved:'화면에서만 옮겨졌습니다 — 줄 순서는 서버에 저장되지 않습니다.',
     resetBlocked:'NAS 에 연결된 동안에는 막혀 있습니다 — 되돌리는 것이 아니라 서버 데이터를 지우게 됩니다.',
@@ -4740,6 +4756,7 @@ const I18N = {
     bfNoTOWhy:' chưa đăng ký Team Objective — không phải lỗi bộ lọc.',
     bfNoTOWho:'Các nhóm đã có ({n})',
     saveDenied:'Chưa lưu — bạn không có quyền sửa mục này. Giá trị đã được hoàn lại.',
+    denyTeam:'Chưa lưu — mục này thuộc nhóm \u300c{team}\u300d. Tài khoản {me} thuộc {mine} nên không sửa được. Hãy nhờ nhóm đó hoặc quản trị viên.',
     saveFailed:'Chưa lưu — máy chủ không chấp nhận. Giá trị đã được hoàn lại.',
     orderNotSaved:'Chỉ di chuyển trên màn hình — thứ tự dòng không được lưu.',
     resetBlocked:'Bị chặn khi đang kết nối NAS — thao tác này sẽ xóa dữ liệu máy chủ, không phải khôi phục.',
@@ -5305,6 +5322,24 @@ function bfHasTeam(rowTeam, team){
   var a = bfTeamsOf(rowTeam), i;
   for(i = 0; i < a.length; i++) if(a[i].toLowerCase() === String(team).toLowerCase()) return true;
   return false;
+}
+/* 이 계정이 이 팀 값의 항목을 고칠 수 있는가 — 서버 api.php can_edit 와 같은 규칙.
+   서버는 쉼표로만 쪼개고, 관리자·경영진은 전부, 팀이 빈 항목은 팀원이 못 고친다.
+   화면이 먼저 막아야 「저장됨」이라고 보였다가 10초 뒤 되돌아가는 일이 없다 (2026-10-02) */
+function canEditTeam(team){
+  var u = (typeof AUTH !== 'undefined' && AUTH && AUTH.user) ? AUTH.user : null;
+  if(!u || !nasMode) return true;
+  if(u.role === 'admin' || u.role === 'bod') return true;
+  var it = String(team == null ? '' : team).split(',').map(function(x){ return x.trim().toLowerCase(); })
+             .filter(function(x){ return x !== ''; });
+  if(!it.length) return false;
+  var mine = (u.teams || []).map(function(x){ return String(x).trim().toLowerCase(); });
+  return it.some(function(x){ return mine.indexOf(x) >= 0; });
+}
+function denyTeamMsg(team){
+  var u = (typeof AUTH !== 'undefined' && AUTH && AUTH.user) ? AUTH.user : {};
+  return t('denyTeam').replace('{team}', team || '—').replace('{me}', u.username || '')
+                      .replace('{mine}', (u.teams || []).join(', ') || '—');
 }
 /* 데이터에 실제로 등장하는 팀 (다중팀 표기는 낱개로 쪼갬) */
 function bfAllTeams(){
