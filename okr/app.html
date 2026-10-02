@@ -505,7 +505,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-3";</script>
 </head>
 <body>
 
@@ -1145,17 +1145,62 @@ function aiBulkBar(){
    + '<b style="color:#0D2137">Bulk apply</b>'
    + '<span>Assignee</span><input id="ai-bulk-pic" placeholder="man in charge" style="width:110px;'+inS+'">'
    + '<span>Reviewer</span><input id="ai-bulk-rev" placeholder="reviewer" style="width:110px;'+inS+'">'
+   + '<span>Schedule</span><input type="date" id="ai-bulk-ps" title="Start date — all rows" style="'+inS+'">'
+   + '<span>~</span><input type="date" id="ai-bulk-pe" title="End date — all rows" style="'+inS+'">'
    + '<button onclick="aiApplyBulk()" style="padding:5px 12px;background:#0D2137;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">Apply to all</button>'
    + '</div>';
 }
 function aiApplyBulk(){
   var pic=(document.getElementById('ai-bulk-pic').value||'').trim();
   var rev=(document.getElementById('ai-bulk-rev').value||'').trim();
+  var bps=(document.getElementById('ai-bulk-ps')||{}).value||'', bpe=(document.getElementById('ai-bulk-pe')||{}).value||'';
   var n=(window._aiSug||[]).length;
   for(var i=0;i<n;i++){
     if(pic){ var pe=document.getElementById('ai-pic-'+i); if(pe) pe.value=pic; }
     if(rev){ var re=document.getElementById('ai-rev-'+i); if(re) re.value=rev; }
+    if(bps){ var s1=document.getElementById('ai-ps-'+i); if(s1) s1.value=bps; }
+    if(bpe){ var e1=document.getElementById('ai-pe-'+i); if(e1) e1.value=bpe; }
   }
+}
+
+/* 날짜 → 'YYYY-MM-DD' (엑셀 Date 는 현지 날짜 기준) */
+function aiYmd(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function aiMonthEnd(y, m){ return new Date(Number(y), Number(m), 0).getDate(); }
+/* AI·엑셀이 주는 흔한 날짜 표기를 [시작, 끝] 'YYYY-MM-DD' 로 — 못 읽으면 null.
+   2026/09/01~2026/09/30 · 2026-09-30 · 30/09/2026 · 30.09.2026 · 30.9 · 2026/09 · Sep 2026 · 두 날짜를 ~ - to 로 이은 것 */
+function aiPeriodToDates(p){
+  p = String(p || '').trim();
+  if(!p) return null;
+  var Y = String(new Date().getFullYear());
+  var mn = {jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  function one(t, isEnd){
+    t = t.trim(); var m;
+    if((m = t.match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/))) return [m[1], m[2], m[3]];
+    if((m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/))) return [m[3], m[2], m[1]];      // 베트남·한국식 일/월/년
+    if((m = t.match(/^(\d{1,2})[\/.](\d{1,2})$/))) return [Y, m[2], m[1]];                           // 30.9 · 30/9 = 일.월
+    if((m = t.match(/^(\d{4})[\/\-.](\d{1,2})$/))) return [m[1], m[2], isEnd ? aiMonthEnd(m[1], m[2]) : 1];
+    if((m = t.match(/^([A-Za-z]{3})[a-z]*\.?\s*(\d{4})?$/)) && mn[m[1].toLowerCase()]){
+      var yy = m[2] || Y, mm = mn[m[1].toLowerCase()];
+      return [yy, mm, isEnd ? aiMonthEnd(yy, mm) : 1];
+    }
+    return null;
+  }
+  function fmt(a){
+    var y = Number(a[0]), mo = Number(a[1]), d = Number(a[2]);
+    if(!(mo >= 1 && mo <= 12)) return null;
+    var me = aiMonthEnd(y, mo); if(!(d >= 1)) d = 1; if(d > me) d = me;
+    return y + '-' + String(mo).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+  }
+  var parts = p.split(/\s*(?:~|\bto\b|–|—|\s-\s)\s*/);
+  if(parts.length >= 2){
+    var a = one(parts[0], false), b = one(parts[1], true);
+    if(a && b){ var fa = fmt(a), fb = fmt(b); if(fa && fb) return [fa, fb]; }
+  }
+  var o = one(p, false), e = one(p, true);
+  if(o && e){ var f1 = fmt(o), f2 = fmt(e); if(f1 && f2) return [f1, f2]; }
+  return null;
 }
 
 function aiRow(s,i){
@@ -1166,9 +1211,13 @@ function aiRow(s,i){
   const reason=aiEsc(s.reason||'');
   const inS='font-size:12px;padding:3px;border:1px solid #E2E8F0;border-radius:5px';
   // AI가 제안한 Schedule 문자열 → 달력 입력칸(YYYY-MM-DD) 초기값으로 변환(best-effort)
-  var pp=parsePeriodStr(s.period||''); var psV='', peV='';
-  if(!pp.allYear && pp.startM){ psV=pp.year+'-'+pp.startM+'-'+String(pp.startD||'01').padStart(2,'0'); }
-  if(!pp.allYear && pp.endM){ var ed=parseInt(pp.endD||'28',10); if(!(ed>=1&&ed<=28)) ed=28; peV=pp.year+'-'+pp.endM+'-'+String(ed).padStart(2,'0'); }
+  var psV='', peV='', _dd=aiPeriodToDates(s.period||'');
+  if(_dd){ psV=_dd[0]; peV=_dd[1]; }
+  else {
+    var pp=parsePeriodStr(s.period||'');
+    if(!pp.allYear && pp.startM){ psV=pp.year+'-'+pp.startM+'-'+String(pp.startD||'01').padStart(2,'0'); }
+    if(!pp.allYear && pp.endM){ var _me=aiMonthEnd(pp.year, pp.endM), ed=parseInt(pp.endD||String(_me),10); if(!(ed>=1&&ed<=_me)) ed=_me; peV=pp.year+'-'+pp.endM+'-'+String(ed).padStart(2,'0'); }
+  }
   if(!psV){ var _t=new Date(); psV=_t.getFullYear()+'-'+String(_t.getMonth()+1).padStart(2,'0')+'-'+String(_t.getDate()).padStart(2,'0'); } // Start date 기본=Today
   return '<div style="border:1px solid #E2E8F0;border-radius:8px;padding:8px;margin-bottom:6px">'
    + '<label style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
@@ -1215,7 +1264,7 @@ async function aiLoadExcel(input){
   try{
     const XLSX=await aiLoadSheetJs();
     const buf=await f.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array'});
+    const wb=XLSX.read(buf,{type:'array', cellDates:true});   // 날짜 칸을 Date 로 받는다
     let out=[];
     wb.SheetNames.forEach(function(name){
       const ws=wb.Sheets[name];
@@ -1223,7 +1272,8 @@ async function aiLoadExcel(input){
       if(!rows.length) return;
       out.push('# Sheet: '+name);
       rows.forEach(function(r){
-        const line=r.map(function(c){return String(c==null?'':c).trim();}).filter(function(c){return c!=='';}).join(' | ');
+        const line=r.map(function(c){ return (c instanceof Date) ? aiYmd(c) : String(c==null?'':c).trim(); })
+                   .filter(function(c){return c!=='';}).join(' | ');
         if(line) out.push(line);
       });
     });
@@ -1280,7 +1330,7 @@ function aiCallGemini(key, text){
     +"If neither applies set both to -1 (top level). "
     +"Never invent specific numbers, dates, or people; leave unknown fields as empty string. "
     +"If the notes clearly state a numeric target, put it in 'target' (else ''). "
-    +"If the notes clearly state a date/period (e.g. a month, 'Friday', '20.6', a year), put a short period string in 'period' (else ''). "
+    +"If the notes clearly state a date/period (e.g. a month, '20.6', a start and end date), put it in 'period' as YYYY/MM/DD~YYYY/MM/DD (a single day: YYYY/MM/DD; a whole month: first~last day of that month); dates written like 30/09/2026 or 30.9 are day/month. Else ''. "
     +"If a current/actual value is stated, put it in 'actual' (else ''). "
     +"If a person in charge / assignee name is stated (e.g. an 'Assignee' or 'PIC' column), put it in 'pic' (else ''). "
     +"If a reviewer/checker name is stated, put it in 'reviewer' (else ''). "
