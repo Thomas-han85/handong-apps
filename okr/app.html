@@ -505,7 +505,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.02-4";</script>
 </head>
 <body>
 
@@ -881,7 +881,7 @@ function buildAuthUI(){
   +   '<button id="umAdmin" onclick="openAdminPanel()" style="'+MENU_BTN+'">👥 User Management</button>'
   +   '<button id="umTrKey" onclick="openTrKey()" style="'+MENU_BTN+'" data-i18n="trKeyMenu">🌐 Gemini key for translation</button>'
   +   '<button id="umPicMerge" onclick="openPicMerge()" style="'+MENU_BTN+'">🧹 담당자 표기 합치기</button>'
-  +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 비밀번호 변경</button>'
+  +   '<button onclick="openPwChange()" style="'+MENU_BTN+'">🔑 '+L3('Change password','비밀번호 변경','Đổi mật khẩu')+'</button>'
   +   '<button onclick="doLogout()" style="'+MENU_BTN+'">🚪 Logout</button>'
   + '</div>'
   + '<div id="adminOverlay" onclick="if(event.target===this)closeAdmin()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2600;align-items:center;justify-content:center">'
@@ -986,16 +986,19 @@ async function adminDeleteUser(uid, name){
 }
 
 /* ---- 부팅: 토큰 있으면 검증 후 접속, 없으면 로그인 화면 ---- */
+/* 알림 문구를 고른 언어로 — 영어 · 한국어 · 베트남어 (2026-10-02: 한국어로 박혀 있던 것) */
+function L3(en, ko, vi){ var l = (typeof currentLang !== 'undefined') ? currentLang : 'en'; return l === 'ko' ? ko : (l === 'vi' ? vi : en); }
+
 /* ═══ 비밀번호 변경 / 초기화 ═══════════════════════════════════
    서버(api.php)의 change_password · reset_password 를 부른다.
    비밀번호를 바꾸면 다른 기기 세션이 전부 끊기므로 새 토큰을 받아 저장한다. */
 async function openPwChange(){
   var m = document.getElementById('userMenu'); if(m) m.style.display='none';
-  var cur = prompt('현재 비밀번호'); if(cur === null) return;
-  var nw  = prompt('새 비밀번호 (6자 이상)'); if(nw === null) return;
-  if(nw.length < 6){ alert('6자 이상이어야 합니다'); return; }
-  var nw2 = prompt('새 비밀번호 확인'); if(nw2 === null) return;
-  if(nw !== nw2){ alert('새 비밀번호가 서로 다릅니다'); return; }
+  var cur = prompt(L3('Current password','현재 비밀번호','Mật khẩu hiện tại')); if(cur === null) return;
+  var nw  = prompt(L3('New password (6+ characters)','새 비밀번호 (6자 이상)','Mật khẩu mới (từ 6 ký tự)')); if(nw === null) return;
+  if(nw.length < 6){ alert(L3('Use at least 6 characters.','6자 이상이어야 합니다','Cần ít nhất 6 ký tự.')); return; }
+  var nw2 = prompt(L3('Confirm new password','새 비밀번호 확인','Nhập lại mật khẩu mới')); if(nw2 === null) return;
+  if(nw !== nw2){ alert(L3('The two new passwords do not match.','새 비밀번호가 서로 다릅니다','Hai mật khẩu mới không khớp.')); return; }
   try{
     var r = await okrApi('change_password', {current: cur, new: nw});
     if(r && r.token){
@@ -1003,21 +1006,21 @@ async function openPwChange(){
       try{ localStorage.setItem('hd_okr_token', r.token); }catch(e){}
       try{ sessionStorage.setItem('hd_okr_token', r.token); }catch(e){}
     }
-    alert('비밀번호를 바꿨습니다.\n다른 기기는 다시 로그인해야 합니다.');
+    alert(L3('Password changed.\nOther devices must log in again.','비밀번호를 바꿨습니다.\n다른 기기는 다시 로그인해야 합니다.','Đã đổi mật khẩu.\nCác thiết bị khác phải đăng nhập lại.'));
   }catch(e){
-    alert((e && e.data && e.data.error) ? e.data.error : '변경 실패');
+    alert((e && e.data && e.data.error) ? e.data.error : L3('Change failed','변경 실패','Đổi không thành công'));
   }
 }
 
 async function adminResetPw(uid, name){
-  var nw = prompt('[' + name + '] 새 비밀번호 (6자 이상)'); if(nw === null) return;
-  if(nw.length < 6){ alert('6자 이상이어야 합니다'); return; }
-  if(!confirm(name + ' 의 비밀번호를 바꿉니다.\n이 사용자는 즉시 로그아웃되고 새 비밀번호로 다시 로그인해야 합니다.\n\n계속할까요?')) return;
+  var nw = prompt('[' + name + '] ' + L3('New password (6+ characters)','새 비밀번호 (6자 이상)','Mật khẩu mới (từ 6 ký tự)')); if(nw === null) return;
+  if(nw.length < 6){ alert(L3('Use at least 6 characters.','6자 이상이어야 합니다','Cần ít nhất 6 ký tự.')); return; }
+  if(!confirm(L3('Reset the password of ' + name + '?\nThis user is logged out at once and must log in with the new password.', name + ' 의 비밀번호를 바꿉니다.\n이 사용자는 즉시 로그아웃되고 새 비밀번호로 다시 로그인해야 합니다.\n\n계속할까요?', 'Đặt lại mật khẩu của ' + name + '?\nNgười dùng này sẽ bị đăng xuất ngay và phải đăng nhập bằng mật khẩu mới.'))) return;
   try{
     await okrApi('reset_password', {uid: uid, new: nw});
-    alert(name + ' 비밀번호를 바꿨습니다');
+    alert(L3('Password of ' + name + ' changed.', name + ' 비밀번호를 바꿨습니다', 'Đã đổi mật khẩu của ' + name + '.'));
   }catch(e){
-    alert((e && e.data && e.data.error) ? e.data.error : '초기화 실패');
+    alert((e && e.data && e.data.error) ? e.data.error : L3('Reset failed','초기화 실패','Đặt lại không thành công'));
   }
 }
 
@@ -1927,7 +1930,7 @@ function picGroups(){
 }
 
 function openPicMerge(){
-  if(!AUTH.isAdmin()){ toast('관리자만 쓸 수 있습니다.', 'error'); return; }
+  if(!AUTH.isAdmin()){ toast(L3('Admins only.','관리자만 쓸 수 있습니다.','Chỉ quản trị viên được dùng.'), 'error'); return; }
   var g = picGroups();
   var h = '';
   if(!g.length){
@@ -1976,13 +1979,13 @@ async function runPicMerge(n){
       plan.push({ from: x.v, to: tgt });
     });
   }
-  if(!plan.length){ toast('합칠 것이 없습니다.', 'error'); return; }
+  if(!plan.length){ toast(L3('Nothing to merge.','합칠 것이 없습니다.','Không có gì để gộp.'), 'error'); return; }
 
   var rows = (DATA || []).filter(function(d){
     var p = (d.pic || '').trim();
     return plan.some(function(q){ return q.from === p; });
   });
-  if(!rows.length){ toast('해당하는 행이 없습니다.', 'error'); return; }
+  if(!rows.length){ toast(L3('No matching rows.','해당하는 행이 없습니다.','Không có dòng phù hợp.'), 'error'); return; }
 
   var lines = plan.map(function(q){ return q.from + '  →  ' + q.to; }).join('\n');
   if(!confirm(rows.length + '행을 고칩니다.\n\n' + lines + '\n\n진행할까요?')) return;
@@ -2001,7 +2004,7 @@ async function runPicMerge(n){
     }catch(e){
       d.pic = prev; fail++;
     }
-    if(i % 5 === 0) toast('합치는 중 ' + (i + 1) + ' / ' + rows.length);
+    if(i % 5 === 0) toast(L3('Merging ','합치는 중 ','Đang gộp ') + (i + 1) + ' / ' + rows.length);
   }
   saveData();
   /* 폴링이 방금 고친 것을 덮어쓰지 않게 해시를 다시 잡는다 */
@@ -2920,12 +2923,12 @@ async function todayAdd(){
   var lines = String(ta.value || '').split('\n')
         .map(function(x){ return x.trim(); }).filter(Boolean);
   if(!lines.length) return;
-  if(!nasMode){ toast('서버에 연결된 뒤에 적어 주세요.','error'); return; }
+  if(!nasMode){ toast(L3('Please wait until the server is connected.','서버에 연결된 뒤에 적어 주세요.','Vui lòng đợi kết nối máy chủ.'),'error'); return; }
 
   var teamEl = document.getElementById('todayTeam');
   var team = teamEl ? teamEl.value : myTeamName();
   if(!team && !AUTH.isPriv()){
-    toast('계정에 팀이 없어 저장할 수 없습니다. 계정 메뉴에서 팀을 지정해 주세요.','error');
+    toast(L3('Your account has no team, so this cannot be saved. Ask an admin to set your team.','계정에 팀이 없어 저장할 수 없습니다. 계정 메뉴에서 팀을 지정해 주세요.','Tài khoản chưa có nhóm nên không lưu được. Hãy nhờ quản trị viên gán nhóm.'),'error');
     return;
   }
   var btn = document.getElementById('todayBtn');
@@ -3163,7 +3166,7 @@ async function atSkip(id){
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
   if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
-  toast('그냥 내 할 일로 두었습니다.');
+  toast(L3('Kept as my own task.','그냥 내 할 일로 두었습니다.','Đã giữ làm việc riêng của tôi.'));
 }
 async function atUndoSkip(id){
   var d = DATA.find(function(x){ return x.id === id; });
@@ -3202,7 +3205,7 @@ async function todayDone(id){
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
   if(!ok){ restoreItem(d, snap); saveData(); saveFailToast(); renderMatrix(); renderTable(); return; }
-  toast('완료했습니다.');
+  toast(L3('Marked as done.','완료했습니다.','Đã hoàn thành.'));
 }
 
 /* 카드에 찍힌 팀을 눌러서 바꾼다.
@@ -6364,7 +6367,7 @@ async function scUpdate(id){
   try{
     var r = await okrApi('sch_update', p);
     BF.slots = BF.slots.map(function(s){ return s.id === id ? r.slot : s; });
-    scModalClose(); scRender(); toast('고쳤습니다.');
+    scModalClose(); scRender(); toast(L3('Updated.','고쳤습니다.','Đã cập nhật.'));
   }catch(e){ scSrvErr(e); }
 }
 
@@ -6372,7 +6375,7 @@ async function scUpdate(id){
 function scSrvErr(e){
   var msg = (e && e.data && e.data.error) || '';
   if(/Unknown action/i.test(msg) || (e && e.status === 400 && !msg))
-    toast('이 기능은 NAS 의 api.php 를 올려야 켜집니다.', 'error');
+    toast(L3('This needs the latest api.php on the server.','이 기능은 NAS 의 api.php 를 올려야 켜집니다.','Tính năng này cần api.php mới trên máy chủ.'), 'error');
   else toast(msg || '실패했습니다.', 'error');
 }
 
