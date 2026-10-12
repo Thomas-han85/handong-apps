@@ -466,7 +466,14 @@ tr.dragging{opacity:.35}
 .pb-sp{flex:1}.pb-opt{font-size:11px;color:var(--text2);cursor:pointer}
 .pb-empty{font-size:12px;color:var(--text2);padding:14px 4px}
 .pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:10px}
-.pb-card{border:1.5px solid;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s}
+.pb-card{border:1.5px solid;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s;position:relative}
+.pb-fold{position:absolute;top:6px;right:6px;border:1px solid var(--border);background:#fff;border-radius:5px;font-size:10px;line-height:1;padding:3px 6px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity .15s}
+.pb-card:hover .pb-fold{opacity:1}.pb-fold:hover{color:var(--text);border-color:var(--text3)}
+.pb-folded{margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pb-ftg{font-size:11px;color:var(--text2);cursor:pointer;font-weight:600;margin-right:4px;user-select:none}
+.pb-fchip{font-size:11px;border:1px solid var(--border);border-radius:12px;padding:2px 9px;cursor:pointer;background:#F8FAFC;color:var(--text2)}
+.pb-fchip.red{border-color:#FCA5A5;color:#B91C1C}.pb-fchip.amber{border-color:#FCD34D;color:#B45309}
+.pb-fchip:hover{background:#fff;color:var(--text)}
 .pb-card:hover{box-shadow:0 2px 10px rgba(0,0,0,.08)}
 .pb-card.open{grid-column:1/-1}
 .pb-path{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
@@ -538,7 +545,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-2";</script>
 </head>
 <body>
 
@@ -3298,8 +3305,15 @@ function mtTeamEdit(id, el){
    팀이 아니라 사람 기준이다 — 내가 담당인 이니셔티브·팀KR, 그리고 내 할 일이 하나라도 든 이니셔티브.
    카드: 진행(완료/전체 할 일) · 기한 D-day · 기한 지난 할 일 · 다음 할 일 3개 · 마지막 움직임.
    펼치면 할 일 목록이 나오고, 그 자리에서 이 이니셔티브 밑에 할 일을 넣는다. */
-var _pbOpen = {}, _pbShowDone = false, _pbShut = false;
+var _pbOpen = {}, _pbShowDone = false, _pbShut = false, _pbFold = {}, _pbShowFold = false;
 try{ _pbShut = localStorage.getItem('okr_pb_shut') === '1'; }catch(e){}
+try{ _pbFold = JSON.parse(localStorage.getItem('okr_pb_fold') || '{}') || {}; }catch(e){ _pbFold = {}; }
+/* 접어두기 — 지금 안 볼 카드를 아래 「접어둔 것」 줄로 내린다. 내 브라우저에만 기억한다(데이터는 그대로). */
+function pbFold(id, on){
+  if(on) _pbFold[id] = 1; else delete _pbFold[id];
+  try{ localStorage.setItem('okr_pb_fold', JSON.stringify(_pbFold)); }catch(e){}
+  renderMatrix();
+}
 function pbHas(field, pic){
   if(!field || !pic) return false;
   var parts = String(field).split(/[,+&\/]/).map(function(p){ return p.trim(); });
@@ -3354,7 +3368,9 @@ function pbCards(pic){
 function projBoardHtml(pic){
   if(!pic) return '';
   var all = pbCards(pic);
-  var cards = all.filter(function(c){ return _pbShowDone || !c.doneCard; });
+  var vis = all.filter(function(c){ return _pbShowDone || !c.doneCard; });
+  var cards = vis.filter(function(c){ return !_pbFold[c.d.id]; });
+  var folded = vis.filter(function(c){ return _pbFold[c.d.id]; });
   var nOver = all.filter(function(c){ return c.tone === 'red'; }).length;
   var nStale = all.filter(function(c){ return c.tone === 'amber'; }).length;
   var C = { red: ['#DC2626', '#FEF2F2'], amber: ['#D97706', '#FFFBEB'], blue: ['#1565C0', '#fff'], green: ['#16A34A', '#F0FDF4'] };
@@ -3368,7 +3384,7 @@ function projBoardHtml(pic){
     + '<label class="pb-opt" onclick="event.stopPropagation()"><input type="checkbox" ' + (_pbShowDone ? 'checked' : '') + ' onchange="_pbShowDone=this.checked;renderMatrix()"> '
     + L3('Show done', '완료 포함', 'Gồm đã xong') + '</label></div>';
   if(_pbShut) return '<div class="pb-wrap">' + head + '</div>';
-  if(!cards.length) return '<div class="pb-wrap">' + head + '<div class="pb-empty">'
+  if(!cards.length && !folded.length) return '<div class="pb-wrap">' + head + '<div class="pb-empty">'
     + L3('No initiatives assigned to you yet. Set yourself as the PIC of an initiative to see it here.',
          '담당 이니셔티브가 없습니다. 이니셔티브의 담당자를 나로 지정하면 여기에 모입니다.',
          'Chưa có sáng kiến nào. Đặt bạn làm người phụ trách để hiển thị ở đây.') + '</div></div>';
@@ -3401,13 +3417,25 @@ function projBoardHtml(pic){
         + '<button onclick="pbAdd(' + d.id + ')">' + L3('Add', '추가', 'Thêm') + '</button></div></div>';
     }
     return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
+      + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
       + '<div class="pb-path">' + bfEsc(pbPath(d)) + '</div>'
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
       + (open ? '' : nx) + list + '</div>';
   }).join('');
-  return '<div class="pb-wrap">' + head + '<div class="pb-grid">' + body + '</div></div>';
+  var fold = '';
+  if(folded.length){
+    fold = '<div class="pb-folded"><span class="pb-ftg" onclick="_pbShowFold=!_pbShowFold;renderMatrix()">'
+      + (_pbShowFold ? '▾ ' : '▸ ') + L3('Folded ', '접어둔 것 ', 'Đã thu gọn ') + folded.length + '</span>'
+      + (_pbShowFold ? folded.map(function(c){
+          return '<span class="pb-fchip ' + c.tone + '" title="' + bfEsc(L3('Unfold', '다시 펼치기', 'Mở lại')) + '" onclick="pbFold(' + c.d.id + ',0)">'
+            + TL(c.d.label) + ' <b>' + (c.kids.length - c.open.length) + '/' + c.kids.length + '</b>'
+            + (c.over.length ? ' ⏰' + c.over.length : '') + ' ↥</span>';
+        }).join('') : '')
+      + '</div>';
+  }
+  return '<div class="pb-wrap">' + head + (cards.length ? '<div class="pb-grid">' + body + '</div>' : '') + fold + '</div>';
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
 function pbToggleAll(){ _pbShut = !_pbShut; try{ localStorage.setItem('okr_pb_shut', _pbShut ? '1' : '0'); }catch(e){} renderMatrix(); }
