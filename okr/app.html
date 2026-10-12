@@ -545,7 +545,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-3";</script>
 </head>
 <body>
 
@@ -3733,21 +3733,61 @@ function setTab(tab,el){
 }
 
 // ══ PANEL ══
-function parentOptions(lv, currentPid){
+/* 부모 고르기 — 팀을 먼저 골라 그 팀 항목만 띄운다 (2026-10-12).
+   예전에는 같은 단계 항목 전부(이니셔티브 170여 개)를 한 줄로 쏟아서 고를 수가 없었다.
+   · 팀 기본값 = 지금 부모의 팀 → 없으면 이 항목의 팀
+   · 할 일의 부모(이니셔티브)는 위 단계(팀KR) 이름으로 묶어 보여 준다
+   · 끝난 항목은 뒤로, 지금 부모는 팀이 달라도 항상 목록에 남긴다 */
+var _ptTeam = null;
+function parentOptions(lv, currentPid, team){
   const parentLv = {TD:'IN', IN:'TK', TK:'KR', KR:'O', TO:''}[lv] || '';
   if(!parentLv) return '';
-  const candidates = DATA.filter(d=>d.lv===parentLv);
-  if(!candidates.length) return '';
-  const opts = candidates.map(d=>{
+  const all = DATA.filter(d=>d.lv===parentLv);
+  if(!all.length) return '';
+  const cur = DATA.find(d=>d.id===currentPid);
+  const teams = (typeof bfAllTeams === 'function') ? bfAllTeams() : [];
+  if(team === undefined || team === null){
+    team = (cur && bfTeamsOf(cur.team)[0]) || '';
+    if(!team){ const me = DATA.find(d=>d.id===editId) || (_pendingNew && _pendingNew.id===editId ? _pendingNew : null); team = (me && bfTeamsOf(me.team)[0]) || ''; }
+  }
+  _ptTeam = team;
+  // KR·O 처럼 팀이 없는 단계는 거르지 않는다
+  const teamed = all.some(d=>d.team);
+  let cands = (team && teamed) ? all.filter(d=>bfHasTeam(d.team, team) || d.id===currentPid) : all.slice();
+  cands.sort((a,b)=>(a.status==='Done')-(b.status==='Done'));
+  const opt = d=>{
     const sel = d.id===currentPid ? ' selected':'';
-    const label = (d.kr?d.kr+' ':'')+TL(d.label).slice(0,40);
-    return `<option value="${d.id}"${sel}>${label}</option>`;
-  }).join('');
+    const label = (d.kr?d.kr+' ':'')+TL(d.label).replace(/<[^>]+>/g,'').slice(0,60) + (d.status==='Done' ? ' ✓' : '');
+    return `<option value="${d.id}"${sel}>${bfEsc(label)}</option>`;
+  };
+  let opts;
+  if(lv==='TD'){
+    const groups = {}, order = [];
+    cands.forEach(d=>{ const p = DATA.find(x=>x.id===d.pid); const k = p ? TL(p.label).replace(/<[^>]+>/g,'').slice(0,50) : L3('(no team KR)','(팀KR 없음)','(không có KR nhóm)');
+      if(!groups[k]){ groups[k]=[]; order.push(k); } groups[k].push(d); });
+    opts = order.map(k=>`<optgroup label="${bfEsc(k)}">${groups[k].map(opt).join('')}</optgroup>`).join('');
+  } else opts = cands.map(opt).join('');
   const parentLabel = {TD:t('parentInit'), IN:t('parentTeamKR'), TK:t('parentCompKR'), KR:t('parentObj')}[lv]||t('parentItem');
-  return `<div class="field-group"><div class="field-lbl">${parentLabel}</div>
+  const teamSel = (teamed && teams.length) ? `<select class="field-sel" id="f-pteam" onchange="onParentTeamChange()" style="margin-bottom:6px">
+      <option value=""${team?'':' selected'}>${L3('— All teams —','— 전체 팀 —','— Tất cả nhóm —')}</option>
+      ${teams.map(x=>`<option value="${bfEsc(x)}"${x===team?' selected':''}>${bfEsc(x)}</option>`).join('')}
+    </select>` : '';
+  return `<div class="field-group"><div class="field-lbl">${parentLabel}
+      <span style="font-weight:400;color:var(--text3);font-size:11px"> · ${L3('pick a team first','팀을 먼저 고르세요','chọn nhóm trước')} (${cands.length})</span></div>
+    ${teamSel}
     <select class="field-sel" id="f-pid" onchange="onParentChange(this)">
       <option value="0">${t('selectItem')}</option>${opts}
     </select></div>`;
+}
+function onParentTeamChange(){
+  const lvSel=document.getElementById('f-lv');
+  const cur = (_pendingNew && _pendingNew.id===editId) ? _pendingNew : DATA.find(x=>x.id===editId);
+  const lv = lvSel ? lvSel.value : (cur ? cur.lv : 'TD');
+  const pidSel=document.getElementById('f-pid');
+  const curPid=pidSel?(parseInt(pidSel.value)||0):0;
+  const team=(document.getElementById('f-pteam')||{}).value||'';
+  const wrap=document.getElementById('edit-parent-wrap');
+  if(wrap) wrap.innerHTML=parentOptions(lv, curPid, team);
 }
 
 function onEditLevelChange(){
@@ -3755,7 +3795,8 @@ function onEditLevelChange(){
   const pidSel=document.getElementById('f-pid');
   const curPid=pidSel?(parseInt(pidSel.value)||0):0;
   const wrap=document.getElementById('edit-parent-wrap');
-  if(wrap) wrap.innerHTML=parentOptions(lvSel.value, curPid);
+  const ptEl=document.getElementById('f-pteam');
+  if(wrap) wrap.innerHTML=parentOptions(lvSel.value, curPid, ptEl ? ptEl.value : undefined);
 }
 function onParentChange(sel){
   // 상위 바뀌면 KR Code 자동 채우기
