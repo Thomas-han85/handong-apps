@@ -545,7 +545,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-4";</script>
 </head>
 <body>
 
@@ -3312,7 +3312,28 @@ try{ _pbFold = JSON.parse(localStorage.getItem('okr_pb_fold') || '{}') || {}; }c
 function pbFold(id, on){
   if(on) _pbFold[id] = 1; else delete _pbFold[id];
   try{ localStorage.setItem('okr_pb_fold', JSON.stringify(_pbFold)); }catch(e){}
+  pbFoldSave();
   renderMatrix();
+}
+/* 접어두기는 계정에도 저장한다 — 브라우저에만 두면 다른 PC·창에서는 「접어둔 것」이 없다 (2026-10-12).
+   처음 한 번은 계정 것과 이 브라우저 것을 합치고, 이 브라우저에만 있던 것이 있으면 계정에 올린다. */
+var _pbPrefMerged = false;
+function pbFoldMerge(){
+  if(_pbPrefMerged || !AUTH || !AUTH.user || AUTH.user.prefs === undefined) return;   // 'me' 로 prefs 를 받은 뒤에만
+  _pbPrefMerged = true;
+  var srv = (AUTH.user.prefs && AUTH.user.prefs.pb_fold) || {};
+  var extra = Object.keys(_pbFold).some(function(k){ return !srv[k]; });
+  Object.keys(srv).forEach(function(k){ _pbFold[k] = 1; });
+  try{ localStorage.setItem('okr_pb_fold', JSON.stringify(_pbFold)); }catch(e){}
+  if(extra) pbFoldSave();
+}
+function pbFoldSave(){
+  if(!AUTH || !AUTH.user) return;
+  try{
+    if(!AUTH.user.prefs || Array.isArray(AUTH.user.prefs)) AUTH.user.prefs = {};
+    AUTH.user.prefs.pb_fold = JSON.parse(JSON.stringify(_pbFold));
+    okrApi('set_pref', { key: 'pb_fold', value: _pbFold }).catch(function(){});
+  }catch(e){}
 }
 function pbHas(field, pic){
   if(!field || !pic) return false;
@@ -3367,6 +3388,7 @@ function pbCards(pic){
 }
 function projBoardHtml(pic){
   if(!pic) return '';
+  pbFoldMerge();
   var all = pbCards(pic);
   var vis = all.filter(function(c){ return _pbShowDone || !c.doneCard; });
   var cards = vis.filter(function(c){ return !_pbFold[c.d.id]; });
@@ -3753,7 +3775,14 @@ function parentOptions(lv, currentPid, team){
   _ptTeam = team;
   // KR·O 처럼 팀이 없는 단계는 거르지 않는다
   const teamed = all.some(d=>d.team);
-  let cands = (team && teamed) ? all.filter(d=>bfHasTeam(d.team, team) || d.id===currentPid) : all.slice();
+  // 팀은 넓게 잇는다 — 항목 자신의 팀 · 위 단계의 팀 · 밑에 달린 항목의 팀 중 하나라도 맞으면 보인다.
+  // 이니셔티브는 여러 팀이 같이 쓴다(벤쩨 정산을 CSP 가 맡는 식). 자기 팀 칸만 보면 안 뜬다 (2026-10-12 실장님)
+  const linked = d=>{
+    if(bfHasTeam(d.team, team)) return true;
+    const p = DATA.find(x=>x.id===d.pid); if(p && bfHasTeam(p.team, team)) return true;
+    return DATA.some(x=>x.pid===d.id && bfHasTeam(x.team, team));
+  };
+  let cands = (team && teamed) ? all.filter(d=>linked(d) || d.id===currentPid) : all.slice();
   cands.sort((a,b)=>(a.status==='Done')-(b.status==='Done'));
   const opt = d=>{
     const sel = d.id===currentPid ? ' selected':'';
