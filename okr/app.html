@@ -471,6 +471,10 @@ tr.dragging{opacity:.35}
 .pb-sub{margin-top:8px}
 .pb-grp .pb-sub:first-of-type{margin-top:6px}
 .pb-sh{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--text2);user-select:none;padding-left:2px;border-left:3px solid #BFD3FB;padding:1px 0 1px 7px}
+.pb-krs{display:inline-flex;flex-wrap:wrap;gap:5px;margin-left:10px}
+.pb-krc{font-size:10.5px;font-weight:400;border:1px dashed #CBD5E1;border-radius:10px;padding:1px 8px;color:var(--text3);cursor:pointer;background:#fff}
+.pb-krc:hover{border-color:#94A3B8;color:var(--text2)}
+.pb-krc.on{border-style:solid;border-color:#93C5FD;background:#EFF6FF;color:#1D4ED8}
 .pb-gn{font-size:10.5px;background:#E2E8F0;color:var(--text2);border-radius:8px;padding:0 7px}
 .pb-wrap > .pb-sub{margin-top:12px}
 .pb-card{border:1.5px solid;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s;position:relative}
@@ -561,7 +565,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-5";</script>
 </head>
 <body>
 
@@ -3500,6 +3504,23 @@ function projBoardHtml(pic){
 }
 /* 묶음 줄 — 팀이 둘 이상이면 팀 → 회사KR, 하나뿐이면 회사KR 로 나눈다.
    머리말을 누르면 그 줄이 접힌다(계정이 아니라 이 브라우저에만 기억). */
+var _pbSplit = null;   // 계정 prefs 에서 처음 쓸 때 읽는다
+function pbSplitMap(){
+  if(_pbSplit === null){
+    _pbSplit = (AUTH && AUTH.user && AUTH.user.prefs && AUTH.user.prefs.pb_split) ? JSON.parse(JSON.stringify(AUTH.user.prefs.pb_split)) : {};
+  }
+  return _pbSplit;
+}
+function pbSplit(key){
+  var m = pbSplitMap();
+  if(m[key]) delete m[key]; else m[key] = 1;
+  try{
+    if(!AUTH.user.prefs || Array.isArray(AUTH.user.prefs)) AUTH.user.prefs = {};
+    AUTH.user.prefs.pb_split = JSON.parse(JSON.stringify(m));
+    okrApi('set_pref', { key: 'pb_split', value: m }).catch(function(){});
+  }catch(e){}
+  renderMatrix();
+}
 var _pbGrpShut = {};
 try{ _pbGrpShut = JSON.parse(localStorage.getItem('okr_pb_grp') || '{}') || {}; }catch(e){ _pbGrpShut = {}; }
 function pbGrp(k){
@@ -3541,14 +3562,35 @@ function pbGroupsHtml(cards, cardH){
   if(!multi){ window._pbFlat = false; return krRows(cards, ''); }
   // 팀이 둘 이상이면 팀 칸 하나에 카드를 이어서 깐다 — KR 별로 아래로 쪼개면 한두 장짜리 줄이 늘어난다 (10/13 실장님)
   // 같은 KR 카드끼리는 붙도록 KR 순서로만 정렬하고, KR 이름은 카드 위 경로에 보인다
+  // 다만 머리말 KR 칩으로 고른 KR 은 「따로 한 줄」로 뺀다 (입찰·정산처럼 — 10/13 실장님). 계정에 저장
   window._pbFlat = true;
+  var SP = pbSplitMap();
+  var krIdOf = function(c){ var k = pbTopKR(c.d); return k ? String(k.id) : '0'; };
   return bucket(cards, teamOf).map(function(g){
     var key = 'T:' + g.k;
-    var kro = bucket(g.cards, krOf).map(function(x){ return x.k; });
+    var kb = bucket(g.cards, krOf);
+    var kro = kb.map(function(x){ return x.k; });
     var sorted = g.cards.slice().sort(function(a, b){ return kro.indexOf(krOf(a)) - kro.indexOf(krOf(b)); });
-    var html = '<div class="pb-grp">' + head('pb-gh', key, g.k, g)
-      + (_pbGrpShut[key] ? '' : '<div class="pb-grid">' + sorted.map(cardH).join('') + '</div>') + '</div>';
-    return html;
+    var isSplit = function(c){ return !!SP[g.k + '|' + krIdOf(c)]; };
+    var rest = sorted.filter(function(c){ return !isSplit(c); });
+    var chips = kb.length > 1 ? '<span class="pb-krs" onclick="event.stopPropagation()">' + kb.map(function(x){
+        var kid = krIdOf(x.cards[0]), on = !!SP[g.k + '|' + kid];
+        var nm = x.k.length > 22 ? x.k.slice(0, 21) + '…' : x.k;
+        return '<span class="pb-krc' + (on ? ' on' : '') + '" title="' + bfEsc(L3('Click: put this KR on its own row / back into the team row',
+            '누르면 이 KR 을 따로 한 줄로 빼거나 다시 합칩니다', 'Bấm: tách KR này thành hàng riêng / gộp lại')) + '"'
+          + ' onclick="pbSplit(\'' + bfEsc(g.k + '|' + kid).replace(/'/g, '&#39;') + '\')">' + (on ? '⤓ ' : '') + bfEsc(nm) + ' ' + x.cards.length + '</span>';
+      }).join('') + '</span>' : '';
+    var body = '';
+    if(!_pbGrpShut[key]){
+      if(rest.length) body += '<div class="pb-grid">' + rest.map(cardH).join('') + '</div>';
+      kb.forEach(function(x){
+        if(!isSplit(x.cards[0])) return;
+        var sk = key + '|KR:' + x.k;
+        body += '<div class="pb-sub">' + head('pb-sh', sk, x.k, x)
+          + (_pbGrpShut[sk] ? '' : '<div class="pb-grid">' + x.cards.map(cardH).join('') + '</div>') + '</div>';
+      });
+    }
+    return '<div class="pb-grp">' + head('pb-gh', key, g.k, g).replace(/<\/div>$/, chips + '</div>') + body + '</div>';
   }).join('');
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
