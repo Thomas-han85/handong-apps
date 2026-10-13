@@ -465,7 +465,14 @@ tr.dragging{opacity:.35}
 .pb-chip.red{background:#FEE2E2;color:#B91C1C}.pb-chip.amber{background:#FEF3C7;color:#B45309}.pb-chip.blue{background:#DBEAFE;color:#1D4ED8}
 .pb-sp{flex:1}.pb-opt{font-size:11px;color:var(--text2);cursor:pointer}
 .pb-empty{font-size:12px;color:var(--text2);padding:14px 4px}
-.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:10px}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;margin-top:8px}
+.pb-grp{margin-top:12px;border:1px solid var(--border);border-radius:10px;padding:8px 10px 10px;background:#FAFBFD}
+.pb-gh{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:13px;user-select:none;color:var(--text)}
+.pb-sub{margin-top:8px}
+.pb-grp .pb-sub:first-of-type{margin-top:6px}
+.pb-sh{display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--text2);user-select:none;padding-left:2px;border-left:3px solid #BFD3FB;padding:1px 0 1px 7px}
+.pb-gn{font-size:10.5px;background:#E2E8F0;color:var(--text2);border-radius:8px;padding:0 7px}
+.pb-wrap > .pb-sub{margin-top:12px}
 .pb-card{border:1.5px solid;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s;position:relative}
 .pb-fold{position:absolute;top:6px;right:6px;border:1px solid var(--border);background:#fff;border-radius:5px;font-size:10px;line-height:1;padding:3px 6px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity .15s}
 .pb-card:hover .pb-fold{opacity:1}.pb-fold:hover{color:var(--text);border-color:var(--text3)}
@@ -554,7 +561,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-3";</script>
 </head>
 <body>
 
@@ -3352,10 +3359,10 @@ function pbHas(field, pic){
 }
 function pbEnd(d){ var e = parseDate(d && d.period, true); return e ? new Date(e.getFullYear(), e.getMonth(), e.getDate()) : null; }
 function pbDays(e){ if(!e) return null; var t0 = new Date(); t0.setHours(0,0,0,0); return Math.round((e - t0) / 86400000); }
-function pbPath(d){
+function pbPath(d, skipKR){
   var out = [], cur = DATA.find(function(x){ return x.id === d.pid; }), n = 0;
   while(cur && n++ < 4){ out.unshift(cur); cur = DATA.find(function(x){ return x.id === cur.pid; }); }
-  return out.filter(function(x){ return x.lv === 'KR' || x.lv === 'TK' || x.lv === 'IN'; })
+  return out.filter(function(x){ return (x.lv === 'KR' && !skipKR) || x.lv === 'TK' || x.lv === 'IN'; })
             .map(function(x){ return TL(x.label).replace(/<[^>]+>/g, '').slice(0, 34); }).join(' › ');
 }
 function pbCards(pic){
@@ -3430,7 +3437,7 @@ function projBoardHtml(pic){
     + L3('No initiatives assigned to you yet. Set yourself as the PIC of an initiative to see it here.',
          '담당 이니셔티브가 없습니다. 이니셔티브의 담당자를 나로 지정하면 여기에 모입니다.',
          'Chưa có sáng kiến nào. Đặt bạn làm người phụ trách để hiển thị ở đây.') + '</div></div>';
-  var body = cards.map(function(c){
+  var cardH = function(c){
     var d = c.d, col = C[c.tone], tot = c.kids.length, dn = tot - c.open.length;
     var pct = tot ? Math.round(dn * 100 / tot) : 0;
     var dtxt = c.dl === null ? '' : c.dl < 0 ? ('D+' + (-c.dl)) : c.dl === 0 ? 'D-day' : ('D-' + c.dl);
@@ -3471,12 +3478,13 @@ function projBoardHtml(pic){
     }
     return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
-      + '<div class="pb-path">' + bfEsc(pbPath(d)) + '</div>'
+      + '<div class="pb-path">' + bfEsc(pbPath(d, true)) + '</div>'
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
       + curH + (open ? '' : nx) + list + '</div>';
-  }).join('');
+  };
+  var body = pbGroupsHtml(cards, cardH);
   var fold = '';
   if(folded.length){
     fold = '<div class="pb-folded"><span class="pb-ftg" onclick="_pbShowFold=!_pbShowFold;renderMatrix()">'
@@ -3488,7 +3496,54 @@ function projBoardHtml(pic){
         }).join('') : '')
       + '</div>';
   }
-  return '<div class="pb-wrap">' + head + (cards.length ? '<div class="pb-grid">' + body + '</div>' : '') + fold + '</div>';
+  return '<div class="pb-wrap">' + head + (cards.length ? body : '') + fold + '</div>';
+}
+/* 묶음 줄 — 팀이 둘 이상이면 팀 → 회사KR, 하나뿐이면 회사KR 로 나눈다.
+   머리말을 누르면 그 줄이 접힌다(계정이 아니라 이 브라우저에만 기억). */
+var _pbGrpShut = {};
+try{ _pbGrpShut = JSON.parse(localStorage.getItem('okr_pb_grp') || '{}') || {}; }catch(e){ _pbGrpShut = {}; }
+function pbGrp(k){
+  if(_pbGrpShut[k]) delete _pbGrpShut[k]; else _pbGrpShut[k] = 1;
+  try{ localStorage.setItem('okr_pb_grp', JSON.stringify(_pbGrpShut)); }catch(e){}
+  renderMatrix();
+}
+function pbTopKR(d){
+  var cur = d, n = 0;
+  while(cur && n++ < 6){ if(cur.lv === 'KR') return cur; cur = DATA.find(function(x){ return x.id === cur.pid; }); }
+  return null;
+}
+function pbGroupsHtml(cards, cardH){
+  var teamOf = function(c){ return bfTeamsOf(c.d.team)[0] || L3('(no team)', '(팀 없음)', '(không nhóm)'); };
+  var krOf = function(c){ var k = pbTopKR(c.d); return k ? TL(k.label).replace(/<[^>]+>/g, '') : L3('(no company KR)', '(회사KR 없음)', '(không có KR công ty)'); };
+  var teams = {}; cards.forEach(function(c){ teams[teamOf(c)] = 1; });
+  var multi = Object.keys(teams).length >= 2;
+  function bucket(list, keyFn){
+    var m = {}, ord = [];
+    list.forEach(function(c){ var k = keyFn(c); if(!m[k]){ m[k] = []; ord.push(k); } m[k].push(c); });
+    var red = function(k){ return m[k].filter(function(c){ return c.tone === 'red'; }).length; };
+    ord.sort(function(a, b){ return (red(b) - red(a)) || (m[b].length - m[a].length) || (a < b ? -1 : 1); });
+    return ord.map(function(k){ return { k: k, cards: m[k], red: red(k) }; });
+  }
+  function head(cls, key, name, g){
+    var shut = !!_pbGrpShut[key];
+    return '<div class="' + cls + '" onclick="pbGrp(\'' + bfEsc(key).replace(/'/g, '&#39;') + '\')">'
+      + '<span class="pb-car">' + (shut ? '▸' : '▾') + '</span><b>' + bfEsc(name) + '</b>'
+      + '<span class="pb-gn">' + g.cards.length + '</span>'
+      + (g.red ? '<span class="pb-chip red">⏰ ' + g.red + '</span>' : '') + '</div>';
+  }
+  function krRows(list, prefix){
+    return bucket(list, krOf).map(function(g){
+      var key = prefix + 'KR:' + g.k;
+      return '<div class="pb-sub">' + head('pb-sh', key, g.k, g)
+        + (_pbGrpShut[key] ? '' : '<div class="pb-grid">' + g.cards.map(cardH).join('') + '</div>') + '</div>';
+    }).join('');
+  }
+  if(!multi) return krRows(cards, '');
+  return bucket(cards, teamOf).map(function(g){
+    var key = 'T:' + g.k;
+    return '<div class="pb-grp">' + head('pb-gh', key, g.k, g)
+      + (_pbGrpShut[key] ? '' : krRows(g.cards, key + '|')) + '</div>';
+  }).join('');
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
 function pbToggleAll(){ _pbShut = !_pbShut; try{ localStorage.setItem('okr_pb_shut', _pbShut ? '1' : '0'); }catch(e){} renderMatrix(); }
