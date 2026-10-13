@@ -630,7 +630,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-8";</script>
 </head>
 <body>
 
@@ -3739,7 +3739,10 @@ function pbTimelineHtml(){
         var dn = g.filter(function(o){ return o.x.status === 'Done'; }).length;
         var tip = g.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n') + (g.length > 20 ? '\n… +' + (g.length - 20) : '');
         dots += '<div class="tl-clu ' + worst + '" style="left:' + X(t) + ';top:4px" title="' + bfEsc(tip) + '" onclick="openEdit(' + g[0].x.id + ')">' + dn + '/' + g.length + '</div>';
-        if(dn) bubbles.push({ xp: xp, txt: dn + L3(' done', '건 완료', ' xong'), cls: 'done', id: g[0].x.id, tip: tip });
+        // 끝난 것은 묶지 않고 하나씩 말풍선 — 한 날에 아주 많으면 6개까지, 나머지는 +n (10/13 실장님)
+        var doneG = g.filter(function(o){ return o.x.status === 'Done'; });
+        doneG.slice(0, 6).forEach(function(o){ bubbles.push({ xp: xp, txt: (o.approx ? '≈ ' : '') + TL(o.x.label), cls: 'done', id: o.x.id, tip: tipOf(o) }); });
+        if(doneG.length > 6) bubbles.push({ xp: xp, txt: '+' + (doneG.length - 6) + L3(' done', '건 완료', ' xong'), cls: 'done', id: doneG[6].x.id, tip: doneG.slice(6, 26).map(function(o){ return '· ' + tipOf(o); }).join('\n') });
         if(l.cur && g.some(function(o){ return o.x.id === l.cur.id; })) bubbles.push({ xp: xp, txt: TL(l.cur.label), cls: 'cur', id: l.cur.id, tip: TL(l.cur.label) });
       } else {
         g.forEach(function(o, k){
