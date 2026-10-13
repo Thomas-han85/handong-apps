@@ -488,6 +488,14 @@ tr.dragging{opacity:.35}
 .pb-nx{font-size:11px;color:var(--text2);margin-top:4px;display:flex;gap:6px;white-space:nowrap;overflow:hidden}
 .pb-nx span{margin-left:auto;color:var(--text3);font-size:10px;flex-shrink:0}.pb-nx.od{color:#B91C1C}
 .pb-nx:hover{color:var(--text)}
+.pb-cur{display:flex;align-items:center;gap:7px;margin-top:7px;padding:5px 8px;border-radius:7px;background:#EEF4FF;border:1px solid #BFD3FB;font-size:11.5px;cursor:pointer;min-width:0}
+.pb-cur.od{background:#FEF2F2;border-color:#FCA5A5}
+.pb-cur-k{flex-shrink:0;font-size:9.5px;font-weight:700;color:#fff;background:#1565C0;border-radius:4px;padding:2px 6px;font-family:'IBM Plex Mono',monospace}
+.pb-cur.od .pb-cur-k{background:#DC2626}
+.pb-cur-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--text)}
+.pb-cur-d{flex-shrink:0;font-size:10px;color:var(--text3)}
+.pb-row.cur{background:#EEF4FF;border-radius:5px}.pb-row.cur .pb-lab{font-weight:700}
+.pb-row.cur .pb-lab::before{content:'▶ ';color:#1565C0}
 .pb-list{margin-top:10px;border-top:1px solid var(--border-light);padding-top:8px;cursor:default}
 .pb-row{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:12px;border-bottom:1px dashed var(--border-light)}
 .pb-row.done .pb-lab{color:var(--text3);text-decoration:line-through}.pb-row.od .pb-lab{color:#B91C1C}
@@ -545,7 +553,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.12-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-1";</script>
 </head>
 <body>
 
@@ -3371,15 +3379,26 @@ function pbCards(pic){
     var wk = open.filter(function(x){ var g = pbDays(pbEnd(x)); return g !== null && g >= 0 && g <= 7; });
     var last = Math.max(+(d._uat || 0), Math.max.apply(null, kids.map(function(x){ return +(x._uat || 0); }).concat([0])));
     var idle = last ? Math.floor((Date.now() - last) / 86400000) : null;
-    var nxt = open.slice().sort(function(a, b){
-      var ea = pbEnd(a), eb = pbEnd(b); return (ea ? ea.getTime() : 9e15) - (eb ? eb.getTime() : 9e15);
-    }).slice(0, 3);
+    var seq = function(x){ var m = String(x.label).match(/^\[[^\]]*?(\d+)\s*\/\s*\d+\]/); return m ? +m[1] : null; };
+    var ord = function(a, b){
+      var sa = seq(a), sb = seq(b);
+      if(sa !== null && sb !== null && sa !== sb) return sa - sb;
+      var ea = pbEnd(a), eb = pbEnd(b), d = (ea ? ea.getTime() : 9e15) - (eb ? eb.getTime() : 9e15);
+      return d || (a.id - b.id);
+    };
+    var openS = open.slice().sort(ord);
+    // 지금 단계 — 진행 중인 것이 있으면 그중 맨 앞, 없으면 미완료 맨 앞
+    var ipS = openS.filter(function(x){ return x.status === 'In Progress'; });
+    var cur = ipS[0] || openS[0] || null;
+    var all = kids.slice().sort(ord);
+    var curNo = cur ? all.indexOf(cur) + 1 : 0;
+    var nxt = openS.filter(function(x){ return x !== cur; }).slice(0, 3);
     var dl = pbDays(pbEnd(d));
     var doneCard = d.status === 'Done';
     var late = !doneCard && dl !== null && dl < 0;
     var stale = !doneCard && open.length && idle !== null && idle > 14;
     var tone = (over.length || late) ? 'red' : stale ? 'amber' : doneCard ? 'green' : 'blue';
-    return { d: d, kids: kids, open: open, over: over, wk: wk, nxt: nxt, dl: dl, idle: idle, tone: tone, doneCard: doneCard };
+    return { d: d, kids: kids, open: open, over: over, wk: wk, nxt: nxt, cur: cur, curNo: curNo, curIp: !!ipS.length, dl: dl, idle: idle, tone: tone, doneCard: doneCard };
   }).sort(function(a, b){
     var r = { red: 0, amber: 1, blue: 2, green: 3 };
     if(r[a.tone] !== r[b.tone]) return r[a.tone] - r[b.tone];
@@ -3422,13 +3441,24 @@ function projBoardHtml(pic){
       return '<div class="pb-nx' + (dueStatus(x) === 'overdue' ? ' od' : '') + '" onclick="event.stopPropagation();openEdit(' + x.id + ')">· '
         + TL(x.label) + '<span>' + (x.period ? String(x.period).split('~').pop() : '') + '</span></div>';
     }).join('');
+    var curH = '';
+    if(c.cur){
+      var x0 = c.cur, od0 = dueStatus(x0) === 'overdue';
+      curH = '<div class="pb-cur' + (od0 ? ' od' : '') + '" onclick="event.stopPropagation();openEdit(' + x0.id + ')">'
+        + '<span class="pb-cur-k">' + (c.curIp ? L3('NOW', '지금', 'ĐANG') : L3('NEXT', '다음', 'TIẾP')) + ' ' + c.curNo + '/' + c.kids.length + '</span>'
+        + '<span class="pb-cur-t">' + TL(x0.label) + '</span>'
+        + '<span class="pb-cur-d">' + bfEsc(String(x0.period || '').split('~').pop()) + (x0.pic ? ' · ' + bfEsc(x0.pic) : '') + '</span></div>';
+    }
     var open = !!_pbOpen[d.id], list = '';
     if(open){
-      var rows = c.open.concat(c.kids.filter(function(x){ return x.status === 'Done'; }));
+      var _o = c.open.slice(); var _sq = function(x){ var m = String(x.label).match(/^\[[^\]]*?(\d+)\s*\/\s*\d+\]/); return m ? +m[1] : null; };
+      _o.sort(function(a, b){ var sa = _sq(a), sb = _sq(b); if(sa !== null && sb !== null && sa !== sb) return sa - sb;
+        var ea = pbEnd(a), eb = pbEnd(b); return ((ea ? ea.getTime() : 9e15) - (eb ? eb.getTime() : 9e15)) || (a.id - b.id); });
+      var rows = _o.concat(c.kids.filter(function(x){ return x.status === 'Done'; }));
       list = '<div class="pb-list" onclick="event.stopPropagation()">'
         + rows.map(function(x){
             var od = dueStatus(x) === 'overdue';
-            return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + '">'
+            return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + '">'
               + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : mtCk(x))
               + '<span class="pb-lab" onclick="openEdit(' + x.id + ')">' + TL(x.label) + '</span>'
               + '<span class="pb-per">' + bfEsc(x.pic || '') + ' · ' + bfEsc(String(x.period || '').split('~').pop()) + '</span></div>';
@@ -3444,7 +3474,7 @@ function projBoardHtml(pic){
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
-      + (open ? '' : nx) + list + '</div>';
+      + curH + (open ? '' : nx) + list + '</div>';
   }).join('');
   var fold = '';
   if(folded.length){
