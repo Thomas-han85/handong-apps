@@ -561,7 +561,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-4";</script>
 </head>
 <body>
 
@@ -3478,7 +3478,7 @@ function projBoardHtml(pic){
     }
     return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
-      + '<div class="pb-path">' + bfEsc(pbPath(d, true)) + '</div>'
+      + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
@@ -3538,11 +3538,17 @@ function pbGroupsHtml(cards, cardH){
         + (_pbGrpShut[key] ? '' : '<div class="pb-grid">' + g.cards.map(cardH).join('') + '</div>') + '</div>';
     }).join('');
   }
-  if(!multi) return krRows(cards, '');
+  if(!multi){ window._pbFlat = false; return krRows(cards, ''); }
+  // 팀이 둘 이상이면 팀 칸 하나에 카드를 이어서 깐다 — KR 별로 아래로 쪼개면 한두 장짜리 줄이 늘어난다 (10/13 실장님)
+  // 같은 KR 카드끼리는 붙도록 KR 순서로만 정렬하고, KR 이름은 카드 위 경로에 보인다
+  window._pbFlat = true;
   return bucket(cards, teamOf).map(function(g){
     var key = 'T:' + g.k;
-    return '<div class="pb-grp">' + head('pb-gh', key, g.k, g)
-      + (_pbGrpShut[key] ? '' : krRows(g.cards, key + '|')) + '</div>';
+    var kro = bucket(g.cards, krOf).map(function(x){ return x.k; });
+    var sorted = g.cards.slice().sort(function(a, b){ return kro.indexOf(krOf(a)) - kro.indexOf(krOf(b)); });
+    var html = '<div class="pb-grp">' + head('pb-gh', key, g.k, g)
+      + (_pbGrpShut[key] ? '' : '<div class="pb-grid">' + sorted.map(cardH).join('') + '</div>') + '</div>';
+    return html;
   }).join('');
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
