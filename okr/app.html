@@ -569,6 +569,8 @@ tr.dragging{opacity:.35}
 .ag-it:hover span{text-decoration:underline}
 .ag-it.done span{color:var(--text3);text-decoration:line-through}.ag-it.od span{color:#B91C1C}
 .ag-it.pack{color:var(--text2)}
+.tl-tick.dd{border-left-color:#F6F8FB}.tl-tick.we{background:rgba(148,163,184,.06)}
+.tl-late{position:absolute;right:2px;top:4px;font-size:10px;color:var(--text2);background:#F1F5F9;border:1px solid var(--border);border-radius:9px;padding:0 6px;cursor:pointer;z-index:4;white-space:nowrap}
 .tl-early{position:absolute;left:2px;top:4px;font-size:10px;color:var(--text2);background:#F1F5F9;border:1px solid var(--border);border-radius:9px;padding:0 6px;cursor:pointer;z-index:4;white-space:nowrap}
 .tl-early.od{color:#B91C1C;background:#FEF2F2;border-color:#FCA5A5}
 .ag-h{font-size:12px;font-weight:700;margin-bottom:4px}.ag-h span{font-weight:400;font-size:10.5px;color:var(--text3);margin-left:6px}
@@ -630,7 +632,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-9";</script>
 </head>
 <body>
 
@@ -3707,21 +3709,23 @@ function pbTimelineHtml(){
     return { p: p, pts: pts, tot: kids.length, dn: kids.length - open.length, cur: cur, end: pe };
   });
   var DAY = 86400000;
-  var lo = Math.max(Math.min.apply(null, dates), t0.getTime() - 30 * DAY) - 3 * DAY, hi = Math.max.apply(null, dates) + 4 * DAY;
-  // 범위보다 앞선 점은 줄 맨 왼쪽 「◂ 이전 n」 하나로 (기한 넘긴 지 한참 된 것들)
-  L.forEach(function(l){ l.early = l.pts.filter(function(o){ return o.t < lo; }); l.pts = l.pts.filter(function(o){ return o.t >= lo; }); });
+  // 창은 지난 2주 ~ 앞으로 한 달 — 이만하면 지금 움직이는 것이 거의 다 보인다 (10/13 실장님)
+  var lo = t0.getTime() - 14 * DAY - DAY / 2, hi = t0.getTime() + 30 * DAY + DAY / 2;
+  // 창 밖의 점은 양끝 「◂ 이전 n」·「이후 n ▸」 하나로
+  L.forEach(function(l){
+    l.early = l.pts.filter(function(o){ return o.t < lo; });
+    l.late = l.pts.filter(function(o){ return o.t > hi; });
+    l.pts = l.pts.filter(function(o){ return o.t >= lo && o.t <= hi; });
+  });
   var X = function(t){ return ((t - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   // 눈금 — 매월 1일, 기간이 짧으면 15일도
-  var ticks = '', d = new Date(lo); d.setDate(1); d.setHours(0, 0, 0, 0);
-  var short = (hi - lo) < 150 * DAY;
-  while(d.getTime() <= hi){
-    [1, 15].forEach(function(dd){
-      if(dd === 15 && !short) return;
-      var t = new Date(d.getFullYear(), d.getMonth(), dd).getTime();
-      if(t < lo || t > hi) return;
-      ticks += '<div class="tl-tick' + (dd === 1 ? ' m' : '') + '" style="left:' + X(t) + '"><span>' + (d.getMonth() + 1) + '/' + dd + '</span></div>';
-    });
-    d.setMonth(d.getMonth() + 1);
+  // 눈금 — 날마다 가는 선, 월요일은 굵게 날짜를, 매월 1일도 날짜를
+  var ticks = '', d = new Date(t0.getTime() - 14 * DAY);
+  var WD = L3('SMTWTFS', '일월화수목금토', 'CN T2 T3 T4 T5 T6 T7');
+  for(var i = 0; i <= 44; i++, d = new Date(d.getTime() + DAY)){
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), mon = d.getDay() === 1, first = d.getDate() === 1;
+    ticks += '<div class="tl-tick' + (mon ? ' m' : ' dd') + (d.getDay() === 0 || d.getDay() === 6 ? ' we' : '') + '" style="left:' + X(t) + '">'
+      + ((mon || first) ? '<span>' + (d.getMonth() + 1) + '/' + d.getDate() + '</span>' : '') + '</div>';
   }
   var rows = L.map(function(l){
     // 점은 한 줄(같은 날 넷 이상은 숫자 하나), 그 밑에 날짜, 그 밑에 말풍선 — 말풍선은 겹치지 않게 층을 나눈다 (10/13 실장님)
@@ -3764,6 +3768,10 @@ function pbTimelineHtml(){
       lv[k] = b.xp + w + 0.6;
       bH += '<div class="tl-bub ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
     });
+    if(l.late.length){
+      dots += '<div class="tl-late" title="' + bfEsc(l.late.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">'
+        + L3('later ', '이후 ', 'sau ') + l.late.length + ' ▸</div>';
+    }
     if(l.early.length){
       var eo = l.early.filter(function(o){ return o.x.status !== 'Done'; }).length;
       dots += '<div class="tl-early' + (eo ? ' od' : '') + '" title="' + bfEsc(l.early.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">◂ '
@@ -3785,8 +3793,8 @@ function pbTimelineHtml(){
     + (undated ? '<span class="tl-lg" style="color:var(--text3)">' + L3('no date: ', '날짜 없음 ', 'không có ngày: ') + undated + '</span>' : '');
   // 일정표 — 날짜순. 안 끝난 것 + 최근 7일 안에 끝난 것
   var agenda = [];
-  L.forEach(function(l, li){ l.pts.forEach(function(o){
-    if(o.x.status === 'Done' && (t0.getTime() - o.t) / DAY > 7) return;
+  L.forEach(function(l, li){ l.pts.concat(l.early.filter(function(o){ return o.x.status !== 'Done'; })).forEach(function(o){
+    if(o.x.status === 'Done' && (t0.getTime() - o.t) / DAY > 14) return;
     agenda.push({ l: l, li: li, o: o });
   }); });
   agenda.sort(function(a, b){ return (a.o.t - b.o.t) || (a.li - b.li) || (a.o.x.id - b.o.x.id); });
@@ -3822,7 +3830,7 @@ function pbTimelineHtml(){
       + L.map(function(l, li){ return '<td>' + cell(byD[k][li] || []) + '</td>'; }).join('') + '</tr>';
   }).join('');
   var agendaH = dKeys.length ? '<div class="ag-wrap"><div class="ag-h">' + L3('Schedule (by date)', '일정표 (날짜순)', 'Lịch (theo ngày)')
-    + ' <span>' + L3('open items + done in the last 7 days', '안 끝난 것 + 최근 7일 안에 끝난 것', 'chưa xong + xong trong 7 ngày') + (dKeys.length > 80 ? ' · 80/' + dKeys.length : '') + '</span></div>'
+    + ' <span>' + L3('open items + done in the last 2 weeks', '안 끝난 것 + 최근 2주 안에 끝난 것', 'chưa xong + xong trong 2 tuần') + (dKeys.length > 80 ? ' · 80/' + dKeys.length : '') + '</span></div>'
     + '<div class="ag-tw"><table class="ag-tb' + (cols > 3 ? ' many' : '') + '"><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div></div>' : '';
   return '<div class="tl-wrap" id="pbTL"><div class="tl-head"><b>' + L3('Timeline', '타임라인', 'Dòng thời gian') + '</b>' + leg + '</div>'
     + '<div class="tl-body"><div class="tl-axis"><div class="tl-name"></div><div class="tl-track ax">' + ticks
