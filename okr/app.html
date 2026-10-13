@@ -540,7 +540,13 @@ tr.dragging{opacity:.35}
 .tl-tick{position:absolute;top:0;bottom:0;border-left:1px solid #EEF2F7}.tl-tick.m{border-left-color:#D9E1EA}
 .tl-tick span{position:absolute;top:3px;left:3px;font-size:10px;color:var(--text3);white-space:nowrap}
 .tl-today{position:absolute;top:0;bottom:0;border-left:2px solid #F59E0B;z-index:1}
-.tl-today span{position:absolute;top:3px;left:4px;font-size:10px;font-weight:700;color:#B45309;background:#fff;padding:0 2px}
+.tl-today span{position:absolute;top:3px;left:4px;font-size:10px;font-weight:700;color:#B45309;background:#fff;padding:0 2px;white-space:nowrap}
+.tl-dl{position:absolute;top:21px;transform:translateX(-50%);font-size:9.5px;color:var(--text3);font-family:'IBM Plex Mono',monospace;white-space:nowrap;pointer-events:none}
+.tl-bub{position:absolute;margin-left:-9px;font-size:10.5px;line-height:15px;padding:1px 6px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:3;box-sizing:border-box}
+.tl-bub::before{content:'';position:absolute;left:5px;top:-4px;border:4px solid transparent;border-top:0;border-bottom-color:inherit}
+.tl-bub.done{background:#F0FDF4;border:1px solid #86EFAC;color:#166534}
+.tl-bub.cur{background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;font-weight:600}
+.tl-bub:hover{z-index:5;max-width:none !important;overflow:visible}
 .tl-end{position:absolute;top:2px;bottom:2px;border-left:2px solid #7C3AED;opacity:.55}
 .tl-dot{position:absolute;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);cursor:pointer;border:2px solid #94A3B8;background:#fff;z-index:2;box-sizing:border-box}
 .tl-dot.done{background:#16A34A;border-color:#16A34A}.tl-dot.ip{background:#1565C0;border-color:#1565C0}
@@ -549,6 +555,22 @@ tr.dragging{opacity:.35}
 .tl-clu{position:absolute;transform:translateX(-50%);min-width:22px;height:18px;border-radius:9px;font-size:10px;font-weight:700;line-height:18px;text-align:center;padding:0 5px;cursor:pointer;z-index:2;color:#fff;background:#64748B;font-family:'IBM Plex Mono',monospace}
 .tl-clu.od{background:#DC2626}.tl-clu.ip{background:#1565C0}.tl-clu.done{background:#16A34A}.tl-clu.cur{box-shadow:0 0 0 3px #FDE68A}
 .ag-wrap{margin-top:12px;border-top:1px solid var(--border);padding-top:8px}
+.ag-tw{overflow-x:auto}
+.ag-tb{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11.5px}
+.ag-tb th{text-align:left;font-size:11px;font-weight:700;padding:4px 6px;border-bottom:3px solid;background:#fff;position:sticky;top:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-tb th.ag-dh{width:92px;border-bottom-color:var(--border);color:var(--text2)}
+.ag-tb.many{min-width:1100px}
+.ag-tb td{vertical-align:top;padding:3px 6px;border-bottom:1px dashed var(--border-light);border-left:1px solid #F1F5F9}
+.ag-tb td.ag-dc{white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;border-left:none}
+.ag-tb td.ag-dc em{font-style:normal;color:var(--text3);font-size:10px}
+.ag-tb tr.today td{background:#FFFBEB}.ag-tb tr.past td.ag-dc{color:#B91C1C}
+.ag-it{display:flex;align-items:flex-start;gap:5px;padding:2px 0;cursor:pointer;line-height:1.35}
+.ag-it .tl-dot{position:static;transform:none;flex-shrink:0;margin-top:3px;cursor:inherit}
+.ag-it:hover span{text-decoration:underline}
+.ag-it.done span{color:var(--text3);text-decoration:line-through}.ag-it.od span{color:#B91C1C}
+.ag-it.pack{color:var(--text2)}
+.tl-early{position:absolute;left:2px;top:4px;font-size:10px;color:var(--text2);background:#F1F5F9;border:1px solid var(--border);border-radius:9px;padding:0 6px;cursor:pointer;z-index:4;white-space:nowrap}
+.tl-early.od{color:#B91C1C;background:#FEF2F2;border-color:#FCA5A5}
 .ag-h{font-size:12px;font-weight:700;margin-bottom:4px}.ag-h span{font-weight:400;font-size:10.5px;color:var(--text3);margin-left:6px}
 .ag-row{display:flex;align-items:center;gap:10px;padding:3px 4px;font-size:11.5px;border-bottom:1px dashed var(--border-light);cursor:pointer}
 .ag-row:hover{background:#F8FAFC}.ag-row.pack .ag-t{color:var(--text2)}
@@ -608,7 +630,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-7";</script>
 </head>
 <body>
 
@@ -1560,6 +1582,11 @@ async function nasWrite(){
    들어온 뒤에 찍히기 시작한 도장이라 한 번도 안 고쳐진 옛 행에는 없고,
    그런 행을 처음 고칠 때 새 번호가 나가면 수정이 아니라 복제가 된다. */
 async function nasUpdateItem(item, isNew){
+  // 완료일 — 끝남으로 바뀐 날을 남긴다(타임라인이 완료일 자리에 찍는다). 다시 열면 지운다 (2026-10-13)
+  try{
+    if(item && item.status === 'Done' && !item.doneAt){ var _t = new Date(); item.doneAt = _t.getFullYear() + '/' + ('0' + (_t.getMonth() + 1)).slice(-2) + '/' + ('0' + _t.getDate()).slice(-2); }
+    else if(item && item.status !== 'Done' && item.doneAt) delete item.doneAt;
+  }catch(e){}
   if(!nasMode || !NAS_API) return true;      // 서버를 안 쓰는 상태면 실패로 치지 않는다
   try{
     const r = await okrApi('update_item',{item:item, baseUat:item._uat, isNew: !!isNew});
@@ -3662,7 +3689,16 @@ function pbTimelineHtml(){
   var L = lanes.map(function(p){
     var kids = DATA.filter(function(x){ return x.pid === p.id && x.lv === 'TD'; });
     var pts = [];
-    kids.forEach(function(x){ var e = pbEnd(x); if(!e){ undated++; return; } pts.push({ x: x, t: e.getTime() }); dates.push(e.getTime()); });
+    kids.forEach(function(x){
+      var t = null, approx = false;
+      if(x.status === 'Done'){
+        var m = String(x.doneAt || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+        if(m) t = new Date(+m[1], +m[2] - 1, +m[3]).getTime();
+        else if(x._uat){ var u = new Date(+x._uat); t = new Date(u.getFullYear(), u.getMonth(), u.getDate()).getTime(); approx = true; }
+      }
+      if(t === null){ var e = pbEnd(x); if(!e){ undated++; return; } t = e.getTime(); }
+      pts.push({ x: x, t: t, approx: approx }); dates.push(t);
+    });
     var pe = pbEnd(p); if(pe) dates.push(pe.getTime());
     pts.sort(function(a, b){ return (a.t - b.t) || (a.x.id - b.x.id); });
     var open = kids.filter(function(x){ return x.status !== 'Done'; });
@@ -3671,7 +3707,9 @@ function pbTimelineHtml(){
     return { p: p, pts: pts, tot: kids.length, dn: kids.length - open.length, cur: cur, end: pe };
   });
   var DAY = 86400000;
-  var lo = Math.min.apply(null, dates) - 3 * DAY, hi = Math.max.apply(null, dates) + 4 * DAY;
+  var lo = Math.max(Math.min.apply(null, dates), t0.getTime() - 30 * DAY) - 3 * DAY, hi = Math.max.apply(null, dates) + 4 * DAY;
+  // 범위보다 앞선 점은 줄 맨 왼쪽 「◂ 이전 n」 하나로 (기한 넘긴 지 한참 된 것들)
+  L.forEach(function(l){ l.early = l.pts.filter(function(o){ return o.t < lo; }); l.pts = l.pts.filter(function(o){ return o.t >= lo; }); });
   var X = function(t){ return ((t - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   // 눈금 — 매월 1일, 기간이 짧으면 15일도
   var ticks = '', d = new Date(lo); d.setDate(1); d.setHours(0, 0, 0, 0);
@@ -3686,31 +3724,50 @@ function pbTimelineHtml(){
     d.setMonth(d.getMonth() + 1);
   }
   var rows = L.map(function(l){
-    // 같은 날 점은 위로 쌓는다 — 넷 이상이면 숫자 한 개로 묶는다(준공서류 41건이 한 날에 몰려 기둥이 됐다)
+    // 점은 한 줄(같은 날 넷 이상은 숫자 하나), 그 밑에 날짜, 그 밑에 말풍선 — 말풍선은 겹치지 않게 층을 나눈다 (10/13 실장님)
     var byT = {}, ordT = [];
     l.pts.forEach(function(o){ if(!byT[o.t]){ byT[o.t] = []; ordT.push(o.t); } byT[o.t].push(o); });
+    ordT.sort(function(a, b){ return a - b; });
     var stOf = function(x){ return x.status === 'Done' ? 'done' : dueStatus(x) === 'overdue' ? 'od' : x.status === 'In Progress' ? 'ip' : 'wait'; };
-    var tipOf = function(x){ return TL(x.label).replace(/<[^>]+>/g, '') + '  (' + String(x.period || '').split('~').pop() + (x.pic ? ' · ' + x.pic : '') + ' · ' + (x.status || '') + ')'; };
-    var maxS = 1, dots = '';
+    var tipOf = function(o){ var x = o.x; return TL(x.label).replace(/<[^>]+>/g, '') + '  (' + (x.status === 'Done' ? L3('done ', '완료 ', 'xong ') + (x.doneAt || (o.approx ? '≈' : '')) : String(x.period || '').split('~').pop()) + (x.pic ? ' · ' + x.pic : '') + ')'; };
+    var dots = '', dlab = '', bubbles = [], lastLab = -99;
+    var tw = Math.max(400, (window.innerWidth || 1400) - 330);           // 줄 폭(px) 어림 — 말풍선 겹침 판정용
     ordT.forEach(function(t){
-      var g = byT[t];
+      var g = byT[t], xp = (t - lo) / (hi - lo) * 100;
       if(g.length >= 4){
         var rank = { od: 0, ip: 1, wait: 2, done: 3 }, worst = g.map(function(o){ return stOf(o.x); }).sort(function(a, b){ return rank[a] - rank[b]; })[0];
         var dn = g.filter(function(o){ return o.x.status === 'Done'; }).length;
-        var tip = g.slice(0, 20).map(function(o){ return '· ' + tipOf(o.x); }).join('\n') + (g.length > 20 ? '\n… +' + (g.length - 20) : '');
-        var hasCur = l.cur && g.some(function(o){ return o.x.id === l.cur.id; });
-        dots += '<div class="tl-clu ' + worst + (hasCur ? ' cur' : '') + '" style="left:' + X(t) + ';top:6px" title="' + bfEsc(tip) + '" onclick="openEdit(' + g[0].x.id + ')">' + dn + '/' + g.length + '</div>';
-        if(hasCur) dots += '<div class="tl-curlab" style="left:' + X(t) + ';top:7px;margin-left:24px">' + TL(l.cur.label) + '</div>';
-        return;
+        var tip = g.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n') + (g.length > 20 ? '\n… +' + (g.length - 20) : '');
+        dots += '<div class="tl-clu ' + worst + '" style="left:' + X(t) + ';top:4px" title="' + bfEsc(tip) + '" onclick="openEdit(' + g[0].x.id + ')">' + dn + '/' + g.length + '</div>';
+        if(dn) bubbles.push({ xp: xp, txt: dn + L3(' done', '건 완료', ' xong'), cls: 'done', id: g[0].x.id, tip: tip });
+        if(l.cur && g.some(function(o){ return o.x.id === l.cur.id; })) bubbles.push({ xp: xp, txt: TL(l.cur.label), cls: 'cur', id: l.cur.id, tip: TL(l.cur.label) });
+      } else {
+        g.forEach(function(o, k){
+          var x = o.x, isCur = l.cur && x.id === l.cur.id;
+          dots += '<div class="tl-dot ' + stOf(x) + (isCur ? ' cur' : '') + '" style="left:calc(' + X(t) + ' + ' + (k * 13 - (g.length - 1) * 6.5) + 'px);top:6px" title="' + bfEsc(tipOf(o)) + '" onclick="openEdit(' + x.id + ')"></div>';
+          if(x.status === 'Done') bubbles.push({ xp: xp, txt: (o.approx ? '≈ ' : '') + TL(x.label), cls: 'done', id: x.id, tip: tipOf(o) });
+          else if(isCur) bubbles.push({ xp: xp, txt: TL(x.label), cls: 'cur', id: x.id, tip: tipOf(o) });
+        });
       }
-      if(g.length > maxS) maxS = g.length;
-      g.forEach(function(o, lvl){
-        var x = o.x, isCur = l.cur && x.id === l.cur.id;
-        dots += '<div class="tl-dot ' + stOf(x) + (isCur ? ' cur' : '') + '" style="left:' + X(o.t) + ';top:' + (8 + lvl * 15) + 'px" title="' + bfEsc(tipOf(x)) + '" onclick="openEdit(' + x.id + ')"></div>'
-          + (isCur ? '<div class="tl-curlab" style="left:' + X(o.t) + ';top:' + (8 + lvl * 15) + 'px">' + TL(x.label) + '</div>' : '');
-      });
+      // 날짜 — 바로 앞 날짜와 너무 붙으면(줄 폭의 3% 안) 생략
+      if(xp - lastLab > 3){ var dt = new Date(t); dlab += '<div class="tl-dl" style="left:' + X(t) + '">' + (dt.getMonth() + 1) + '/' + dt.getDate() + '</div>'; lastLab = xp; }
     });
-    var h = Math.max(34, 18 + maxS * 15);
+    // 말풍선 층 나누기 — 왼쪽부터 넣으며 앞 말풍선 끝과 겹치면 아래 층으로
+    var lv = [], bH = '';
+    bubbles.forEach(function(b){
+      var plain = String(b.txt).replace(/<[^>]+>/g, '');
+      var wpx = Math.min(230, plain.length * 6.6 + 18), w = wpx / tw * 100;
+      var k = 0; while(lv[k] !== undefined && lv[k] > b.xp - 0.4) k++;
+      lv[k] = b.xp + w + 0.6;
+      bH += '<div class="tl-bub ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
+    });
+    if(l.early.length){
+      var eo = l.early.filter(function(o){ return o.x.status !== 'Done'; }).length;
+      dots += '<div class="tl-early' + (eo ? ' od' : '') + '" title="' + bfEsc(l.early.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">◂ '
+        + L3('earlier ', '이전 ', 'trước ') + l.early.length + (eo ? ' (' + L3('open ', '미완 ', 'chưa xong ') + eo + ')' : '') + '</div>';
+    }
+    dots += dlab + bH;
+    var h = Math.max(42, 44 + lv.length * 21);
     var endMark = l.end ? '<div class="tl-end" style="left:' + X(l.end.getTime()) + '" title="' + bfEsc(L3('Initiative deadline', '이니셔티브 기한', 'Hạn sáng kiến')) + '"></div>' : '';
     return '<div class="tl-row"><div class="tl-name" onclick="openEdit(' + l.p.id + ')" title="' + bfEsc(TL(l.p.label).replace(/<[^>]+>/g, '')) + '">'
       + TL(l.p.label) + '<span>' + l.dn + '/' + l.tot + '</span></div>'
@@ -3742,28 +3799,28 @@ function pbTimelineHtml(){
   });
   agenda = packed;
   var LC = ['#1565C0', '#7C3AED', '#0F766E', '#B45309', '#BE185D', '#4D7C0F', '#334155'];
-  var lastD = '', agH = agenda.slice(0, 80).map(function(a){
-    var x = a.o.x, dt = new Date(a.o.t), ds = (dt.getMonth() + 1) + '/' + dt.getDate();
-    if(a.pack){
-      var dd0 = Math.round((a.o.t - t0.getTime()) / DAY), dl0 = dd0 === 0 ? L3('today', '오늘', 'hôm nay') : dd0 < 0 ? 'D+' + (-dd0) : 'D-' + dd0;
-      var same0 = ds === lastD; lastD = ds;
-      return '<div class="ag-row pack' + (a.od ? ' od' : '') + '" onclick="_pbOpen[' + a.l.p.id + ']=true;renderMatrix()">'
-        + '<span class="ag-d">' + (same0 ? '' : ds + ' <em>' + dl0 + '</em>') + '</span>'
-        + '<span class="ag-p" style="border-color:' + LC[a.li % LC.length] + ';color:' + LC[a.li % LC.length] + '">' + TL(a.l.p.label) + '</span>'
-        + '<span class="ag-t"><b class="ag-n">' + a.dn + '/' + a.n + '</b>' + L3(' to-dos due this day — click to open the card', '건이 이 날 마감 — 누르면 카드가 펼쳐집니다', ' việc đến hạn ngày này — bấm để mở thẻ') + '</span>'
-        + '<span class="ag-w"></span></div>';
-    }
-    var dd = Math.round((a.o.t - t0.getTime()) / DAY), dl = dd === 0 ? L3('today', '오늘', 'hôm nay') : dd < 0 ? 'D+' + (-dd) : 'D-' + dd;
-    var st = x.status === 'Done' ? 'done' : dueStatus(x) === 'overdue' ? 'od' : x.status === 'In Progress' ? 'ip' : 'wait';
-    var same = ds === lastD; lastD = ds;
-    return '<div class="ag-row ' + st + (dd === 0 ? ' today' : '') + '" onclick="openEdit(' + x.id + ')">'
-      + '<span class="ag-d">' + (same ? '' : ds + ' <em>' + dl + '</em>') + '</span>'
-      + '<span class="ag-p" style="border-color:' + LC[a.li % LC.length] + ';color:' + LC[a.li % LC.length] + '">' + TL(a.l.p.label) + '</span>'
-      + '<span class="ag-t"><i class="tl-dot ' + st + '"></i>' + TL(x.label) + '</span>'
-      + '<span class="ag-w">' + bfEsc(x.pic || '') + '</span></div>';
+  // 일정표 — 날짜가 줄, 고른 이니셔티브가 칸 (여러 개 고르면 나란히 본다 — 10/13 실장님)
+  var dKeys = [], byD = {};
+  agenda.forEach(function(a){ var k = a.o.t; if(!byD[k]){ byD[k] = {}; dKeys.push(k); } (byD[k][a.li] = byD[k][a.li] || []).push(a); });
+  var cell = function(list){
+    return list.map(function(a){
+      if(a.pack) return '<div class="ag-it pack' + (a.od ? ' od' : '') + '" onclick="_pbOpen[' + a.l.p.id + ']=true;renderMatrix()"><b class="ag-n">' + a.dn + '/' + a.n + '</b>' + L3('to-dos', '건', 'việc') + '</div>';
+      var x = a.o.x, st = x.status === 'Done' ? 'done' : dueStatus(x) === 'overdue' ? 'od' : x.status === 'In Progress' ? 'ip' : 'wait';
+      return '<div class="ag-it ' + st + '" title="' + bfEsc((x.pic ? x.pic + ' · ' : '') + (x.status || '')) + '" onclick="openEdit(' + x.id + ')"><i class="tl-dot ' + st + '"></i><span>' + TL(x.label) + '</span></div>';
+    }).join('');
+  };
+  var cols = L.length;
+  var thead = '<tr><th class="ag-dh">' + L3('Date', '날짜', 'Ngày') + '</th>' + L.map(function(l, li){
+    return '<th style="border-bottom-color:' + LC[li % LC.length] + ';color:' + LC[li % LC.length] + '">' + TL(l.p.label) + '</th>'; }).join('') + '</tr>';
+  var tbody = dKeys.slice(0, 80).map(function(k){
+    var dt = new Date(+k), ds = (dt.getMonth() + 1) + '/' + dt.getDate();
+    var dd = Math.round((+k - t0.getTime()) / DAY), dl = dd === 0 ? L3('today', '오늘', 'hôm nay') : dd < 0 ? 'D+' + (-dd) : 'D-' + dd;
+    return '<tr class="' + (dd === 0 ? 'today' : dd < 0 ? 'past' : '') + '"><td class="ag-dc"><b>' + ds + '</b> <em>' + dl + '</em></td>'
+      + L.map(function(l, li){ return '<td>' + cell(byD[k][li] || []) + '</td>'; }).join('') + '</tr>';
   }).join('');
-  var agendaH = agenda.length ? '<div class="ag-wrap"><div class="ag-h">' + L3('Schedule (by date)', '일정표 (날짜순)', 'Lịch (theo ngày)')
-    + ' <span>' + L3('open items + done in the last 7 days', '안 끝난 것 + 최근 7일 안에 끝난 것', 'chưa xong + xong trong 7 ngày') + (agenda.length > 80 ? ' · 80/' + agenda.length : '') + '</span></div>' + agH + '</div>' : '';
+  var agendaH = dKeys.length ? '<div class="ag-wrap"><div class="ag-h">' + L3('Schedule (by date)', '일정표 (날짜순)', 'Lịch (theo ngày)')
+    + ' <span>' + L3('open items + done in the last 7 days', '안 끝난 것 + 최근 7일 안에 끝난 것', 'chưa xong + xong trong 7 ngày') + (dKeys.length > 80 ? ' · 80/' + dKeys.length : '') + '</span></div>'
+    + '<div class="ag-tw"><table class="ag-tb' + (cols > 3 ? ' many' : '') + '"><thead>' + thead + '</thead><tbody>' + tbody + '</tbody></table></div></div>' : '';
   return '<div class="tl-wrap" id="pbTL"><div class="tl-head"><b>' + L3('Timeline', '타임라인', 'Dòng thời gian') + '</b>' + leg + '</div>'
     + '<div class="tl-body"><div class="tl-axis"><div class="tl-name"></div><div class="tl-track ax">' + ticks
     + '<div class="tl-today" style="left:' + X(t0.getTime()) + '"><span>' + L3('today', '오늘', 'hôm nay') + '</span></div></div></div>'
