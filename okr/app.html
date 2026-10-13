@@ -516,6 +516,49 @@ tr.dragging{opacity:.35}
 .pb-ok{color:#16A34A;font-weight:700;width:18px;text-align:center}
 .pb-add{display:flex;gap:6px;margin-top:8px}.pb-add input{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px}
 .pb-add input:first-child{flex:1}.pb-add button{border:none;background:#1565C0;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
+/* ── 타임라인으로 보기 ── */
+.pb-pick{position:absolute;top:7px;left:8px;line-height:0}.pb-pick input{width:13px;height:13px;cursor:pointer;margin:0}
+.pb-card .pb-path{padding-left:18px}
+.pb-selhint{font-size:10.5px;color:var(--text3);margin-left:6px}
+.pb-selbar{display:inline-flex;gap:6px;margin-left:6px}
+.pb-tlbtn{border:none;background:#1565C0;color:#fff;border-radius:6px;padding:3px 10px;font-size:11.5px;cursor:pointer}
+.pb-tlbtn.on{background:#334155}.pb-tlclr{border:1px solid var(--border);background:#fff;border-radius:6px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--text2)}
+.tl-wrap{margin-top:14px;border:1px solid var(--border);border-radius:10px;background:#fff;padding:10px 12px}
+.tl-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+.tl-lg{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text2)}
+.tl-lg .tl-dot{position:static;transform:none;display:inline-block}
+.tl-endk{display:inline-block;width:2px;height:12px;background:#7C3AED}
+.tl-body{position:relative}
+.tl-axis,.tl-row,.tl-grid{display:flex;align-items:stretch}
+.tl-name{flex:0 0 230px;font-size:11.5px;font-weight:600;color:var(--text);padding:6px 8px 6px 0;cursor:pointer;line-height:1.3;display:flex;flex-direction:column;gap:2px}
+.tl-name span{font-size:10px;font-weight:400;color:var(--text3);font-family:'IBM Plex Mono',monospace}
+.tl-track{position:relative;flex:1;min-width:0}
+.tl-track.ax{height:22px;border-bottom:1px solid var(--border)}
+.tl-rows{position:relative}
+.tl-grid{position:absolute;inset:0;pointer-events:none}.tl-grid .tl-name{visibility:hidden}
+.tl-row{border-bottom:1px dashed var(--border-light);position:relative}
+.tl-tick{position:absolute;top:0;bottom:0;border-left:1px solid #EEF2F7}.tl-tick.m{border-left-color:#D9E1EA}
+.tl-tick span{position:absolute;top:3px;left:3px;font-size:10px;color:var(--text3);white-space:nowrap}
+.tl-today{position:absolute;top:0;bottom:0;border-left:2px solid #F59E0B;z-index:1}
+.tl-today span{position:absolute;top:3px;left:4px;font-size:10px;font-weight:700;color:#B45309;background:#fff;padding:0 2px}
+.tl-end{position:absolute;top:2px;bottom:2px;border-left:2px solid #7C3AED;opacity:.55}
+.tl-dot{position:absolute;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);cursor:pointer;border:2px solid #94A3B8;background:#fff;z-index:2;box-sizing:border-box}
+.tl-dot.done{background:#16A34A;border-color:#16A34A}.tl-dot.ip{background:#1565C0;border-color:#1565C0}
+.tl-dot.od{background:#DC2626;border-color:#DC2626}.tl-dot.wait{background:#fff;border-color:#94A3B8}
+.tl-dot.cur{box-shadow:0 0 0 3px #FDE68A}.tl-dot:hover{transform:translateX(-50%) scale(1.35)}
+.tl-clu{position:absolute;transform:translateX(-50%);min-width:22px;height:18px;border-radius:9px;font-size:10px;font-weight:700;line-height:18px;text-align:center;padding:0 5px;cursor:pointer;z-index:2;color:#fff;background:#64748B;font-family:'IBM Plex Mono',monospace}
+.tl-clu.od{background:#DC2626}.tl-clu.ip{background:#1565C0}.tl-clu.done{background:#16A34A}.tl-clu.cur{box-shadow:0 0 0 3px #FDE68A}
+.ag-wrap{margin-top:12px;border-top:1px solid var(--border);padding-top:8px}
+.ag-h{font-size:12px;font-weight:700;margin-bottom:4px}.ag-h span{font-weight:400;font-size:10.5px;color:var(--text3);margin-left:6px}
+.ag-row{display:flex;align-items:center;gap:10px;padding:3px 4px;font-size:11.5px;border-bottom:1px dashed var(--border-light);cursor:pointer}
+.ag-row:hover{background:#F8FAFC}.ag-row.pack .ag-t{color:var(--text2)}
+.ag-n{font-family:'IBM Plex Mono',monospace;background:#E2E8F0;border-radius:8px;padding:0 7px;margin-right:6px;color:var(--text)}.ag-row.today{background:#FFFBEB}
+.ag-d{flex:0 0 92px;font-weight:700;font-family:'IBM Plex Mono',monospace;font-size:11px}.ag-d em{font-style:normal;font-weight:400;color:var(--text3);font-size:10px;margin-left:3px}
+.ag-p{flex:0 0 190px;font-size:10.5px;border-left:3px solid;padding-left:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-t{flex:1;min-width:0;display:flex;align-items:center;gap:6px}.ag-t .tl-dot{position:static;transform:none;flex-shrink:0;cursor:inherit}
+.ag-row.done .ag-t{color:var(--text3);text-decoration:line-through}.ag-row.od .ag-t{color:#B91C1C}
+.ag-w{flex:0 0 120px;font-size:10.5px;color:var(--text3);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-curlab{position:absolute;margin-left:10px;margin-top:-3px;font-size:10.5px;font-weight:600;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:5px;padding:0 5px;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;z-index:3;pointer-events:none}
 /* ── My Tasks 카드의 완료 동그라미 · 사분면 번호 ── */
 .mt-ck{width:17px;height:17px;border:1.6px solid var(--border);border-radius:5px;cursor:pointer;
   flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;
@@ -565,7 +608,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-6";</script>
 </head>
 <body>
 
@@ -3433,6 +3476,7 @@ function projBoardHtml(pic){
     + '<span class="pb-n">' + cards.length + '</span>'
     + (nOver ? '<span class="pb-chip red">' + L3('Overdue ', '기한 지남 ', 'Quá hạn ') + nOver + '</span>' : '')
     + (nStale ? '<span class="pb-chip amber">' + L3('Idle 2wk+ ', '2주+ 멈춤 ', 'Dừng 2 tuần+ ') + nStale + '</span>' : '')
+    + pbSelBar()
     + '<span class="pb-sp"></span>'
     + '<label class="pb-opt" onclick="event.stopPropagation()"><input type="checkbox" ' + (_pbShowDone ? 'checked' : '') + ' onchange="_pbShowDone=this.checked;renderMatrix()"> '
     + L3('Show done', '완료 포함', 'Gồm đã xong') + '</label></div>';
@@ -3482,6 +3526,8 @@ function projBoardHtml(pic){
     }
     return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
+      + '<label class="pb-pick" title="' + bfEsc(L3('Select for timeline', '타임라인에 넣기', 'Chọn để xem dòng thời gian')) + '" onclick="event.stopPropagation()">'
+      + '<input type="checkbox"' + (_pbSel[d.id] ? ' checked' : '') + ' onchange="pbPick(' + d.id + ',this.checked)"></label>'
       + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
@@ -3500,7 +3546,7 @@ function projBoardHtml(pic){
         }).join('') : '')
       + '</div>';
   }
-  return '<div class="pb-wrap">' + head + (cards.length ? body : '') + fold + '</div>';
+  return '<div class="pb-wrap">' + head + (cards.length ? body : '') + fold + (_pbTL ? pbTimelineHtml() : '') + '</div>';
 }
 /* 묶음 줄 — 팀이 둘 이상이면 팀 → 회사KR, 하나뿐이면 회사KR 로 나눈다.
    머리말을 누르면 그 줄이 접힌다(계정이 아니라 이 브라우저에만 기억). */
@@ -3592,6 +3638,137 @@ function pbGroupsHtml(cards, cardH){
     }
     return '<div class="pb-grp">' + head('pb-gh', key, g.k, g).replace(/<\/div>$/, chips + '</div>') + body + '</div>';
   }).join('');
+}
+/* ══ 타임라인으로 보기 ══════════════════════════════════════════════════
+   카드 몇 장을 골라 한 화면 가로 줄로 — 이니셔티브 하나가 한 줄, 할 일은 마감일 자리에 점.
+   VO02 15단계·입찰 3건 통합 일정처럼 「어디까지 왔고 무엇이 몰려 있나」를 보려는 것 (2026-10-13 실장님).
+   고른 것은 이 화면에서만 기억한다(새로고침하면 비워진다). */
+var _pbSel = {}, _pbTL = false;
+function pbPick(id, on){ if(on) _pbSel[id] = 1; else delete _pbSel[id]; if(!Object.keys(_pbSel).length) _pbTL = false; renderMatrix(); }
+function pbSelBar(){
+  var n = Object.keys(_pbSel).length;
+  if(!n) return '<span class="pb-selhint">' + L3('☐ tick cards to see a timeline', '☐ 카드를 체크하면 타임라인으로 볼 수 있습니다', '☐ chọn thẻ để xem dòng thời gian') + '</span>';
+  return '<span class="pb-selbar" onclick="event.stopPropagation()">'
+    + '<button class="pb-tlbtn' + (_pbTL ? ' on' : '') + '" onclick="_pbTL=!_pbTL;renderMatrix();if(_pbTL)setTimeout(function(){var e=document.getElementById(\'pbTL\');if(e)e.scrollIntoView({behavior:\'smooth\',block:\'start\'});},50)">'
+    + (_pbTL ? L3('Hide timeline', '타임라인 닫기', 'Ẩn dòng thời gian') : L3('Show timeline', '타임라인으로 보기', 'Xem dòng thời gian')) + ' (' + n + ')</button>'
+    + '<button class="pb-tlclr" onclick="_pbSel={};_pbTL=false;renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></span>';
+}
+function pbTimelineHtml(){
+  var ids = Object.keys(_pbSel).map(Number);
+  var lanes = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(Boolean);
+  if(!lanes.length) return '';
+  var t0 = new Date(); t0.setHours(0, 0, 0, 0);
+  var dates = [t0.getTime()], undated = 0;
+  var L = lanes.map(function(p){
+    var kids = DATA.filter(function(x){ return x.pid === p.id && x.lv === 'TD'; });
+    var pts = [];
+    kids.forEach(function(x){ var e = pbEnd(x); if(!e){ undated++; return; } pts.push({ x: x, t: e.getTime() }); dates.push(e.getTime()); });
+    var pe = pbEnd(p); if(pe) dates.push(pe.getTime());
+    pts.sort(function(a, b){ return (a.t - b.t) || (a.x.id - b.x.id); });
+    var open = kids.filter(function(x){ return x.status !== 'Done'; });
+    var cur = open.filter(function(x){ return x.status === 'In Progress'; })[0] || open.slice().sort(function(a, b){
+      var ea = pbEnd(a), eb = pbEnd(b); return ((ea ? ea.getTime() : 9e15) - (eb ? eb.getTime() : 9e15)) || (a.id - b.id); })[0];
+    return { p: p, pts: pts, tot: kids.length, dn: kids.length - open.length, cur: cur, end: pe };
+  });
+  var DAY = 86400000;
+  var lo = Math.min.apply(null, dates) - 3 * DAY, hi = Math.max.apply(null, dates) + 4 * DAY;
+  var X = function(t){ return ((t - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
+  // 눈금 — 매월 1일, 기간이 짧으면 15일도
+  var ticks = '', d = new Date(lo); d.setDate(1); d.setHours(0, 0, 0, 0);
+  var short = (hi - lo) < 150 * DAY;
+  while(d.getTime() <= hi){
+    [1, 15].forEach(function(dd){
+      if(dd === 15 && !short) return;
+      var t = new Date(d.getFullYear(), d.getMonth(), dd).getTime();
+      if(t < lo || t > hi) return;
+      ticks += '<div class="tl-tick' + (dd === 1 ? ' m' : '') + '" style="left:' + X(t) + '"><span>' + (d.getMonth() + 1) + '/' + dd + '</span></div>';
+    });
+    d.setMonth(d.getMonth() + 1);
+  }
+  var rows = L.map(function(l){
+    // 같은 날 점은 위로 쌓는다 — 넷 이상이면 숫자 한 개로 묶는다(준공서류 41건이 한 날에 몰려 기둥이 됐다)
+    var byT = {}, ordT = [];
+    l.pts.forEach(function(o){ if(!byT[o.t]){ byT[o.t] = []; ordT.push(o.t); } byT[o.t].push(o); });
+    var stOf = function(x){ return x.status === 'Done' ? 'done' : dueStatus(x) === 'overdue' ? 'od' : x.status === 'In Progress' ? 'ip' : 'wait'; };
+    var tipOf = function(x){ return TL(x.label).replace(/<[^>]+>/g, '') + '  (' + String(x.period || '').split('~').pop() + (x.pic ? ' · ' + x.pic : '') + ' · ' + (x.status || '') + ')'; };
+    var maxS = 1, dots = '';
+    ordT.forEach(function(t){
+      var g = byT[t];
+      if(g.length >= 4){
+        var rank = { od: 0, ip: 1, wait: 2, done: 3 }, worst = g.map(function(o){ return stOf(o.x); }).sort(function(a, b){ return rank[a] - rank[b]; })[0];
+        var dn = g.filter(function(o){ return o.x.status === 'Done'; }).length;
+        var tip = g.slice(0, 20).map(function(o){ return '· ' + tipOf(o.x); }).join('\n') + (g.length > 20 ? '\n… +' + (g.length - 20) : '');
+        var hasCur = l.cur && g.some(function(o){ return o.x.id === l.cur.id; });
+        dots += '<div class="tl-clu ' + worst + (hasCur ? ' cur' : '') + '" style="left:' + X(t) + ';top:6px" title="' + bfEsc(tip) + '" onclick="openEdit(' + g[0].x.id + ')">' + dn + '/' + g.length + '</div>';
+        if(hasCur) dots += '<div class="tl-curlab" style="left:' + X(t) + ';top:7px;margin-left:24px">' + TL(l.cur.label) + '</div>';
+        return;
+      }
+      if(g.length > maxS) maxS = g.length;
+      g.forEach(function(o, lvl){
+        var x = o.x, isCur = l.cur && x.id === l.cur.id;
+        dots += '<div class="tl-dot ' + stOf(x) + (isCur ? ' cur' : '') + '" style="left:' + X(o.t) + ';top:' + (8 + lvl * 15) + 'px" title="' + bfEsc(tipOf(x)) + '" onclick="openEdit(' + x.id + ')"></div>'
+          + (isCur ? '<div class="tl-curlab" style="left:' + X(o.t) + ';top:' + (8 + lvl * 15) + 'px">' + TL(x.label) + '</div>' : '');
+      });
+    });
+    var h = Math.max(34, 18 + maxS * 15);
+    var endMark = l.end ? '<div class="tl-end" style="left:' + X(l.end.getTime()) + '" title="' + bfEsc(L3('Initiative deadline', '이니셔티브 기한', 'Hạn sáng kiến')) + '"></div>' : '';
+    return '<div class="tl-row"><div class="tl-name" onclick="openEdit(' + l.p.id + ')" title="' + bfEsc(TL(l.p.label).replace(/<[^>]+>/g, '')) + '">'
+      + TL(l.p.label) + '<span>' + l.dn + '/' + l.tot + '</span></div>'
+      + '<div class="tl-track" style="height:' + h + 'px">' + endMark + dots + '</div></div>';
+  }).join('');
+  var leg = '<span class="tl-lg"><i class="tl-dot done"></i>' + L3('done', '끝남', 'xong') + '</span>'
+    + '<span class="tl-lg"><i class="tl-dot ip"></i>' + L3('in progress', '진행 중', 'đang làm') + '</span>'
+    + '<span class="tl-lg"><i class="tl-dot od"></i>' + L3('overdue', '기한 지남', 'quá hạn') + '</span>'
+    + '<span class="tl-lg"><i class="tl-dot wait"></i>' + L3('waiting', '대기', 'chờ') + '</span>'
+    + '<span class="tl-lg"><i class="tl-dot wait cur"></i>' + L3('current step', '지금 단계', 'bước hiện tại') + '</span>'
+    + '<span class="tl-lg"><i class="tl-endk"></i>' + L3('initiative deadline', '이니셔티브 기한', 'hạn sáng kiến') + '</span>'
+    + (undated ? '<span class="tl-lg" style="color:var(--text3)">' + L3('no date: ', '날짜 없음 ', 'không có ngày: ') + undated + '</span>' : '');
+  // 일정표 — 날짜순. 안 끝난 것 + 최근 7일 안에 끝난 것
+  var agenda = [];
+  L.forEach(function(l, li){ l.pts.forEach(function(o){
+    if(o.x.status === 'Done' && (t0.getTime() - o.t) / DAY > 7) return;
+    agenda.push({ l: l, li: li, o: o });
+  }); });
+  agenda.sort(function(a, b){ return (a.o.t - b.o.t) || (a.li - b.li) || (a.o.x.id - b.o.x.id); });
+  // 같은 날 같은 이니셔티브가 넷 이상 → 한 줄로 (준공서류 41건이 11/20 한 날에 몰려 있다)
+  var gk = {}; agenda.forEach(function(a){ var k = a.o.t + '|' + a.li; gk[k] = (gk[k] || 0) + 1; });
+  var seen = {}, packed = [];
+  agenda.forEach(function(a){
+    var k = a.o.t + '|' + a.li;
+    if(gk[k] < 4){ packed.push(a); return; }
+    if(seen[k]) { seen[k].n++; if(a.o.x.status === 'Done') seen[k].dn++; if(dueStatus(a.o.x) === 'overdue') seen[k].od++; return; }
+    seen[k] = { l: a.l, li: a.li, o: a.o, pack: true, n: 1, dn: a.o.x.status === 'Done' ? 1 : 0, od: dueStatus(a.o.x) === 'overdue' ? 1 : 0 };
+    packed.push(seen[k]);
+  });
+  agenda = packed;
+  var LC = ['#1565C0', '#7C3AED', '#0F766E', '#B45309', '#BE185D', '#4D7C0F', '#334155'];
+  var lastD = '', agH = agenda.slice(0, 80).map(function(a){
+    var x = a.o.x, dt = new Date(a.o.t), ds = (dt.getMonth() + 1) + '/' + dt.getDate();
+    if(a.pack){
+      var dd0 = Math.round((a.o.t - t0.getTime()) / DAY), dl0 = dd0 === 0 ? L3('today', '오늘', 'hôm nay') : dd0 < 0 ? 'D+' + (-dd0) : 'D-' + dd0;
+      var same0 = ds === lastD; lastD = ds;
+      return '<div class="ag-row pack' + (a.od ? ' od' : '') + '" onclick="_pbOpen[' + a.l.p.id + ']=true;renderMatrix()">'
+        + '<span class="ag-d">' + (same0 ? '' : ds + ' <em>' + dl0 + '</em>') + '</span>'
+        + '<span class="ag-p" style="border-color:' + LC[a.li % LC.length] + ';color:' + LC[a.li % LC.length] + '">' + TL(a.l.p.label) + '</span>'
+        + '<span class="ag-t"><b class="ag-n">' + a.dn + '/' + a.n + '</b>' + L3(' to-dos due this day — click to open the card', '건이 이 날 마감 — 누르면 카드가 펼쳐집니다', ' việc đến hạn ngày này — bấm để mở thẻ') + '</span>'
+        + '<span class="ag-w"></span></div>';
+    }
+    var dd = Math.round((a.o.t - t0.getTime()) / DAY), dl = dd === 0 ? L3('today', '오늘', 'hôm nay') : dd < 0 ? 'D+' + (-dd) : 'D-' + dd;
+    var st = x.status === 'Done' ? 'done' : dueStatus(x) === 'overdue' ? 'od' : x.status === 'In Progress' ? 'ip' : 'wait';
+    var same = ds === lastD; lastD = ds;
+    return '<div class="ag-row ' + st + (dd === 0 ? ' today' : '') + '" onclick="openEdit(' + x.id + ')">'
+      + '<span class="ag-d">' + (same ? '' : ds + ' <em>' + dl + '</em>') + '</span>'
+      + '<span class="ag-p" style="border-color:' + LC[a.li % LC.length] + ';color:' + LC[a.li % LC.length] + '">' + TL(a.l.p.label) + '</span>'
+      + '<span class="ag-t"><i class="tl-dot ' + st + '"></i>' + TL(x.label) + '</span>'
+      + '<span class="ag-w">' + bfEsc(x.pic || '') + '</span></div>';
+  }).join('');
+  var agendaH = agenda.length ? '<div class="ag-wrap"><div class="ag-h">' + L3('Schedule (by date)', '일정표 (날짜순)', 'Lịch (theo ngày)')
+    + ' <span>' + L3('open items + done in the last 7 days', '안 끝난 것 + 최근 7일 안에 끝난 것', 'chưa xong + xong trong 7 ngày') + (agenda.length > 80 ? ' · 80/' + agenda.length : '') + '</span></div>' + agH + '</div>' : '';
+  return '<div class="tl-wrap" id="pbTL"><div class="tl-head"><b>' + L3('Timeline', '타임라인', 'Dòng thời gian') + '</b>' + leg + '</div>'
+    + '<div class="tl-body"><div class="tl-axis"><div class="tl-name"></div><div class="tl-track ax">' + ticks
+    + '<div class="tl-today" style="left:' + X(t0.getTime()) + '"><span>' + L3('today', '오늘', 'hôm nay') + '</span></div></div></div>'
+    + '<div class="tl-rows"><div class="tl-grid"><div class="tl-name"></div><div class="tl-track gl">' + ticks.replace(/<span>[^<]*<\/span>/g, '')
+    + '<div class="tl-today" style="left:' + X(t0.getTime()) + '"></div></div></div>' + rows + '</div></div>' + agendaH + '</div>';
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
 function pbToggleAll(){ _pbShut = !_pbShut; try{ localStorage.setItem('okr_pb_shut', _pbShut ? '1' : '0'); }catch(e){} renderMatrix(); }
