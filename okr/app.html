@@ -488,12 +488,13 @@ tr.dragging{opacity:.35}
 .pb-nx{font-size:11px;color:var(--text2);margin-top:4px;display:flex;gap:6px;white-space:nowrap;overflow:hidden}
 .pb-nx span{margin-left:auto;color:var(--text3);font-size:10px;flex-shrink:0}.pb-nx.od{color:#B91C1C}
 .pb-nx:hover{color:var(--text)}
-.pb-cur{display:flex;align-items:center;gap:7px;margin-top:7px;padding:5px 8px;border-radius:7px;background:#EEF4FF;border:1px solid #BFD3FB;font-size:11.5px;cursor:pointer;min-width:0}
+.pb-cur{margin-top:7px;padding:6px 8px;border-radius:7px;background:#EEF4FF;border:1px solid #BFD3FB;font-size:11.5px;cursor:pointer;min-width:0}
+.pb-cur-h{display:flex;align-items:center;gap:7px;margin-bottom:3px}
 .pb-cur.od{background:#FEF2F2;border-color:#FCA5A5}
 .pb-cur-k{flex-shrink:0;font-size:9.5px;font-weight:700;color:#fff;background:#1565C0;border-radius:4px;padding:2px 6px;font-family:'IBM Plex Mono',monospace}
 .pb-cur.od .pb-cur-k{background:#DC2626}
-.pb-cur-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600;color:var(--text)}
-.pb-cur-d{flex-shrink:0;font-size:10px;color:var(--text3)}
+.pb-cur-t{font-weight:600;color:var(--text);line-height:1.4;word-break:break-word}
+.pb-cur-d{font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pb-row.cur{background:#EEF4FF;border-radius:5px}.pb-row.cur .pb-lab{font-weight:700}
 .pb-row.cur .pb-lab::before{content:'▶ ';color:#1565C0}
 .pb-list{margin-top:10px;border-top:1px solid var(--border-light);padding-top:8px;cursor:default}
@@ -553,7 +554,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-2";</script>
 </head>
 <body>
 
@@ -3392,7 +3393,7 @@ function pbCards(pic){
     var cur = ipS[0] || openS[0] || null;
     var all = kids.slice().sort(ord);
     var curNo = cur ? all.indexOf(cur) + 1 : 0;
-    var nxt = openS.filter(function(x){ return x !== cur; }).slice(0, 3);
+    var nxt = openS.filter(function(x){ return x !== cur; }).slice(0, 2);   // 지금 단계가 두 줄을 쓰니 다음은 2개
     var dl = pbDays(pbEnd(d));
     var doneCard = d.status === 'Done';
     var late = !doneCard && dl !== null && dl < 0;
@@ -3445,9 +3446,9 @@ function projBoardHtml(pic){
     if(c.cur){
       var x0 = c.cur, od0 = dueStatus(x0) === 'overdue';
       curH = '<div class="pb-cur' + (od0 ? ' od' : '') + '" onclick="event.stopPropagation();openEdit(' + x0.id + ')">'
-        + '<span class="pb-cur-k">' + (c.curIp ? L3('NOW', '지금', 'ĐANG') : L3('NEXT', '다음', 'TIẾP')) + ' ' + c.curNo + '/' + c.kids.length + '</span>'
-        + '<span class="pb-cur-t">' + TL(x0.label) + '</span>'
-        + '<span class="pb-cur-d">' + bfEsc(String(x0.period || '').split('~').pop()) + (x0.pic ? ' · ' + bfEsc(x0.pic) : '') + '</span></div>';
+        + '<div class="pb-cur-h"><span class="pb-cur-k">' + (c.curIp ? L3('NOW', '지금', 'ĐANG') : L3('NEXT', '다음', 'TIẾP')) + ' ' + c.curNo + '/' + c.kids.length + '</span>'
+        + '<span class="pb-cur-d">' + bfEsc(String(x0.period || '').split('~').pop()) + (x0.pic ? ' · ' + bfEsc(x0.pic) : '') + '</span></div>'
+        + '<div class="pb-cur-t">' + TL(x0.label) + '</div></div>';
     }
     var open = !!_pbOpen[d.id], list = '';
     if(open){
