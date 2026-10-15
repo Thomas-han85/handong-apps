@@ -647,7 +647,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-11";</script>
 </head>
 <body>
 
@@ -4194,9 +4194,10 @@ function renderMatrix(){
         const cardBg = ds==='overdue'?'#FEE2E2':ds==='today'?'#FEF2F2':'#fff';
         const cardBd = ds?'#EF4444':'#C4B5FD';
         const dueTag = ds==='overdue'?' <span style="color:#B91C1C;font-weight:700">\u26a0 Overdue</span>':ds==='today'?' <span style="color:#B91C1C;font-weight:700">\u23f0 Today</span>':'';
-        return `<div style="background:${cardBg};border:1px solid ${cardBd};border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;transition:box-shadow .15s"
+        return `<div style="background:${_tdSel[d.id]?'#EFF6FF':cardBg};border:1px solid ${cardBd};border-radius:8px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;transition:box-shadow .15s"
           onmouseover="this.querySelector('.mt-rev-actions').style.display='flex';this.style.boxShadow='0 2px 8px rgba(109,40,217,.12)'"
           onmouseout="this.querySelector('.mt-rev-actions').style.display='none';this.style.boxShadow='none'">
+          <input type="checkbox" class="tsel" style="margin-top:2px" title="${bfEsc(L3('Select','고르기','Chọn'))}"${_tdSel[d.id]?' checked':''} onchange="tdPick(${d.id},this.checked)">
           <span style="font-size:14px;flex-shrink:0;margin-top:1px">👁</span>
           ${mtCk(d)}
           <div style="flex:1;min-width:0">
@@ -4219,7 +4220,8 @@ function renderMatrix(){
       }).join('');
       return `<div style="margin-top:16px;background:#FAF8FF;border:1.5px solid #C4B5FD;border-radius:12px;padding:14px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="checkbox" class="tsel" title="${bfEsc(L3('Select all','전체 고르기','Chọn tất cả'))}"${reviewItems.every(d=>_tdSel[d.id])?' checked':''} onchange="tdPickMany([${reviewItems.map(d=>d.id).join(',')}],this.checked)">
             <span style="font-size:13px;font-weight:700;color:#6D28D9">👁 ${t('reviewLabel')}</span>
           </div>
           <span style="background:#6D28D9;color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px">${reviewItems.length}</span>
