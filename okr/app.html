@@ -641,7 +641,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-4";</script>
 </head>
 <body>
 
@@ -3107,7 +3107,7 @@ async function todayAdd(){
   var _dd = document.getElementById('todayDue'); if(_dd) _dd.value = todayISO();
   if(btn) btn.disabled = false;
   refreshTeamFilter(); renderTable(); renderMatrix();
-  toast(fail ? ('적음 ' + ok + '건 · 실패 ' + fail + '건') : ('적었습니다 — ' + ok + '건'),
+  toast(fail ? L3('Added ' + ok + ' · failed ' + fail, '적음 ' + ok + '건 · 실패 ' + fail + '건', 'Đã thêm ' + ok + ' · lỗi ' + fail) : L3('Added — ' + ok, '적었습니다 — ' + ok + '건', 'Đã thêm — ' + ok),
         fail ? 'error' : 'success');
   ta.focus();
 }
@@ -3207,13 +3207,13 @@ function todayHtml(pic){
   function ago(d){
     var e = parseDate(d.period, true); if(!e) return '';
     var n = Math.round((t0 - new Date(e.getFullYear(),e.getMonth(),e.getDate()))/86400000);
-    if(n > 0) return n + '일 지남';
-    if(n === 0) return '오늘';
-    return (-n) + '일 남음';
+    if(n > 0) return L3(n + 'd overdue', n + '일 지남', 'quá ' + n + ' ngày');
+    if(n === 0) return L3('today', '오늘', 'hôm nay');
+    return L3(-n + 'd left', (-n) + '일 남음', 'còn ' + (-n) + ' ngày');
   }
   var defs = [
-    ['over','기한 지남','over'], ['today','오늘','today'],
-    ['week','이번 주',''], ['none','기한 없음·나중','']
+    ['over',L3('Overdue','기한 지남','Quá hạn'),'over'], ['today',L3('Today','오늘','Hôm nay'),'today'],
+    ['week',L3('This week','이번 주','Tuần này'),''], ['none',L3('No date · later','기한 없음·나중','Không hạn · để sau'),'']
   ];
   var h = '<div id="todayGroups">' + tdBulkBar();
   defs.forEach(function(x){
@@ -3232,13 +3232,13 @@ function todayHtml(pic){
       +  '<input type="checkbox" class="tsel" title="' + bfEsc(L3('Select all in this group', '이 묶음 전체 고르기', 'Chọn tất cả nhóm này')) + '"' + (allOn ? ' checked' : '')
       +  ' onclick="event.stopPropagation()" onchange="tdPickMany([' + list.map(function(d){ return d.id; }).join(',') + '],this.checked)">' + x[1]
       +  ' <span class="n">' + list.length + '</span>'
-      +  (pend ? '<span class="n" style="color:#B7791F">· 안 붙임 ' + pend + '</span>' : '')
+      +  (pend ? '<span class="n" style="color:#B7791F">· ' + L3('not linked ', '안 붙임 ', 'chưa gắn ') + pend + '</span>' : '')
       +  '<span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
       +  '<div class="tgb">';
     list.forEach(function(d){
       h += '<div class="tr1' + (_tdSel[d.id] ? ' sel' : '') + '" data-id="' + d.id + '">'
         +  '<input type="checkbox" class="tsel" title="' + bfEsc(L3('Select', '고르기', 'Chọn')) + '"' + (_tdSel[d.id] ? ' checked' : '') + ' onchange="tdPick(' + d.id + ',this.checked)">'
-        +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
+        +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="' + L3('Done', '완료', 'Xong') + '">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  atSelHtml(d)
         +  ((k === 'over' || k === 'today') ? quadBtns(d) + watchBtn(d) : '')
@@ -3946,11 +3946,11 @@ function renderMatrix(){
 
   // 적는 칸 — 담당자를 고르기 전에도 보인다. 적을 때는 아무것도 묻지 않는다(GTD)
   var capH = '<div id="todayBox"><div class="cap">'
-    + '<textarea id="todayIn" rows="1" placeholder="오늘 할 일을 한 줄씩 적으세요. 여러 줄을 붙여넣으면 줄마다 한 건이 됩니다."'
+    + '<textarea id="todayIn" rows="1" placeholder="' + bfEsc(L3('Write today\'s to-dos, one per line. Pasting several lines makes one item per line.', '오늘 할 일을 한 줄씩 적으세요. 여러 줄을 붙여넣으면 줄마다 한 건이 됩니다.', 'Ghi việc hôm nay, mỗi dòng một việc. Dán nhiều dòng thì mỗi dòng thành một việc.')) + '"'
     + ' onkeydown="if(event.key===\'Enter\'&&!event.shiftKey&&!event.isComposing){event.preventDefault();todayAdd();}"></textarea>'
     + todoTeamHtml()
-    + '<input type="date" id="todayDue" class="tdue" value="' + todayISO() + '" title="이 할 일들의 마감일 (기본: 오늘). 바꾸면 그 날 마감으로 들어갑니다">'
-    + '<button id="todayBtn" onclick="todayAdd()">추가</button></div>'
+    + '<input type="date" id="todayDue" class="tdue" value="' + todayISO() + '" title="' + bfEsc(L3('Due date for these to-dos (default: today).', '이 할 일들의 마감일 (기본: 오늘). 바꾸면 그 날 마감으로 들어갑니다', 'Hạn của các việc này (mặc định: hôm nay).')) + '">'
+    + '<button id="todayBtn" onclick="todayAdd()">' + L3('Add', '추가', 'Thêm') + '</button></div>'
     + '<div class="hint">' + t('todoHint') + '</div></div>';
 
   if(!pic){
