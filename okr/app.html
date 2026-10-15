@@ -482,6 +482,8 @@ tr.dragging{opacity:.35}
 .pb-card{border:1.5px solid;border-radius:10px;padding:10px 12px;cursor:pointer;transition:box-shadow .15s;position:relative}
 .pb-fold{position:absolute;top:6px;right:6px;border:1px solid var(--border);background:#fff;border-radius:5px;font-size:10px;line-height:1;padding:3px 6px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity .15s}
 .pb-card:hover .pb-fold{opacity:1}
+.pb-fold.pb-done{right:62px;color:#94A3B8}.pb-fold.pb-done:hover{color:#15803D;border-color:#86EFAC}
+.pb-donesel{color:#15803D;border-color:#86EFAC}
 .pb-fold.pb-drop{right:34px;color:#94A3B8}.pb-fold.pb-drop:hover{color:#B91C1C;border-color:#FCA5A5}
 .pb-dropsel{color:#B91C1C;border-color:#FCA5A5}
 .pb-rdrop{width:18px;text-align:center;color:#CBD5E1;cursor:pointer;font-size:12px;flex-shrink:0}.pb-rdrop:hover{color:#B91C1C}.pb-rdrop.off{cursor:default}.pb-fold:hover{color:var(--text);border-color:var(--text3)}
@@ -647,7 +649,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-11";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-12";</script>
 </head>
 <body>
 
@@ -3655,6 +3657,7 @@ function projBoardHtml(pic){
     }
     return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
+      + (d.status !== 'Done' && d.status !== 'Dropped' ? '<button class="pb-fold pb-done" title="' + bfEsc(L3('Done — this initiative and all its open to-dos', '완료 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Xong — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDone([' + d.id + '])">✓</button>' : '')
       + (d.status !== 'Dropped' ? '<button class="pb-fold pb-drop" title="' + bfEsc(L3('Drop — this initiative and all its open to-dos', '중단 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Dừng — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDrop([' + d.id + '])">⊘</button>' : '')
       + '<label class="pb-pick" title="' + bfEsc(L3('Select for timeline', '타임라인에 넣기', 'Chọn để xem dòng thời gian')) + '" onclick="event.stopPropagation()">'
       + '<input type="checkbox"' + (_pbSel[d.id] ? ' checked' : '') + ' onchange="pbPick(' + d.id + ',this.checked)"></label>'
@@ -3781,6 +3784,7 @@ function pbSelBar(){
   return '<span class="pb-selbar" onclick="event.stopPropagation()">'
     + '<button class="pb-tlbtn' + (_pbTL ? ' on' : '') + '" onclick="_pbTL=!_pbTL;renderMatrix();if(_pbTL)setTimeout(function(){var e=document.getElementById(\'pbTL\');if(e)e.scrollIntoView({behavior:\'smooth\',block:\'start\'});},50)">'
     + (_pbTL ? L3('Hide timeline', '타임라인 닫기', 'Ẩn dòng thời gian') : L3('Show timeline', '타임라인으로 보기', 'Xem dòng thời gian')) + ' (' + n + ')</button>'
+    + '<button class="pb-tlclr pb-donesel" onclick="pbDone(Object.keys(_pbSel).map(Number))">✓ ' + L3('Done', '완료', 'Xong') + '</button>'
     + '<button class="pb-tlclr pb-dropsel" onclick="pbDrop(Object.keys(_pbSel).map(Number))">⊘ ' + L3('Drop', '중단', 'Dừng') + '</button>'
     + '<button class="pb-tlclr" onclick="_pbSel={};_pbTL=false;renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></span>';
 }
@@ -3955,6 +3959,24 @@ function pbPicListHtml(){
   try{ knownAccounts().forEach(function(a){ set[a] = 1; }); }catch(e){}
   (DATA || []).forEach(function(d){ String(d.pic || '').split(/[,+&\/]/).forEach(function(p){ p = p.trim(); if(p) set[p] = 1; }); });
   return '<datalist id="pbPicList">' + Object.keys(set).sort().map(function(p){ return '<option value="' + bfEsc(p) + '">'; }).join('') + '</datalist>';
+}
+/* 보드에서 완료 — 이니셔티브(카드)와 밑의 안 끝난 할 일을 같이 완료, 확인은 한 번만 (10/15 실장님) */
+async function pbDone(ids){
+  var items = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(function(d){ return d && d.status !== 'Done' && d.status !== 'Dropped'; });
+  if(!items.length) return;
+  var kids = [], seen = {};
+  items.forEach(function(d){ dropKids(d).forEach(function(x){ if(x.status !== 'Done' && x.status !== 'Dropped' && !seen[x.id]){ seen[x.id] = 1; kids.push(x); } }); });
+  var names = items.slice(0, 3).map(function(d){ return '· ' + TL(d.label).replace(/<[^>]+>/g, ''); }).join('\n') + (items.length > 3 ? '\n… +' + (items.length - 3) : '');
+  if(!confirm(L3('Mark ' + items.length + ' initiative(s) and ' + kids.length + ' open to-do(s) under them as done?\n\n', '이니셔티브 ' + items.length + '개와 밑의 안 끝난 할 일 ' + kids.length + '개를 모두 완료로 할까요?\n\n', 'Đánh dấu xong ' + items.length + ' sáng kiến và ' + kids.length + ' việc chưa xong bên dưới?\n\n') + names)) return;
+  var ok = 0, fail = 0, list = kids.concat(items);
+  for(var i = 0; i < list.length; i++){
+    var d = list[i], snap = snapItem(d);
+    d.status = 'Done';
+    if(await nasUpdateItem(d)){ ok++; delete _pbSel[d.id]; } else { restoreItem(d, snap); fail++; }
+  }
+  if(!Object.keys(_pbSel).length) _pbTL = false;
+  saveData(); window._nasHash = JSON.stringify(DATA); renderTable(); renderMatrix();
+  toast(L3(ok + ' item(s) done', ok + '건 완료', ok + ' mục đã xong') + (fail ? ' · ' + L3('failed ', '실패 ', 'lỗi ') + fail : ''), fail ? 'error' : 'success');
 }
 /* 보드에서 중단 — 이니셔티브(카드)는 밑의 안 끝난 할 일까지 전부, 확인은 한 번만 (10/15 실장님) */
 async function pbDrop(ids){
