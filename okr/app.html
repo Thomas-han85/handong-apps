@@ -515,7 +515,7 @@ tr.dragging{opacity:.35}
 .pb-per{font-size:10px;color:var(--text3);white-space:nowrap}
 .pb-ok{color:#16A34A;font-weight:700;width:18px;text-align:center}
 .pb-add{display:flex;gap:6px;margin-top:8px}.pb-add input{border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:12px}
-.pb-add input:first-child{flex:1}.pb-add button{border:none;background:#1565C0;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
+.pb-add input:first-child{flex:1}.pb-add .pb-picin{width:150px;flex:0 0 150px}.pb-add button{border:none;background:#1565C0;color:#fff;border-radius:6px;padding:5px 12px;font-size:12px;cursor:pointer}
 /* ── 타임라인으로 보기 ── */
 .pb-pick{position:absolute;top:7px;left:8px;line-height:0}.pb-pick input{width:13px;height:13px;cursor:pointer;margin:0}
 .pb-card .pb-path{padding-left:18px}
@@ -632,7 +632,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.13-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-1";</script>
 </head>
 <body>
 
@@ -3462,7 +3462,7 @@ function pbCards(pic){
     var over = open.filter(function(x){ return dueStatus(x) === 'overdue'; });
     var wk = open.filter(function(x){ var g = pbDays(pbEnd(x)); return g !== null && g >= 0 && g <= 7; });
     var last = Math.max(+(d._uat || 0), Math.max.apply(null, kids.map(function(x){ return +(x._uat || 0); }).concat([0])));
-    var idle = last ? Math.floor((Date.now() - last) / 86400000) : null;
+    var idle = last ? Math.max(0, Math.floor((Date.now() - last) / 86400000)) : null;   // 서버 시각이 몇 시간 앞서 음수가 나오던 것
     var seq = function(x){ var m = String(x.label).match(/^\[[^\]]*?(\d+)\s*\/\s*\d+\]/); return m ? +m[1] : null; };
     var ord = function(a, b){
       var sa = seq(a), sb = seq(b);
@@ -3550,6 +3550,7 @@ function projBoardHtml(pic){
           }).join('')
         + '<div class="pb-add"><input id="pbIn' + d.id + '" placeholder="' + bfEsc(L3('Add a to-do to this initiative', '이 이니셔티브에 할 일 추가', 'Thêm việc vào sáng kiến này')) + '"'
         + ' onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();pbAdd(' + d.id + ');}">'
+        + '<input id="pbPic' + d.id + '" class="pb-picin" list="pbPicList" value="' + bfEsc(myPicName()) + '" placeholder="' + bfEsc(L3('Person in charge', '담당자', 'Người phụ trách')) + '" title="' + bfEsc(L3('Person in charge', '담당자', 'Người phụ trách')) + '" onkeydown="if(event.key===\'Enter\'&&!event.isComposing){event.preventDefault();pbAdd(' + d.id + ');}">'
         + '<input type="date" id="pbDue' + d.id + '" value="' + todayISO() + '">'
         + '<button onclick="pbAdd(' + d.id + ')">' + L3('Add', '추가', 'Thêm') + '</button></div></div>';
     }
@@ -3575,7 +3576,7 @@ function projBoardHtml(pic){
         }).join('') : '')
       + '</div>';
   }
-  return '<div class="pb-wrap">' + head + (cards.length ? body : '') + fold + (_pbTL ? pbTimelineHtml() : '') + '</div>';
+  return '<div class="pb-wrap">' + head + (cards.length ? body : '') + fold + (_pbTL ? pbTimelineHtml() : '') + pbPicListHtml() + '</div>';
 }
 /* 묶음 줄 — 팀이 둘 이상이면 팀 → 회사KR, 하나뿐이면 회사KR 로 나눈다.
    머리말을 누르면 그 줄이 접힌다(계정이 아니라 이 브라우저에만 기억). */
@@ -3845,6 +3846,12 @@ function pbTimelineHtml(){
     + '<div class="tl-rows"><div class="tl-grid"><div class="tl-name"></div><div class="tl-track gl">' + ticks.replace(/<span>[^<]*<\/span>/g, '')
     + '<div class="tl-today" style="left:' + X(t0.getTime()) + '"></div></div></div>' + rows + '</div></div>' + agendaH + '</div>';
 }
+function pbPicListHtml(){
+  var set = {};
+  try{ knownAccounts().forEach(function(a){ set[a] = 1; }); }catch(e){}
+  (DATA || []).forEach(function(d){ String(d.pic || '').split(/[,+&\/]/).forEach(function(p){ p = p.trim(); if(p) set[p] = 1; }); });
+  return '<datalist id="pbPicList">' + Object.keys(set).sort().map(function(p){ return '<option value="' + bfEsc(p) + '">'; }).join('') + '</datalist>';
+}
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
 function pbToggleAll(){ _pbShut = !_pbShut; try{ localStorage.setItem('okr_pb_shut', _pbShut ? '1' : '0'); }catch(e){} renderMatrix(); }
 async function pbAdd(pid){
@@ -3854,10 +3861,11 @@ async function pbAdd(pid){
   if(!nasMode){ toast(L3('Please wait until the server is connected.', '서버에 연결된 뒤에 적어 주세요.', 'Vui lòng đợi kết nối máy chủ.'), 'error'); return; }
   var par = DATA.find(function(x){ return x.id === pid; }); if(!par) return;
   var due = (document.getElementById('pbDue' + pid) || {}).value || '';
+  var who = String((document.getElementById('pbPic' + pid) || {}).value || '').trim() || myPicName();
   var team = bfTeamsOf(par.team)[0] || myTeamName();
   var ok = 0;
   for(var i = 0; i < lines.length; i++){
-    var d = { id: newTodoId(), pid: pid, lv: 'TD', kr: par.kr || '', label: lines[i], team: team, pic: myPicName(),
+    var d = { id: newTodoId(), pid: pid, lv: 'TD', kr: par.kr || '', label: lines[i], team: team, pic: who,
               reviewer: '', period: todoPeriodFor(due), target: 0, actual: 0, status: 'Not Started', feedbacks: [],
               importance: '', urgency: '', review: false };
     DATA.push(d);
