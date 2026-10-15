@@ -647,7 +647,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-9";</script>
 </head>
 <body>
 
@@ -3781,7 +3781,7 @@ function pbSelBar(){
   return '<span class="pb-selbar" onclick="event.stopPropagation()">'
     + '<button class="pb-tlbtn' + (_pbTL ? ' on' : '') + '" onclick="_pbTL=!_pbTL;renderMatrix();if(_pbTL)setTimeout(function(){var e=document.getElementById(\'pbTL\');if(e)e.scrollIntoView({behavior:\'smooth\',block:\'start\'});},50)">'
     + (_pbTL ? L3('Hide timeline', '타임라인 닫기', 'Ẩn dòng thời gian') : L3('Show timeline', '타임라인으로 보기', 'Xem dòng thời gian')) + ' (' + n + ')</button>'
-    + '<button class="pb-tlclr pb-dropsel" onclick="pbDrop(Object.keys(_pbSel).map(Number))">⊘ ' + L3('Drop selected', '선택 중단', 'Dừng mục đã chọn') + '</button>'
+    + '<button class="pb-tlclr pb-dropsel" onclick="pbDrop(Object.keys(_pbSel).map(Number))">⊘ ' + L3('Drop', '중단', 'Dừng') + '</button>'
     + '<button class="pb-tlclr" onclick="_pbSel={};_pbTL=false;renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></span>';
 }
 function pbTimelineHtml(){
