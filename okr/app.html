@@ -594,7 +594,7 @@ tr.dragging{opacity:.35}
 .tg.rev h4{color:#6D28D9}
 .tsel{width:14px;height:14px;margin:0 4px 0 0;cursor:pointer;flex-shrink:0;vertical-align:middle}
 .tr1.sel{background:#EFF6FF}
-.td-bulk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;padding:8px 10px;border:1px solid #93C5FD;background:#EFF6FF;border-radius:8px;font-size:12.5px;position:sticky;top:0;z-index:5}
+.td-bulk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 14px;border:1px solid #93C5FD;background:#EFF6FF;border-radius:10px;font-size:12.5px;position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:900;box-shadow:0 6px 24px rgba(15,23,42,.18);max-width:calc(100vw - 32px)}   /* 화면 아래에 떠 있게 — 아래 묶음에서 골라도 보이게 (10/15) */
 .td-bulk button{border:1px solid #93C5FD;background:#fff;color:#1D4ED8;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer}
 .td-bulk button:hover{background:#DBEAFE}.td-bulk button.clr{color:var(--text2);border-color:var(--border)}
 .td-bd{display:inline-flex;gap:4px;align-items:center}.td-bd input{border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px}
@@ -647,7 +647,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-10";</script>
 </head>
 <body>
 
