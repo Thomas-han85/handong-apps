@@ -644,7 +644,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-7";</script>
 </head>
 <body>
 
@@ -1980,12 +1980,42 @@ function toggleReview(id){
   d.review = !(d.review===true||d.review==='true');
   saveData(); nasUpdateItem(d); renderTable();
 }
+/* 중단 이어받기 — 이니셔티브·팀KR 을 중단하면 밑의 할 일도 같이 중단(묻고), 중단을 풀면 같이 되살리기(묻고) (10/15 실장님)
+   끝난 할 일은 건드리지 않는다. 같이 중단된 것에는 dropBy 를 남겨 되살릴 때 쓴다. */
+function dropKids(d){
+  var out = [];
+  (function walk(pid){ DATA.forEach(function(x){ if(x.pid === pid){ if(x.lv === 'TD') out.push(x); walk(x.id); } }); })(d.id);
+  return out;
+}
+async function cascadeDrop(d, was){
+  if(!d || d.lv === 'TD') return;
+  var kids = dropKids(d), list = [], to = '';
+  if(d.status === 'Dropped' && was !== 'Dropped'){
+    list = kids.filter(function(x){ return x.status !== 'Done' && x.status !== 'Dropped'; }); to = 'Dropped';
+    if(!list.length) return;
+    if(!confirm(L3('Also drop the ' + list.length + ' open to-do(s) under this item?', '밑의 안 끝난 할 일 ' + list.length + '개도 같이 중단할까요?', 'Dừng luôn ' + list.length + ' việc chưa xong bên dưới?'))) return;
+  } else if(was === 'Dropped' && d.status !== 'Dropped'){
+    list = kids.filter(function(x){ return x.status === 'Dropped' && (!x.dropBy || x.dropBy === d.id); }); to = 'Not Started';
+    if(!list.length) return;
+    if(!confirm(L3('Also restore the ' + list.length + ' dropped to-do(s) under this item?', '같이 중단됐던 할 일 ' + list.length + '개도 되살릴까요? (미착수로)', 'Khôi phục luôn ' + list.length + ' việc đã dừng bên dưới?'))) return;
+  } else return;
+  var ok = 0, fail = 0;
+  for(var i = 0; i < list.length; i++){
+    var x = list[i], snap = snapItem(x);
+    x.status = to; if(to === 'Dropped') x.dropBy = d.id; else delete x.dropBy;
+    var r = await nasUpdateItem(x);
+    if(r) ok++; else { restoreItem(x, snap); fail++; }
+  }
+  saveData(); window._nasHash = JSON.stringify(DATA); renderTable(); try{ renderMatrix(); }catch(e){}
+  toast(L3(ok + ' to-do(s) ' + (to === 'Dropped' ? 'dropped' : 'restored'), '할 일 ' + ok + '개 ' + (to === 'Dropped' ? '같이 중단' : '되살림'), ok + ' việc ' + (to === 'Dropped' ? 'đã dừng' : 'đã khôi phục')) + (fail ? ' · ' + L3('failed ', '실패 ', 'lỗi ') + fail : ''), fail ? 'error' : 'success');
+}
 function cycleStatus(id){
   const d=DATA.find(x=>x.id===id); if(!d)return;
   const order=['Not Started','In Progress','Done'];
   const i=order.indexOf(d.status);
+  const _was = d.status;
   d.status = d.status==='Dropped' ? 'Not Started' : order[(i+1)%order.length];   // 중단은 다시 미착수로
-  saveData(); nasUpdateItem(d); renderTable();
+  saveData(); nasUpdateItem(d).then(function(ok){ if(ok) cascadeDrop(d, _was); }); renderTable();
 }
 /* 중요도·긴급도 값이 두 벌로 갈려 있다 — 'Important' 와 '중요', '덜중요' 와 '덜Important'.
    읽을 때 눕혀서 비교하고 저장은 영문 한 벌로 한다. 기존 데이터는 안 건드린다. */
@@ -4667,7 +4697,7 @@ async function saveEdit(){
   if(!nasMode){ toast(t('toastSaved'),'success'); return; }
   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사). 「저장됨」은 서버가 받은 뒤에만 띄운다
   const _ok = await nasUpdateItem(d, _wasNew);
-  if(_ok){ toast(t('toastSaved'),'success'); return; }
+  if(_ok){ toast(t('toastSaved'),'success'); await cascadeDrop(d, _snap0 ? _snap0.status : ''); return; }
   // 서버가 거절 — 10초 뒤 동기화가 몰래 되돌리기 전에 지금 되돌린다 (거절 사유 알림은 nasUpdateItem 이 띄움)
   if(_wasNew){ const _i = DATA.indexOf(d); if(_i >= 0) DATA.splice(_i, 1); }
   else restoreItem(d, _snap0);
