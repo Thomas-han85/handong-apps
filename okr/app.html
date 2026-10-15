@@ -82,6 +82,8 @@ body{font-family:'IBM Plex Sans KR',sans-serif;background:var(--bg);color:var(--
 
 .status-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500;white-space:nowrap}
 .st-ip{background:var(--amber-bg);color:#92400E}.st-done{background:var(--green-bg);color:#14532D}.st-ns{background:var(--gray-bg);color:var(--gray)}
+.st-drop{background:#F1F5F9;color:#64748B;text-decoration:line-through}
+tr.row-dropped td{opacity:.45}tr.row-dropped td .lbl,tr.row-dropped td:nth-child(3){text-decoration:line-through}
 .col-dimmed{opacity:.25;pointer-events:none}
 .col-active{opacity:1;pointer-events:auto}
 .fb-count{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:10px;font-weight:600;background:var(--blue-bg);color:var(--blue)}
@@ -642,7 +644,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-6";</script>
 </head>
 <body>
 
@@ -700,6 +702,7 @@ tr.dragging{opacity:.35}
     <button id="sf-ip"   onclick="toggleStFilter('In Progress')" class="sf-btn sf-on"  style="padding:3px 7px;border-radius:4px;font-size:10px;border:none;cursor:pointer;font-weight:500;white-space:nowrap" data-i18n="inProgress">In Progress</button>
     <button id="sf-ns"   onclick="toggleStFilter('Not Started')" class="sf-btn sf-on"  style="padding:3px 7px;border-radius:4px;font-size:10px;border:none;cursor:pointer;font-weight:500;white-space:nowrap" data-i18n="notStarted">Not Started</button>
     <button id="sf-done" onclick="toggleStFilter('Done')"        class="sf-btn sf-off" style="padding:3px 7px;border-radius:4px;font-size:10px;border:none;cursor:pointer;font-weight:500;opacity:.45;white-space:nowrap" data-i18n="done">Done</button>
+    <button id="sf-drop" onclick="toggleStFilter('Dropped')"     class="sf-btn sf-off" style="padding:3px 7px;border-radius:4px;font-size:10px;border:none;cursor:pointer;font-weight:500;opacity:.45;white-space:nowrap" data-i18n="stDropped">Dropped</button>
   </div>
   <div class="divider"></div>
   <!-- Important/Urgent/점검 탭 -->
@@ -729,7 +732,7 @@ tr.dragging{opacity:.35}
   </select>
   <select class="filter-sel" id="ganttStatus" onchange="renderGantt()">
     <option value="">All Status</option>
-    <option value="In Progress">In Progress</option><option value="Done">Done</option><option value="Not Started">Not Started</option>
+    <option value="In Progress">In Progress</option><option value="Done">Done</option><option value="Not Started">Not Started</option><option value="Dropped">Dropped</option>
   </select>
   <button class="btn" id="gantt-expand-btn" onclick="ganttToggleAll()" style="padding:4px 10px;font-size:11px;white-space:nowrap">▼ Expand all</button>
   <button class="btn" id="gantt-hidedone-btn" onclick="ganttToggleDone()" style="padding:4px 10px;font-size:11px;white-space:nowrap">✓ Hide Done</button>
@@ -895,7 +898,7 @@ function toggleStFilter(st){
   if(stFilters.has(st)) stFilters.delete(st);
   else stFilters.add(st);
   // 버튼 스타일 반영
-  const map = {'In Progress':'sf-ip','Not Started':'sf-ns','Done':'sf-done'};
+  const map = {'In Progress':'sf-ip','Not Started':'sf-ns','Done':'sf-done','Dropped':'sf-drop'};
   Object.entries(map).forEach(([s,bid])=>{
     const btn = document.getElementById(bid); if(!btn) return;
     const on = stFilters.has(s);
@@ -1861,6 +1864,7 @@ function reviewCell(d){
 }
 
 function statusCell(d){
+  if(d.status==='Dropped') return `<span class="status-badge st-drop" onclick="cycleStatus(${d.id})" title="${t('clickTo')}${t('stNotStarted')}${t('changeToSuffix')}" style="cursor:pointer">${t('stDropped')}</span>`;
   if(d.lv!=='TD'&&d.lv!=='IN'&&d.lv!=='TK'&&d.lv!=='KR') return `<span class="status-badge ${d.status==='Done'?'st-done':d.status==='Not Started'?'st-ns':'st-ip'}">${d.status==='Done'?t('stDone'):d.status==='Not Started'?t('stNotStarted'):t('stInProgress')}</span>`;
   const s = d.status;
   const next = s==='Not Started'?'In Progress':s==='In Progress'?'Done':'Not Started';
@@ -1980,7 +1984,7 @@ function cycleStatus(id){
   const d=DATA.find(x=>x.id===id); if(!d)return;
   const order=['Not Started','In Progress','Done'];
   const i=order.indexOf(d.status);
-  d.status=order[(i+1)%order.length];
+  d.status = d.status==='Dropped' ? 'Not Started' : order[(i+1)%order.length];   // 중단은 다시 미착수로
   saveData(); nasUpdateItem(d); renderTable();
 }
 /* 중요도·긴급도 값이 두 벌로 갈려 있다 — 'Important' 와 '중요', '덜중요' 와 '덜Important'.
@@ -2023,7 +2027,7 @@ function calcPct(d){
   return Math.min(Math.round(A/T*100),200);
 }
 function dueStatus(d){
-  if(!d || d.status==='Done') return null;
+  if(!d || d.status==='Done' || d.status==='Dropped') return null;
   if(d.lv!=='TD' && d.lv!=='IN') return null;
   const e=parseDate(d.period, true);
   if(!e) return null;
@@ -2567,7 +2571,7 @@ function renderTable(){
         </div>`
       : `<span style="color:var(--text3);font-size:11px">—</span>`;
     const canDrag = (d.lv==='KR'||d.lv==='TO'||d.lv==='TK'||d.lv==='IN'||d.lv==='TD');
-    const doneClass = (d.status==='Done') ? (hideDone ? ' row-done-hide' : ' row-done-fade') : '';
+    const doneClass = (d.status==='Done') ? (hideDone ? ' row-done-hide' : ' row-done-fade') : (d.status==='Dropped' ? (hideDone ? ' row-done-hide' : ' row-dropped') : '');
     h+=`<tr class="row-${d.lv}${doneClass}" data-id="${d.id}" data-lv="${d.lv}" data-pid="${d.pid}"
          draggable="${canDrag}"
          onclick="openEdit(${d.id})"
@@ -2874,7 +2878,7 @@ function renderGantt(){
   let allInis = DATA.filter(d=>d.lv==='IN'||d.lv==='TD');
   if(filterTeam) allInis = allInis.filter(d=>teamMatch(d.team));
   if(filterSt)   allInis = allInis.filter(d=>d.status===filterSt);
-  if(ganttHideDone) allInis = allInis.filter(d=>d.status!=='Done');
+  if(ganttHideDone) allInis = allInis.filter(d=>d.status!=='Done' && d.status!=='Dropped');
 
   // TK별로 Initiative 그룹핑
   const tkMap = {}; // tkId -> {tk, inis[]}
@@ -3150,18 +3154,19 @@ var _tdSel = {};
 function tdPick(id, on){ if(on) _tdSel[id] = 1; else delete _tdSel[id]; renderMatrix(); }
 function tdPickMany(ids, on){ ids.forEach(function(id){ if(on) _tdSel[id] = 1; else delete _tdSel[id]; }); renderMatrix(); }
 function tdBulkBar(){
-  var ids = Object.keys(_tdSel).map(Number).filter(function(id){ return DATA.some(function(x){ return x.id === id && x.status !== 'Done'; }); });
+  var ids = Object.keys(_tdSel).map(Number).filter(function(id){ return DATA.some(function(x){ return x.id === id && x.status !== 'Done' && x.status !== 'Dropped'; }); });
   if(!ids.length) return '';
   return '<div class="td-bulk"><b>' + L3('Selected ', '선택 ', 'Đã chọn ') + ids.length + L3('', '건', '') + '</b>'
     + '<button onclick="tdBulk(\'done\')">✓ ' + L3('Done', '완료', 'Xong') + '</button>'
     + '<button onclick="tdBulk(\'today\')">' + L3('Move to today', '오늘로', 'Dời về hôm nay') + '</button>'
+    + '<button onclick="tdBulk(\'drop\')" title="' + bfEsc(L3('Decided not to do — removed from lists and alerts', '안 하기로 한 일 — 목록·알림에서 빠집니다', 'Quyết định không làm — bỏ khỏi danh sách và nhắc hạn')) + '">⊘ ' + L3('Drop', '중단', 'Dừng') + '</button>'
     + '<span class="td-bd"><input type="date" id="tdBulkDate" value="' + todayISO() + '">'
     + '<button onclick="tdBulk(\'date\')">' + L3('Change due date', '날짜 바꾸기', 'Đổi hạn') + '</button></span>'
     + '<button class="clr" onclick="_tdSel={};renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></div>';
 }
 async function tdBulk(kind){
   var ids = Object.keys(_tdSel).map(Number);
-  var list = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(function(d){ return d && d.status !== 'Done'; });
+  var list = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(function(d){ return d && d.status !== 'Done' && d.status !== 'Dropped'; });
   if(!list.length) return;
   var due = kind === 'date' ? ((document.getElementById('tdBulkDate') || {}).value || '') : '';
   if(kind === 'date' && !due){ toast(L3('Pick a date first.', '날짜를 먼저 고르세요.', 'Hãy chọn ngày trước.'), 'error'); return; }
@@ -3169,13 +3174,14 @@ async function tdBulk(kind){
   for(var i = 0; i < list.length; i++){
     var d = list[i], snap = snapItem(d);
     if(kind === 'done') d.status = 'Done';
+    else if(kind === 'drop') d.status = 'Dropped';
     else if(kind === 'today') d.period = todayPeriod();
     else d.period = todoPeriodFor(due);
     var r = await nasUpdateItem(d);
     if(r){ ok++; delete _tdSel[d.id]; } else { restoreItem(d, snap); fail++; }
   }
   saveData(); renderTable(); renderMatrix();
-  var what = kind === 'done' ? L3('done', '완료', 'xong') : kind === 'today' ? L3('moved to today', '오늘로 옮김', 'dời về hôm nay') : L3('due date changed', '날짜 바꿈', 'đã đổi hạn');
+  var what = kind === 'done' ? L3('done', '완료', 'xong') : kind === 'drop' ? L3('dropped', '중단', 'đã dừng') : kind === 'today' ? L3('moved to today', '오늘로 옮김', 'dời về hôm nay') : L3('due date changed', '날짜 바꿈', 'đã đổi hạn');
   toast(ok + L3(' item(s) ', '건 ', ' mục ') + what + (fail ? ' · ' + L3('failed ', '실패 ', 'lỗi ') + fail : ''), fail ? 'error' : 'success');
 }
 function todayToggle(k){ _tgShut[k] = !tgShut(k); renderMatrix(); }
@@ -3183,7 +3189,7 @@ function todayToggle(k){ _tgShut[k] = !tgShut(k); renderMatrix(); }
 function todayHtml(pic){
   var sent = 0;                     /* 사분면으로 보내 여기서 빠진 건수 */
   var mine = DATA.filter(function(d){
-    if(d.lv !== 'TD' || d.status === 'Done') return false;
+    if(d.lv !== 'TD' || d.status === 'Done' || d.status === 'Dropped') return false;
     var ps = String(d.pic || '').split(/[,+&\/]/).map(function(x){ return x.trim(); });
     if(ps.indexOf(pic) < 0) return false;
     // 사분면에 넣은 것은 '오늘은 안 한다' 는 뜻이다. 여기서는 뺀다.
@@ -3198,7 +3204,7 @@ function todayHtml(pic){
   var G = { over:[], today:[], week:[], none:[], rev:[] };
   // 검토자로만 걸린 할 일(담당은 다른 사람) 중 기한 지남·오늘 — 마감 알림 창과 목록을 맞춘다 (10/15 실장님)
   DATA.forEach(function(d){
-    if(d.lv !== 'TD' || d.status === 'Done') return;
+    if(d.lv !== 'TD' || d.status === 'Done' || d.status === 'Dropped') return;
     var rs = String(d.reviewer || '').split(/[,+&\/]/).map(function(x){ return x.trim(); });
     var ps = String(d.pic || '').split(/[,+&\/]/).map(function(x){ return x.trim(); });
     if(rs.indexOf(pic) < 0 || ps.indexOf(pic) >= 0) return;
@@ -3503,7 +3509,7 @@ function pbCards(pic){
   var ids = {};
   DATA.forEach(function(d){
     if((d.lv === 'IN' || d.lv === 'TK') && pbHas(d.pic, pic)) ids[d.id] = 1;
-    if(d.lv === 'TD' && d.status !== 'Done' && pbHas(d.pic, pic)){
+    if(d.lv === 'TD' && d.status !== 'Done' && d.status !== 'Dropped' && pbHas(d.pic, pic)){
       var p = DATA.find(function(x){ return x.id === d.pid; });
       if(p && (p.lv === 'IN' || p.lv === 'TK')) ids[p.id] = 1;
     }
@@ -3515,7 +3521,7 @@ function pbCards(pic){
   });
   return Object.keys(ids).map(function(k){
     var d = DATA.find(function(x){ return String(x.id) === k; });
-    var kids = DATA.filter(function(x){ return x.pid === d.id && x.lv === 'TD'; });
+    var kids = DATA.filter(function(x){ return x.pid === d.id && x.lv === 'TD' && x.status !== 'Dropped'; });   // 중단은 세지 않는다
     var open = kids.filter(function(x){ return x.status !== 'Done'; });
     var over = open.filter(function(x){ return dueStatus(x) === 'overdue'; });
     var wk = open.filter(function(x){ var g = pbDays(pbEnd(x)); return g !== null && g >= 0 && g <= 7; });
@@ -3536,13 +3542,13 @@ function pbCards(pic){
     var curNo = cur ? all.indexOf(cur) + 1 : 0;
     var nxt = openS.filter(function(x){ return x !== cur; }).slice(0, 2);   // 지금 단계가 두 줄을 쓰니 다음은 2개
     var dl = pbDays(pbEnd(d));
-    var doneCard = d.status === 'Done';
+    var doneCard = d.status === 'Done' || d.status === 'Dropped';
     var late = !doneCard && dl !== null && dl < 0;
     var stale = !doneCard && open.length && idle !== null && idle > 14;
-    var tone = (over.length || late) ? 'red' : stale ? 'amber' : doneCard ? 'green' : 'blue';
+    var tone = d.status === 'Dropped' ? 'drop' : (over.length || late) ? 'red' : stale ? 'amber' : doneCard ? 'green' : 'blue';
     return { d: d, kids: kids, open: open, over: over, wk: wk, nxt: nxt, cur: cur, curNo: curNo, curIp: !!ipS.length, dl: dl, idle: idle, tone: tone, doneCard: doneCard };
   }).sort(function(a, b){
-    var r = { red: 0, amber: 1, blue: 2, green: 3 };
+    var r = { red: 0, amber: 1, blue: 2, green: 3, drop: 4 };
     if(r[a.tone] !== r[b.tone]) return r[a.tone] - r[b.tone];
     return (a.dl === null ? 9e9 : a.dl) - (b.dl === null ? 9e9 : b.dl);
   });
@@ -3556,7 +3562,7 @@ function projBoardHtml(pic){
   var folded = vis.filter(function(c){ return _pbFold[c.d.id]; });
   var nOver = all.filter(function(c){ return c.tone === 'red'; }).length;
   var nStale = all.filter(function(c){ return c.tone === 'amber'; }).length;
-  var C = { red: ['#DC2626', '#FEF2F2'], amber: ['#D97706', '#FFFBEB'], blue: ['#1565C0', '#fff'], green: ['#16A34A', '#F0FDF4'] };
+  var C = { red: ['#DC2626', '#FEF2F2'], amber: ['#D97706', '#FFFBEB'], blue: ['#1565C0', '#fff'], green: ['#16A34A', '#F0FDF4'], drop: ['#94A3B8', '#F8FAFC'] };
   var head = '<div class="pb-head" onclick="pbToggleAll()">'
     + '<span class="pb-car">' + (_pbShut ? '▸' : '▾') + '</span>'
     + '<b>' + L3('Projects', '프로젝트', 'Dự án') + '</b>'
@@ -3748,7 +3754,7 @@ function pbTimelineHtml(){
   var t0 = new Date(); t0.setHours(0, 0, 0, 0);
   var dates = [t0.getTime()], undated = 0;
   var L = lanes.map(function(p){
-    var kids = DATA.filter(function(x){ return x.pid === p.id && x.lv === 'TD'; });
+    var kids = DATA.filter(function(x){ return x.pid === p.id && x.lv === 'TD' && x.status !== 'Dropped'; });
     var pts = [];
     kids.forEach(function(x){
       var t = null, approx = false;
@@ -3994,7 +4000,7 @@ function renderMatrix(){
   const Q = {imp_urg:[], imp_noturg:[], notimp_urg:[], notimp_noturg:[], unset:[]};
   myTasks.forEach(d=>{
     // Done 또는 점검 항목은 4사분면에 넣지 않음
-    if(d.status==='Done') return;
+    if(d.status==='Done' || d.status==='Dropped') return;
     if(d.review===true||d.review==='true') return;
     // Reviewer로만 지정된 항목도 4사분면 제외 (점검 섹션으로)
     if(reviewerOnlyIds.has(d.id)) return;
@@ -4109,7 +4115,7 @@ function renderMatrix(){
 
     <!-- 점검 섹션 -->
     ${(()=>{
-      const reviewItems = myTasks.filter(d=>d.status!=='Done' && ((d.review===true||d.review==='true') || reviewerOnlyIds.has(d.id)));
+      const reviewItems = myTasks.filter(d=>d.status!=='Done' && d.status!=='Dropped' && ((d.review===true||d.review==='true') || reviewerOnlyIds.has(d.id)));
       if(!reviewItems.length) return `<div style="margin-top:16px;background:#fff;border:1px dashed #C4B5FD;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px">
         <span style="font-size:16px">👁</span>
         <span style="font-size:12px;color:var(--text2)">${t('reviewEmpty')}</span>
@@ -4238,10 +4244,11 @@ function parentOptions(lv, currentPid, team){
     return DATA.some(x=>x.pid===d.id && bfHasTeam(x.team, team));
   };
   let cands = (team && teamed) ? all.filter(d=>linked(d) || d.id===currentPid) : all.slice();
-  cands.sort((a,b)=>(a.status==='Done')-(b.status==='Done'));
+  const _rk = x=>x.status==='Dropped'?2:x.status==='Done'?1:0;
+  cands.sort((a,b)=>_rk(a)-_rk(b));
   const opt = d=>{
     const sel = d.id===currentPid ? ' selected':'';
-    const label = (d.kr?d.kr+' ':'')+TL(d.label).replace(/<[^>]+>/g,'').slice(0,60) + (d.status==='Done' ? ' ✓' : '');
+    const label = (d.kr?d.kr+' ':'')+TL(d.label).replace(/<[^>]+>/g,'').slice(0,60) + (d.status==='Done' ? ' ✓' : d.status==='Dropped' ? ' ⊘' : '');
     return `<option value="${d.id}"${sel}>${bfEsc(label)}</option>`;
   };
   let opts;
@@ -4300,7 +4307,7 @@ function openEdit(id){
   document.getElementById('btnCancel').textContent=t('btnCancel');
   const fbH=(d.feedbacks||[]).map(f=>`<div class="fb-item"><div class="fb-meta"><span class="fb-by">${f.by}</span><span>${f.date}</span></div><div class="fb-text">${String(TL(f.text)||'').replace(/</g,'&lt;')}</div></div>`).join('')||`<div style="font-size:12px;color:var(--text3);padding:8px 0">${t('fldFbNone')}</div>`;
   const lvO=['O','KR','TO','TK','IN','TD'].map(v=>`<option${d.lv===v?' selected':''}>${v}</option>`).join('');
-  const stO=['In Progress','Done','Not Started'].map(v=>`<option${d.status===v?' selected':''}>${v}</option>`).join('');
+  const stO=['In Progress','Done','Not Started','Dropped'].map(v=>`<option value="${v}"${d.status===v?' selected':''}>${v==='Dropped'?t('stDropped')+' (Dropped)':v}</option>`).join('');
   const parentSel = parentOptions(d.lv, d.pid);
   document.getElementById('panelBody').innerHTML=`
     <div class="p-sec"><div class="p-sec-title">${t('panelBasic')}</div>
@@ -4442,7 +4449,7 @@ function openNew(){
         </select></div>` : ''}
       <div class="field-group" style="margin-top:10px"><div class="field-lbl">${t('fldStatus')}</div>
         <select class="field-sel" id="f-status">
-          <option>Not Started</option><option>In Progress</option><option>Done</option>
+          <option>Not Started</option><option>In Progress</option><option>Done</option><option value="Dropped">Dropped</option>
         </select>
       </div>
     </div>`;
@@ -5091,7 +5098,7 @@ const I18N = {
     thPeriod:'Period', thTarget:'Target', thActual:'Actual', thAttain:'Attainment',
     thImp:'Priority', thUrg:'Urgency', thRev:'Watching', thStatus:'Status',
     saveInd:'Saved',
-    stDone:'Done', stInProgress:'In Progress', stNotStarted:'Not Started',
+    stDone:'Done', stInProgress:'In Progress', stNotStarted:'Not Started', stDropped:'Dropped',
     clickTo:'Click: change to ', changeToSuffix:'',
     imp:'Important', lessImp:'Less Imp.', urg:'Urgent', lessUrg:'Less Urg.', setLabel:'Set',
     reviewLabel:'Watching', reviewTitle:'Keep an eye on this until it is done',
@@ -5291,7 +5298,7 @@ const I18N = {
     thPeriod:'기간', thTarget:'목표', thActual:'실적', thAttain:'달성률',
     thImp:'중요도', thUrg:'긴급도', thRev:'지켜봄', thStatus:'상태',
     saveInd:'저장됨',
-    stDone:'완료', stInProgress:'진행 중', stNotStarted:'미착수',
+    stDone:'완료', stInProgress:'진행 중', stNotStarted:'미착수', stDropped:'중단',
     clickTo:'클릭: 바꾸기 → ', changeToSuffix:'',
     imp:'중요', lessImp:'덜 중요', urg:'긴급', lessUrg:'덜 긴급', setLabel:'설정',
     reviewLabel:'지켜보기', reviewTitle:'끝날 때까지 계속 볼 일로 둔다',
@@ -5491,7 +5498,7 @@ const I18N = {
     thPeriod:'Thời gian', thTarget:'Chỉ tiêu', thActual:'Thực tế', thAttain:'Tỷ lệ đạt',
     thImp:'Ưu tiên', thUrg:'Khẩn', thRev:'Theo dõi', thStatus:'Trạng thái',
     saveInd:'Đã lưu',
-    stDone:'Hoàn thành', stInProgress:'Đang làm', stNotStarted:'Chưa bắt đầu',
+    stDone:'Hoàn thành', stInProgress:'Đang làm', stNotStarted:'Chưa bắt đầu', stDropped:'Dừng',
     clickTo:'Nhấn: đổi thành ', changeToSuffix:'',
     imp:'Quan trọng', lessImp:'Ít quan trọng', urg:'Khẩn cấp', lessUrg:'Ít khẩn cấp', setLabel:'Đặt',
     reviewLabel:'Đang theo dõi', reviewTitle:'Theo dõi cho đến khi xong',
