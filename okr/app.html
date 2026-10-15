@@ -586,6 +586,12 @@ tr.dragging{opacity:.35}
 .ag-row.done .ag-t{color:var(--text3);text-decoration:line-through}.ag-row.od .ag-t{color:#B91C1C}
 .ag-w{flex:0 0 120px;font-size:10.5px;color:var(--text3);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-curlab{position:absolute;margin-left:10px;margin-top:-3px;font-size:10.5px;font-weight:600;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:5px;padding:0 5px;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis;z-index:3;pointer-events:none}
+.tsel{width:14px;height:14px;margin:0 4px 0 0;cursor:pointer;flex-shrink:0;vertical-align:middle}
+.tr1.sel{background:#EFF6FF}
+.td-bulk{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;padding:8px 10px;border:1px solid #93C5FD;background:#EFF6FF;border-radius:8px;font-size:12.5px;position:sticky;top:0;z-index:5}
+.td-bulk button{border:1px solid #93C5FD;background:#fff;color:#1D4ED8;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer}
+.td-bulk button:hover{background:#DBEAFE}.td-bulk button.clr{color:var(--text2);border-color:var(--border)}
+.td-bd{display:inline-flex;gap:4px;align-items:center}.td-bd input{border:1px solid var(--border);border-radius:6px;padding:2px 6px;font-size:12px}
 /* ── My Tasks 카드의 완료 동그라미 · 사분면 번호 ── */
 .mt-ck{width:17px;height:17px;border:1.6px solid var(--border);border-radius:5px;cursor:pointer;
   flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;
@@ -635,7 +641,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-3";</script>
 </head>
 <body>
 
@@ -3137,6 +3143,40 @@ var _tgShut = {};
 function tgShut(k){
   return (_tgShut[k] === undefined) ? (k === 'over' || k === 'none') : _tgShut[k];
 }
+/* ══ 할 일 여러 건 한꺼번에 (10/15 실장님) ══
+   첫 화면 「오늘 할 일」에서 못 한 것들을 골라 한 번에 — 완료 · 오늘로 당기기 · 날짜 바꾸기 */
+var _tdSel = {};
+function tdPick(id, on){ if(on) _tdSel[id] = 1; else delete _tdSel[id]; renderMatrix(); }
+function tdPickMany(ids, on){ ids.forEach(function(id){ if(on) _tdSel[id] = 1; else delete _tdSel[id]; }); renderMatrix(); }
+function tdBulkBar(){
+  var ids = Object.keys(_tdSel).map(Number).filter(function(id){ return DATA.some(function(x){ return x.id === id && x.status !== 'Done'; }); });
+  if(!ids.length) return '';
+  return '<div class="td-bulk"><b>' + L3('Selected ', '선택 ', 'Đã chọn ') + ids.length + L3('', '건', '') + '</b>'
+    + '<button onclick="tdBulk(\'done\')">✓ ' + L3('Done', '완료', 'Xong') + '</button>'
+    + '<button onclick="tdBulk(\'today\')">' + L3('Move to today', '오늘로', 'Dời về hôm nay') + '</button>'
+    + '<span class="td-bd"><input type="date" id="tdBulkDate" value="' + todayISO() + '">'
+    + '<button onclick="tdBulk(\'date\')">' + L3('Change due date', '날짜 바꾸기', 'Đổi hạn') + '</button></span>'
+    + '<button class="clr" onclick="_tdSel={};renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></div>';
+}
+async function tdBulk(kind){
+  var ids = Object.keys(_tdSel).map(Number);
+  var list = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(function(d){ return d && d.status !== 'Done'; });
+  if(!list.length) return;
+  var due = kind === 'date' ? ((document.getElementById('tdBulkDate') || {}).value || '') : '';
+  if(kind === 'date' && !due){ toast(L3('Pick a date first.', '날짜를 먼저 고르세요.', 'Hãy chọn ngày trước.'), 'error'); return; }
+  var ok = 0, fail = 0;
+  for(var i = 0; i < list.length; i++){
+    var d = list[i], snap = snapItem(d);
+    if(kind === 'done') d.status = 'Done';
+    else if(kind === 'today') d.period = todayPeriod();
+    else d.period = todoPeriodFor(due);
+    var r = await nasUpdateItem(d);
+    if(r){ ok++; delete _tdSel[d.id]; } else { restoreItem(d, snap); fail++; }
+  }
+  saveData(); renderTable(); renderMatrix();
+  var what = kind === 'done' ? L3('done', '완료', 'xong') : kind === 'today' ? L3('moved to today', '오늘로 옮김', 'dời về hôm nay') : L3('due date changed', '날짜 바꿈', 'đã đổi hạn');
+  toast(ok + L3(' item(s) ', '건 ', ' mục ') + what + (fail ? ' · ' + L3('failed ', '실패 ', 'lỗi ') + fail : ''), fail ? 'error' : 'success');
+}
 function todayToggle(k){ _tgShut[k] = !tgShut(k); renderMatrix(); }
 
 function todayHtml(pic){
@@ -3175,7 +3215,7 @@ function todayHtml(pic){
     ['over','기한 지남','over'], ['today','오늘','today'],
     ['week','이번 주',''], ['none','기한 없음·나중','']
   ];
-  var h = '<div id="todayGroups">';
+  var h = '<div id="todayGroups">' + tdBulkBar();
   defs.forEach(function(x){
     var k = x[0], list = G[k];
     if(!list.length) return;
@@ -3186,14 +3226,18 @@ function todayHtml(pic){
       return (ea?ea.getTime():9e15) - (eb?eb.getTime():9e15);
     });
     var pend = list.filter(atPending).length;
+    var allOn = list.length && list.every(function(d){ return _tdSel[d.id]; });
     h += '<div class="tg ' + x[2] + (shut ? ' shut' : '') + '">'
-      +  '<h4 onclick="todayToggle(\'' + k + '\')">' + x[1]
+      +  '<h4 onclick="todayToggle(\'' + k + '\')">'
+      +  '<input type="checkbox" class="tsel" title="' + bfEsc(L3('Select all in this group', '이 묶음 전체 고르기', 'Chọn tất cả nhóm này')) + '"' + (allOn ? ' checked' : '')
+      +  ' onclick="event.stopPropagation()" onchange="tdPickMany([' + list.map(function(d){ return d.id; }).join(',') + '],this.checked)">' + x[1]
       +  ' <span class="n">' + list.length + '</span>'
       +  (pend ? '<span class="n" style="color:#B7791F">· 안 붙임 ' + pend + '</span>' : '')
       +  '<span class="ar">' + (shut ? '▶' : '▼') + '</span></h4>'
       +  '<div class="tgb">';
     list.forEach(function(d){
-      h += '<div class="tr1" data-id="' + d.id + '">'
+      h += '<div class="tr1' + (_tdSel[d.id] ? ' sel' : '') + '" data-id="' + d.id + '">'
+        +  '<input type="checkbox" class="tsel" title="' + bfEsc(L3('Select', '고르기', 'Chọn')) + '"' + (_tdSel[d.id] ? ' checked' : '') + ' onchange="tdPick(' + d.id + ',this.checked)">'
         +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="완료">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  atSelHtml(d)
@@ -5916,6 +5960,9 @@ async function connectNas(){
     if(statusEl){ statusEl.textContent='\ud83d\udfe2 NAS'; statusEl.title='NAS connected \u2014 '+NAS_API; }
     toast(t('toastNasOk'),'success');
     window._nasHash=JSON.stringify(DATA);
+    // 로그인하면 My Tasks 부터 연다 (10/15 실장님) — 처음 한 번만
+    if(!window._landedMT){ window._landedMT = true;
+      try{ var _mt = [].slice.call(document.querySelectorAll('.nav-item')).filter(function(e){ return /'matrix'/.test(e.getAttribute('onclick') || ''); })[0]; if(_mt) setTab('matrix', _mt); }catch(e){} }
     if(!window._nasPoll){
       window._nasPoll=setInterval(async function(){
         const latest=await nasRead();
