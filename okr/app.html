@@ -483,6 +483,7 @@ tr.dragging{opacity:.35}
 .pb-fold{position:absolute;top:6px;right:6px;border:1px solid var(--border);background:#fff;border-radius:5px;font-size:10px;line-height:1;padding:3px 6px;color:var(--text3);cursor:pointer;opacity:0;transition:opacity .15s}
 .pb-card:hover .pb-fold{opacity:1}
 .pb-fold.pb-done{right:62px;color:#94A3B8}.pb-fold.pb-done:hover{color:#15803D;border-color:#86EFAC}
+.mt-fold-ic{width:12px;font-size:11px;color:var(--text3)}.mt-fhd:hover .mt-fold-ic{color:var(--text)}
 .pb-donesel{color:#15803D;border-color:#86EFAC}
 .pb-fold.pb-drop{right:34px;color:#94A3B8}.pb-fold.pb-drop:hover{color:#B91C1C;border-color:#FCA5A5}
 .pb-dropsel{color:#B91C1C;border-color:#FCA5A5}
@@ -649,7 +650,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.15-12";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-1";</script>
 </head>
 <body>
 
@@ -4241,14 +4242,15 @@ function renderMatrix(){
         </div>`;
       }).join('');
       return `<div style="margin-top:16px;background:#FAF8FF;border:1.5px solid #C4B5FD;border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div class="mt-fhd" onclick="mtFold('rev')" title="${bfEsc(L3('Fold / unfold','접기 / 펴기','Thu gọn / mở'))}" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;${mtFolded('rev')?'':'margin-bottom:10px'}">
           <div style="display:flex;align-items:center;gap:8px">
-            <input type="checkbox" class="tsel" title="${bfEsc(L3('Select all','전체 고르기','Chọn tất cả'))}"${reviewItems.every(d=>_tdSel[d.id])?' checked':''} onchange="tdPickMany([${reviewItems.map(d=>d.id).join(',')}],this.checked)">
+            <span class="mt-fold-ic">${mtFolded('rev')?'▸':'▾'}</span>
+            <input type="checkbox" class="tsel" onclick="event.stopPropagation()" title="${bfEsc(L3('Select all','전체 고르기','Chọn tất cả'))}"${reviewItems.every(d=>_tdSel[d.id])?' checked':''} onchange="tdPickMany([${reviewItems.map(d=>d.id).join(',')}],this.checked)">
             <span style="font-size:13px;font-weight:700;color:#6D28D9">👁 ${t('reviewLabel')}</span>
           </div>
           <span style="background:#6D28D9;color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px">${reviewItems.length}</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:6px">${cards}</div>
+        ${mtFolded('rev')?'':`<div style="display:flex;flex-direction:column;gap:6px">${cards}</div>`}
       </div>`;
     })()}
 
@@ -4272,16 +4274,21 @@ function renderMatrix(){
         </div>`;
       }).join('');
       return `<div style="margin-top:16px;background:#F0FDF4;border:1.5px solid #86EFAC;border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <div>
+        <div class="mt-fhd" onclick="mtFold('done')" title="${bfEsc(L3('Fold / unfold','접기 / 펴기','Thu gọn / mở'))}" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;${mtFolded('done')?'':'margin-bottom:10px'}">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="mt-fold-ic">${mtFolded('done')?'▸':'▾'}</span>
             <span style="font-size:13px;font-weight:700;color:#16A34A">✅ ${t('stDone')}</span>
           </div>
           <span style="background:#16A34A;color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px">${doneItems.length}</span>
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px">${cards}</div>
+        ${mtFolded('done')?'':`<div style="display:flex;flex-direction:column;gap:5px">${cards}</div>`}
       </div>`;
     })()}`;
 }
+/* My Tasks 묶음 접기 — 지켜보기·완료. 완료는 처음엔 접어 둔다 (10/16 실장님) */
+var _mtFold = (function(){ try{ return JSON.parse(localStorage.getItem('okr_mt_fold') || '{}') || {}; }catch(e){ return {}; } })();
+function mtFolded(k){ return _mtFold[k] === undefined ? (k === 'done') : !!_mtFold[k]; }
+function mtFold(k){ _mtFold[k] = !mtFolded(k); try{ localStorage.setItem('okr_mt_fold', JSON.stringify(_mtFold)); }catch(e){} renderMatrix(); }
 function setTab(tab,el){
   document.querySelectorAll('.nav-item').forEach(t=>t.classList.remove('active')); el.classList.add('active');
   document.getElementById('listView').style.display   = tab==='list'   ? 'block':'none';
