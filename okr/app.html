@@ -650,7 +650,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-2";</script>
 </head>
 <body>
 
@@ -3541,13 +3541,20 @@ function pbPath(d, skipKR){
   return out.filter(function(x){ return (x.lv === 'KR' && !skipKR) || x.lv === 'TK' || x.lv === 'IN'; })
             .map(function(x){ return TL(x.label).replace(/<[^>]+>/g, '').slice(0, 34); }).join(' › ');
 }
+/* 프로젝트 보드에 올릴지 — 이니셔티브·팀KR 편집 창의 체크 (10/16 실장님: 프로젝트성만 골라 올린다) */
+function pbOn(d){ return d && (d.pb === true || d.pb === 'true'); }
+function pbFlagHtml(d){
+  return '<div class="field-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--text)">'
+    + '<input type="checkbox" id="f-pb"' + (pbOn(d) ? ' checked' : '') + ' style="width:15px;height:15px">'
+    + bfEsc(L3('Show on the project board (My Tasks)', '프로젝트 보드에 올리기 (My Tasks 맨 위)', 'Đưa lên bảng dự án (My Tasks)')) + '</label></div>';
+}
 function pbCards(pic){
   var ids = {};
   DATA.forEach(function(d){
-    if((d.lv === 'IN' || d.lv === 'TK') && pbHas(d.pic, pic)) ids[d.id] = 1;
+    if((d.lv === 'IN' || d.lv === 'TK') && pbOn(d) && pbHas(d.pic, pic)) ids[d.id] = 1;
     if(d.lv === 'TD' && d.status !== 'Done' && d.status !== 'Dropped' && pbHas(d.pic, pic)){
       var p = DATA.find(function(x){ return x.id === d.pid; });
-      if(p && (p.lv === 'IN' || p.lv === 'TK')) ids[p.id] = 1;
+      if(p && (p.lv === 'IN' || p.lv === 'TK') && pbOn(p)) ids[p.id] = 1;
     }
   });
   // 내가 담당인 팀KR 은 그 밑에 내 이니셔티브가 있으면 카드로 따로 세우지 않는다(겹침)
@@ -4449,6 +4456,7 @@ function openEdit(id){
           <option value="low"${d.conf==='low'?' selected':''}>${t('conf_low')}</option>
         </select></div>` : ''}
       <div class="field-group"><div class="field-lbl">${t('fldStatus')}</div><select class="field-sel" id="f-status">${stO}</select></div>
+      ${(d.lv==='IN'||d.lv==='TK') ? pbFlagHtml(d) : ''}
       ${(d.lv==='TD')?`<div class="field-row">
         <div class="field-group"><div class="field-lbl">${t('fldImp')}</div><select class="field-sel" id="f-imp">
           <option value="">${t('fldUnset')}</option>
@@ -4523,6 +4531,7 @@ function openNew(){
         <div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div>
       </div>
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml({period:''})}</div>
+      <div id="new-pb-row" style="display:none">${pbFlagHtml({})}</div>
       <div class="field-group" id="new-reviewer-row" style="display:none"><div class="field-lbl">${t('fldReviewer')}</div><input class="field-input" id="f-reviewer" value="" placeholder="${t('fldReviewerPhNew')}"></div>
     </div>
     <div class="p-sec"><div class="p-sec-title">${t('panelGoalNew')}</div>
@@ -4632,6 +4641,8 @@ function selectNewLv(lv){
   // Update reviewer field visibility
   const revRow = document.getElementById('new-reviewer-row');
   if(revRow) revRow.style.display = (lv==='TD'||lv==='IN') ? 'block' : 'none';
+  const pbRow = document.getElementById('new-pb-row');
+  if(pbRow) pbRow.style.display = (lv==='IN'||lv==='TK') ? 'block' : 'none';
 }
 
 function _buildTargetSec(lv){
@@ -4743,6 +4754,8 @@ async function saveEdit(){
   const tgtEl=document.getElementById('f-target'); if(tgtEl) d.target=parseNumVal(tgtEl.value);
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
   const stEl=document.getElementById('f-status');  if(stEl)  d.status=stEl.value;
+  const pbEl=document.getElementById('f-pb');
+  if(pbEl && (d.lv==='IN'||d.lv==='TK')){ if(pbEl.checked) d.pb=true; else delete d.pb; }
 
   const dirEl=document.getElementById('f-dir');   if(dirEl)  d.dir=dirEl.value;
   const baseEl=document.getElementById('f-base'); if(baseEl) d.base=parseNumVal(baseEl.value.trim());
