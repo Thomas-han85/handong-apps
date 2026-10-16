@@ -484,6 +484,8 @@ tr.dragging{opacity:.35}
 .pb-card:hover .pb-fold{opacity:1}
 .pb-fold.pb-done{right:62px;color:#94A3B8}.pb-fold.pb-done:hover{color:#15803D;border-color:#86EFAC}
 .mt-fold-ic{width:12px;font-size:11px;color:var(--text3)}.mt-fhd:hover .mt-fold-ic{color:var(--text)}
+.pb-lv.pb-rev{background:#EDE9FE;color:#6D28D9}
+.pb-newbtn{color:#1565C0;border-color:#93C5FD;font-weight:700}
 .pb-donesel{color:#15803D;border-color:#86EFAC}
 .pb-fold.pb-drop{right:34px;color:#94A3B8}.pb-fold.pb-drop:hover{color:#B91C1C;border-color:#FCA5A5}
 .pb-dropsel{color:#B91C1C;border-color:#FCA5A5}
@@ -650,7 +652,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-3";</script>
 </head>
 <body>
 
@@ -3548,10 +3550,20 @@ function pbFlagHtml(d){
     + '<input type="checkbox" id="f-pb"' + (pbOn(d) ? ' checked' : '') + ' style="width:15px;height:15px">'
     + bfEsc(L3('Show on the project board (My Tasks)', '프로젝트 보드에 올리기 (My Tasks 맨 위)', 'Đưa lên bảng dự án (My Tasks)')) + '</label></div>';
 }
+/* 보드에서 새 프로젝트 — 새로 만들기 창을 Initiative · 담당자=나 · 보드에 올리기 체크로 연다 */
+function pbNewProject(){
+  openNew();
+  try{ selectNewLv('IN'); }catch(e){}
+  setTimeout(function(){
+    var p = document.getElementById('f-pic'); if(p && !p.value) p.value = myPicName();
+    var c = document.getElementById('f-pb'); if(c) c.checked = true;
+    var l = document.getElementById('f-label'); if(l) l.focus();
+  }, 0);
+}
 function pbCards(pic){
   var ids = {};
   DATA.forEach(function(d){
-    if((d.lv === 'IN' || d.lv === 'TK') && pbOn(d) && pbHas(d.pic, pic)) ids[d.id] = 1;
+    if((d.lv === 'IN' || d.lv === 'TK') && pbOn(d) && (pbHas(d.pic, pic) || pbHas(d.reviewer, pic))) ids[d.id] = 1;
     if(d.lv === 'TD' && d.status !== 'Done' && d.status !== 'Dropped' && pbHas(d.pic, pic)){
       var p = DATA.find(function(x){ return x.id === d.pid; });
       if(p && (p.lv === 'IN' || p.lv === 'TK') && pbOn(p)) ids[p.id] = 1;
@@ -3612,6 +3624,7 @@ function projBoardHtml(pic){
     + '<span class="pb-n">' + cards.length + '</span>'
     + (nOver ? '<span class="pb-chip red">' + L3('Overdue ', '기한 지남 ', 'Quá hạn ') + nOver + '</span>' : '')
     + (nStale ? '<span class="pb-chip amber">' + L3('Idle 2wk+ ', '2주+ 멈춤 ', 'Dừng 2 tuần+ ') + nStale + '</span>' : '')
+    + '<button class="pb-tlclr pb-newbtn" onclick="event.stopPropagation();pbNewProject()">+ ' + L3('Project', '프로젝트', 'Dự án') + '</button>'
     + pbSelBar()
     + '<span class="pb-sp"></span>'
     + '<label class="pb-opt" onclick="event.stopPropagation()"><input type="checkbox" ' + (_pbShowDone ? 'checked' : '') + ' onchange="_pbShowDone=this.checked;renderMatrix()"> '
@@ -3670,7 +3683,9 @@ function projBoardHtml(pic){
       + '<label class="pb-pick" title="' + bfEsc(L3('Select for timeline', '타임라인에 넣기', 'Chọn để xem dòng thời gian')) + '" onclick="event.stopPropagation()">'
       + '<input type="checkbox"' + (_pbSel[d.id] ? ' checked' : '') + ' onchange="pbPick(' + d.id + ',this.checked)"></label>'
       + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
-      + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span><span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
+      + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span>'
+      + (!pbHas(d.pic, myPicName()) && pbHas(d.reviewer, myPicName()) ? '<span class="pb-lv pb-rev">' + L3('Review', '검토', 'Xem xét') + '</span>' : '')
+      + '<span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
       + curH + (open ? '' : nx) + list + '</div>';
