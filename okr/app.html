@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-7";</script>
 </head>
 <body>
 
@@ -2316,6 +2316,7 @@ var PIC_ALIAS = {
   'Thomas':       ['Thomas', 'Tom'],
   'nguyenthiep':  ['Mr. Thiep', 'Mr.Thiep', 'Thiep'],
   'Thien.tr':     ['Mr. Thien', 'Mr.Thien', 'Thien', 'Thientran'],
+  'longhk':       ['Long', 'Mr.Long'],
   'quangdnt':     ['Quang', 'Mr.Quang', 'Mr. Quang']
 };
 /* 계정 아이디로 그 사람의 별명 목록을 준다(자기 아이디 포함) */
@@ -3230,6 +3231,7 @@ function tdBulkBar(){
   return '<div class="td-bulk"><b>' + L3('Selected ', '선택 ', 'Đã chọn ') + ids.length + L3('', '건', '') + '</b>'
     + '<button onclick="tdBulk(\'done\')">✓ ' + L3('Done', '완료', 'Xong') + '</button>'
     + '<button onclick="tdBulk(\'today\')">' + L3('Move to today', '오늘로', 'Dời về hôm nay') + '</button>'
+    + '<span class="td-bq">' + L3('Quadrant ', '분면 ', 'Ô ') + [1,2,3,4].map(function(n){ return '<button onclick="tdBulk(\'q' + n + '\')" title="' + bfEsc(t('q' + n + 'Title')) + '" style="min-width:26px;color:#fff;background:' + QUAD_COLOR[n] + ';border-color:' + QUAD_COLOR[n] + '">' + n + '</button>'; }).join('') + '</span>'
     + '<button onclick="tdBulk(\'drop\')" title="' + bfEsc(L3('Decided not to do — removed from lists and alerts', '안 하기로 한 일 — 목록·알림에서 빠집니다', 'Quyết định không làm — bỏ khỏi danh sách và nhắc hạn')) + '">⊘ ' + L3('Drop', '중단', 'Dừng') + '</button>'
     + '<span class="td-bd"><input type="date" id="tdBulkDate" value="' + todayISO() + '">'
     + '<button onclick="tdBulk(\'date\')">' + L3('Change due date', '날짜 바꾸기', 'Đổi hạn') + '</button></span>'
@@ -3247,12 +3249,15 @@ async function tdBulk(kind){
     if(kind === 'done') d.status = 'Done';
     else if(kind === 'drop') d.status = 'Dropped';
     else if(kind === 'today') d.period = todayPeriod();
+    else if(/^q[1-4]$/.test(kind)){ var qn = +kind.slice(1);          // 여러 개를 한 번에 1~4 (10/27)
+      d.importance = (qn === 1 || qn === 2) ? 'Important' : '덜중요';
+      d.urgency    = (qn === 1 || qn === 3) ? 'Urgent'    : '덜긴급'; }
     else d.period = todoPeriodFor(due);
     var r = await nasUpdateItem(d);
     if(r){ ok++; delete _tdSel[d.id]; } else { restoreItem(d, snap); fail++; }
   }
   saveData(); renderTable(); renderMatrix();
-  var what = kind === 'done' ? L3('done', '완료', 'xong') : kind === 'drop' ? L3('dropped', '중단', 'đã dừng') : kind === 'today' ? L3('moved to today', '오늘로 옮김', 'dời về hôm nay') : L3('due date changed', '날짜 바꿈', 'đã đổi hạn');
+  var what = /^q[1-4]$/.test(kind) ? L3('moved to ', '→ ', '→ ') + quadName(+kind.slice(1)) : kind === 'done' ? L3('done', '완료', 'xong') : kind === 'drop' ? L3('dropped', '중단', 'đã dừng') : kind === 'today' ? L3('moved to today', '오늘로 옮김', 'dời về hôm nay') : L3('due date changed', '날짜 바꿈', 'đã đổi hạn');
   toast(ok + L3(' item(s) ', '건 ', ' mục ') + what + (fail ? ' · ' + L3('failed ', '실패 ', 'lỗi ') + fail : ''), fail ? 'error' : 'success');
 }
 function todayToggle(k){ _tgShut[k] = !tgShut(k); renderMatrix(); }
@@ -3329,7 +3334,7 @@ function todayHtml(pic){
         +  '<div class="ck" onclick="todayDone(' + d.id + ')" title="' + L3('Done', '완료', 'Xong') + '">✓</div>'
         +  '<div class="lb" onclick="openEdit(' + d.id + ')" style="cursor:pointer">' + bfEsc(TL(d.label)) + '</div>'
         +  atSelHtml(d)
-        +  ((k === 'over' || k === 'today') ? quadBtns(d) + watchBtn(d) : '')
+        +  ((k !== 'rev') ? quadBtns(d) + watchBtn(d) : '')
         +  (k === 'over' ? '<div class="pull" onclick="todayPull(' + d.id + ')" title="'
              + bfEsc(t('todayPullTip')) + '">' + t('todayPull') + '</div>' : '')
         +  '<div class="tm">' + mtTeamHtml(d) + '</div>'
@@ -3597,7 +3602,8 @@ function pbCards(pic){
   var ids = {};
   DATA.forEach(function(d){
     if((d.lv === 'IN' || d.lv === 'TK') && pbOn(d) && (pbHas(d.pic, pic) || pbHas(d.reviewer, pic))) ids[d.id] = 1;
-    if(d.lv === 'TD' && d.status !== 'Done' && d.status !== 'Dropped' && pbHas(d.pic, pic)){
+    // 내가 담당·검토자인 할 일이 든 과제 — 끝난 할 일도 친다(같은 프로젝트 사람끼리 같은 카드를 본다, 10/27)
+    if(d.lv === 'TD' && d.status !== 'Dropped' && (pbHas(d.pic, pic) || pbHas(d.reviewer, pic))){
       var p = DATA.find(function(x){ return x.id === d.pid; });
       if(p && (p.lv === 'IN' || p.lv === 'TK') && pbOn(p)) ids[p.id] = 1;
     }
@@ -4086,8 +4092,8 @@ async function pbAdd(pid){
 function renderMatrix(){
   // Assignee 목록 갱신
   const pics = [...new Set(
-    DATA.filter(d=>d.lv==='TD'&&d.pic)
-      .flatMap(d=>d.pic.split(/[,+&\/]/).map(p=>p.trim()).filter(Boolean))
+    DATA.filter(d=>d.lv==='TD'&&(d.pic||d.reviewer))
+      .flatMap(d=>((d.pic||'')+'/'+(d.reviewer||'')).split(/[,+&\/]/).map(p=>p.trim()).filter(Boolean))   // 검토자만 맡은 사람도 (10/27)
   )].sort();
   // 새로 가입해 아직 할 일이 없는 사람도 목록에 자기 이름을 넣는다 — 없으면 보드·「+ 프로젝트」가 안 떠서 시작을 못 한다 (10/27)
   if(AUTH.user){
