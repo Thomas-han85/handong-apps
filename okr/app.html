@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-11";</script>
 </head>
 <body>
 
@@ -4269,29 +4269,18 @@ function renderMatrix(){
         : `<button onclick="event.stopPropagation();mtMove(${d.id},'unreview')" style="font-size:9px;padding:2px 6px;border-radius:5px;border:1px solid #C4B5FD;background:#EDE9FE;color:#6D28D9;cursor:pointer;white-space:nowrap">${t('btnUnreview')}</button>`;
       const btnDone = `<button onclick="event.stopPropagation();mtMove(${d.id},'done')" style="font-size:9px;padding:2px 6px;border-radius:5px;border:1px solid #BBF7D0;background:#DCFCE7;color:#15803D;cursor:pointer;white-space:nowrap">${t('btnDone')}</button>`;
 
-      return `<div style="background:${cardBg};border:1px solid ${cardBd};border-radius:8px;padding:9px 11px;transition:box-shadow .15s;margin-bottom:6px;position:relative"
+      /* 한 줄 (10/27) — 체크 · 제목 · 팀·기간 · 1234 · 상태. 지켜보기·완료는 마우스를 올리면 */
+      const _end = String(d.period||'').split('~').pop() || '—';
+      return `<div title="${bfEsc(TL(d.label).replace(/<[^>]+>/g,'') + ' · ' + (d.period||''))}" style="background:${cardBg};border:1px solid ${cardBd};border-radius:7px;padding:4px 8px;transition:box-shadow .15s;margin-bottom:4px;display:flex;align-items:center;gap:7px;min-width:0"
         onmouseover="this.querySelector('.mt-actions').style.display='flex';this.style.boxShadow='0 2px 8px rgba(0,0,0,.1)'"
         onmouseout="this.querySelector('.mt-actions').style.display='none';this.style.boxShadow='none'">
-        <div style="display:flex;gap:8px;align-items:flex-start">
         ${mtCk(d)}
-        <div onclick="openEdit(${d.id})" style="cursor:pointer;flex:1;min-width:0">
-          <div style="font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};line-height:1.4;margin-bottom:6px">${TL(d.label)}${dueTag}</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-            <span style="font-size:10px;color:var(--text2)">${mtTeamHtml(d)} · ${d.period||'—'}</span>
-            <div style="display:flex;align-items:center;gap:5px">
-              ${pct!==null?`<span style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:${ac(pct)}">${pct}%</span>`:''}
-              <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500">${stLabel}</span>
-            </div>
-          </div>
-        </div>
-        </div>
-        <!-- 사분면 옮기기 · 같은 번호를 다시 누르면 「오늘」 목록으로 돌아간다 -->
-        <div style="display:flex;align-items:center;gap:6px;margin-top:7px;padding-top:7px;border-top:1px solid var(--border-light)">
-          ${quadBtns(d)}
-          <div class="mt-actions" style="display:none;gap:4px;flex-wrap:wrap">
-            ${btnReview}${btnDone}
-          </div>
-        </div>
+        <div onclick="openEdit(${d.id})" style="cursor:pointer;flex:1;min-width:0;font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${TL(d.label)}${dueTag}</div>
+        <span style="font-size:10px;color:var(--text2);white-space:nowrap;flex-shrink:0">${mtTeamHtml(d)} · ${bfEsc(_end)}</span>
+        <div class="mt-actions" style="display:none;gap:4px;flex-shrink:0">${btnReview}${btnDone}</div>
+        <span style="flex-shrink:0">${quadBtns(d)}</span>
+        ${pct!==null?`<span style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:${ac(pct)};flex-shrink:0">${pct}%</span>`:''}
+        <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500;white-space:nowrap;flex-shrink:0">${stLabel}</span>
       </div>`;
     }).join('');
     return `<div style="background:${bgColor};border:1.5px solid ${borderColor};border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:200px">
