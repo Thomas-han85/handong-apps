@@ -652,7 +652,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-2";</script>
 </head>
 <body>
 
@@ -664,9 +664,9 @@ tr.dragging{opacity:.35}
   </div>
   <div class="nav-menu">
     <div class="nav-item active" onclick="setTab('list',this)">OKR List</div>
-    <div class="nav-item" onclick="setTab('gantt',this)">OKR Gantt Chart</div>
+    <div class="nav-item" onclick="setTab('gantt',this)" style="display:none" data-hidden="2026-10-27 실장님 지시 — 다시 열 때까지 숨김">OKR Gantt Chart</div>
     <div class="nav-item" onclick="setTab('matrix',this)">My Tasks</div>
-    <div class="nav-item" onclick="setTab('boost',this)" data-i18n="navBoost">Boosting Feedback</div>
+    <div class="nav-item" onclick="setTab('boost',this)" data-i18n="navBoost" style="display:none" data-hidden="2026-10-27 실장님 지시 — 다시 열 때까지 숨김">Boosting Feedback</div>
     <div class="nav-item" onclick="setTab('sched',this)" data-i18n="navSched">Meeting Slots</div>
   </div>
   <div class="nav-right">
