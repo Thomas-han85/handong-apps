@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-8";</script>
 </head>
 <body>
 
@@ -2260,6 +2260,35 @@ function teamOptions(){
   });
   return Object.keys(cnt).sort(function(a, b){ return cnt[b] - cnt[a]; });
 }
+/* 칸 밑 「+ 추가 선택」 — 고를 때마다 「, 」로 이어 붙인다. 지우는 것은 칸에서 직접 (10/27 실장님) */
+function msOpts(kind){
+  var seen = {}, out = [];
+  function add(v){ v = String(v || '').trim(); if(v && !seen[v.toLowerCase()]){ seen[v.toLowerCase()] = 1; out.push(v); } }
+  if(kind === 'team'){
+    TEAMS.forEach(add);
+    teamOptions().forEach(function(t){ String(t).split(',').forEach(add); });
+  }else{
+    if(typeof AUTH !== 'undefined' && AUTH && AUTH.user) add(AUTH.user.username);
+    picOptions().forEach(function(o){ String(o.v).split(/[,+\/]/).forEach(add); });
+    try{ knownAccounts().forEach(add); }catch(e){}
+  }
+  return kind === 'team' ? out : out.sort(function(a, b){ return a.toLowerCase() < b.toLowerCase() ? -1 : 1; });
+}
+function multiSel(id, kind){
+  return '<select class="field-sel" onchange="msAdd(\'' + id + '\',this)" style="margin-top:4px;font-size:11px;padding:4px 6px;color:var(--text2)">'
+    + '<option value="">+ ' + L3('Add another', '추가 선택', 'Thêm người / nhóm') + '</option>'
+    + msOpts(kind).map(function(v){ return '<option value="' + bfEsc(v) + '">' + bfEsc(v) + '</option>'; }).join('')
+    + '</select>';
+}
+function msAdd(id, sel){
+  var v = sel.value; sel.value = ''; if(!v) return;
+  var el = document.getElementById(id); if(!el) return;
+  var parts = String(el.value || '').split(/\s*,\s*/).filter(Boolean);
+  if(!parts.some(function(p){ return p.toLowerCase() === v.toLowerCase(); })) parts.push(v);
+  el.value = parts.join(', ');
+  el.dispatchEvent(new Event('input', {bubbles:true})); el.dispatchEvent(new Event('change', {bubbles:true}));
+}
+
 function picListHtml(){
   return '<datalist id="picList">'
        + picOptions().map(function(o){
@@ -4089,6 +4118,15 @@ async function pbAdd(pid){
   if(ok){ saveData(); _pbOpen[pid] = true; renderTable(); renderMatrix();
     toast(L3('Added — ', '적었습니다 — ', 'Đã thêm — ') + ok, 'success'); }
 }
+/* 1~4 칸에 무엇을 넣나 — 'pic' 내 담당만(기본) / 'rev' 검토자로 걸린 것도 (10/27 Thien.tr) */
+function mtQv(){ try{ return localStorage.getItem('okr_mt_qv') === 'rev' ? 'rev' : 'pic'; }catch(e){ return 'pic'; } }
+function mtQvSet(v){ try{ localStorage.setItem('okr_mt_qv', v); }catch(e){} renderMatrix(); }
+function mtQvHtml(){
+  var v = mtQv(), b = function(k, label){ return '<button onclick="mtQvSet(\'' + k + '\')" style="border:1px solid ' + (v === k ? 'var(--navy)' : 'var(--border)') + ';background:' + (v === k ? 'var(--navy)' : '#fff') + ';color:' + (v === k ? 'var(--gold)' : 'var(--text2)') + ';border-radius:14px;padding:3px 11px;font-size:11px;font-weight:600;cursor:pointer">' + label + '</button>'; };
+  return '<div style="display:flex;gap:6px;align-items:center;margin:0 0 8px;flex-wrap:wrap"><span style="font-size:11px;color:var(--text2)">' + L3('Show in boxes:', '1~4 칸에 보기:', 'Hiển thị trong ô:') + '</span>'
+    + b('pic', L3('Only mine (in charge)', '내 담당만', 'Chỉ việc tôi phụ trách'))
+    + b('rev', L3('Include ones I review', '검토 포함', 'Gồm cả việc tôi xem xét')) + '</div>';
+}
 function renderMatrix(){
   // Assignee 목록 갱신
   const pics = [...new Set(
@@ -4155,7 +4193,7 @@ function renderMatrix(){
     if(d.status==='Done' || d.status==='Dropped') return;
     if(d.review===true||d.review==='true') return;
     // Reviewer로만 지정된 항목도 4사분면 제외 (점검 섹션으로)
-    if(reviewerOnlyIds.has(d.id)) return;
+    if(reviewerOnlyIds.has(d.id) && mtQv() !== 'rev') return;   // 「검토 포함」이면 1~4 칸에도 (10/27)
     // '중요'/'Important' 처럼 두 벌로 갈린 값을 눕혀서 본다.
     // 직접 견주면 '중요' 로 찍은 13건이 중요로 안 쳐져 3·4 사분면으로 떨어진다.
     const iN = flagNorm(d.importance), uN = flagNorm(d.urgency);
@@ -4243,6 +4281,7 @@ function renderMatrix(){
         <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;color:var(--text3)">↑</div>
       </div>
       <div style="flex:1">
+        ${mtQvHtml()}
         <!-- 상단 축 레이블 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;padding:0 2px">
           <div style="text-align:center;font-size:11px;font-weight:600;color:#DC2626">${t('urgAxisHigh')}</div>
@@ -4267,7 +4306,7 @@ function renderMatrix(){
 
     <!-- 점검 섹션 -->
     ${(()=>{
-      const reviewItems = myTasks.filter(d=>d.status!=='Done' && d.status!=='Dropped' && ((d.review===true||d.review==='true') || reviewerOnlyIds.has(d.id)));
+      const reviewItems = myTasks.filter(d=>d.status!=='Done' && d.status!=='Dropped' && ((d.review===true||d.review==='true') || (reviewerOnlyIds.has(d.id) && mtQv() !== 'rev')));
       if(!reviewItems.length) return `<div style="margin-top:16px;background:#fff;border:1px dashed #C4B5FD;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:10px">
         <span style="font-size:16px">👁</span>
         <span style="font-size:12px;color:var(--text2)">${t('reviewEmpty')}</span>
@@ -4474,8 +4513,8 @@ function openEdit(id){
       <div class="field-row"><div class="field-group"><div class="field-lbl">${t('fldLevel')}</div><select class="field-sel" id="f-lv" onchange="onEditLevelChange()">${lvO}</select></div><div class="field-group"><div class="field-lbl">${t('fldKR')} <span style="font-size:10px;color:var(--text3)">${t('fldKRAuto')}</span></div><input class="field-input" id="f-kr" value="${d.kr||''}" style="background:var(--gray-bg);color:var(--text2)" readonly></div></div>
       <div id="edit-parent-wrap">${parentSel}</div>
       <div class="field-group"><div class="field-lbl">${t('fldContent')}</div><input class="field-input" id="f-label" value="${d.label}">${TL(d.label)!==d.label?`<div style="font-size:11px;color:var(--text2);margin-top:4px;padding:5px 8px;background:var(--gray-bg);border-radius:5px">🌐 ${TL(d.label)}</div>`:''}</div>
-      <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value="${d.team||''}" ></div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="${d.pic||''}" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div></div>${picListHtml()}
-      ${(d.lv==='TD'||d.lv==='IN')?`<div class="field-group"><div class="field-lbl">${t('fldReviewer')} <span style="font-size:10px;color:var(--text3)">${t('fldReviewerHint')}</span></div><input class="field-input" id="f-reviewer" value="${d.reviewer||''}" placeholder="${t('fldReviewerPh')}"></div>`:''}
+      <div class="field-row"><div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value="${d.team||''}" >${multiSel('f-team','team')}</div><div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="${d.pic||''}" oninput="picHint()">${multiSel('f-pic','pic')}<div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div></div>${picListHtml()}
+      ${(d.lv==='TD'||d.lv==='IN')?`<div class="field-group"><div class="field-lbl">${t('fldReviewer')} <span style="font-size:10px;color:var(--text3)">${t('fldReviewerHint')}</span></div><input class="field-input" id="f-reviewer" value="${d.reviewer||''}" placeholder="${t('fldReviewerPh')}">${multiSel('f-reviewer','pic')}</div>`:''}
       ${d.lv==='TO' ? `<div class="field-group"><div class="field-lbl">${t('refLbl')}</div>
         <div style="font-size:10.5px;color:var(--text3);margin-bottom:5px;line-height:1.5">${t('refHint')}</div>
         ${refPickerHtml(d)}</div>` : ''}
@@ -4586,12 +4625,12 @@ function openNew(){
       </div>
       <div class="field-group"><div class="field-lbl">${t('fldContent')} <span style="color:var(--red)">*</span></div><input class="field-input" id="f-label" placeholder="${t('fldContentPh')}"></div>
       <div class="field-row">
-        <div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value=""></div>
-        <div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="" oninput="picHint()"><div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div>
+        <div class="field-group"><div class="field-lbl">Team in Charge</div><input class="field-input" id="f-team" list="teamList" value="">${multiSel('f-team','team')}</div>
+        <div class="field-group"><div class="field-lbl">Person in Charge</div><input class="field-input" id="f-pic" list="picList" value="" oninput="picHint()">${multiSel('f-pic','pic')}<div id="f-pic-hint" style="font-size:10.5px;margin-top:3px;min-height:13px"></div></div>
       </div>
       <div class="field-group"><div class="field-lbl">${t('fldPeriod')}</div>${periodPickerHtml({period:''})}</div>
       <div id="new-pb-row" style="display:none">${pbFlagHtml({})}</div>
-      <div class="field-group" id="new-reviewer-row" style="display:none"><div class="field-lbl">${t('fldReviewer')}</div><input class="field-input" id="f-reviewer" value="" placeholder="${t('fldReviewerPhNew')}"></div>
+      <div class="field-group" id="new-reviewer-row" style="display:none"><div class="field-lbl">${t('fldReviewer')}</div><input class="field-input" id="f-reviewer" value="" placeholder="${t('fldReviewerPhNew')}">${multiSel('f-reviewer','pic')}</div>
     </div>
     <div class="p-sec"><div class="p-sec-title">${t('panelGoalNew')}</div>
       <div id="new-target-sec">
