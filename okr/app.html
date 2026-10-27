@@ -652,7 +652,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-4";</script>
 </head>
 <body>
 
@@ -959,7 +959,7 @@ if(typeof window.OKR_DEBUG==='undefined') window.OKR_DEBUG = false;
 function dbg(){ if(window.OKR_DEBUG) console.log('[OKR]', ...arguments); }
 
 /* 가입 화면 팀 목록(관리자가 사용자별 팀을 패널에서 조정 가능) */
-const TEAMS = ['MEP','C&C1','C&C2','P&C','AG','BenTre','CSP','HSSE','PNS','FM+ACC','FO','B14','HP-GP','KO','BD','CM1','CE1','Div1','Div2'];
+const TEAMS = ['MEP','C&C1','C&C2','P&C','AG','BenTre','CSP','HSSE','PNS','FM','FO','B14','HP-GP','KO','BD','CM1','CE1','Div1','Div2'];
 
 const IN_STYLE  = 'width:100%;padding:10px 12px;border:1.5px solid #D1DCE8;border-radius:8px;font-size:16px;outline:none;font-family:inherit;margin-bottom:8px;box-sizing:border-box';
 const BTN_STYLE = 'width:100%;padding:11px;background:#0D2137;color:#F5A623;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer';
@@ -2287,7 +2287,8 @@ var PIC_ALIAS = {
   'khang.tran':   ['Khang', 'Mr.Khang'],
   'Thomas':       ['Thomas', 'Tom'],
   'nguyenthiep':  ['Mr. Thiep', 'Mr.Thiep', 'Thiep'],
-  'Thien.tr':     ['Mr. Thien', 'Mr.Thien', 'Thien', 'Thientran']
+  'Thien.tr':     ['Mr. Thien', 'Mr.Thien', 'Thien', 'Thientran'],
+  'quangdnt':     ['Quang', 'Mr.Quang', 'Mr. Quang']
 };
 /* 계정 아이디로 그 사람의 별명 목록을 준다(자기 아이디 포함) */
 function picAliases(uname){
@@ -2404,7 +2405,7 @@ function parseDate(period, isEnd){
 const TEAM_COLORS = {
   'B14':'#1565C0','KO':'#2E7D32','BenTre':'#6A1B9A','AG':'#C84B11','PNS':'#00695C',
   'HP-GP':'#AD1457','Div1':'#1565C0','Div2 HO':'#37474F','BD':'#1B5E20',
-  'CSP':'#283593','FM+ACC':'#4A148C','P&C':'#BF360C','HSSE':'#B71C1C','HR':'#880E4F',
+  'CSP':'#283593','FM':'#4A148C','FM+ACC':'#4A148C','P&C':'#BF360C','HSSE':'#B71C1C','HR':'#880E4F',
   'Div2':'#37474F','default':'#546E7A'
 };
 function teamColor(team){ return TEAM_COLORS[team]||TEAM_COLORS.default; }
