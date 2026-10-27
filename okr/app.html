@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-6";</script>
 </head>
 <body>
 
@@ -6248,7 +6248,10 @@ async function connectNas(){
         DATA=latest; window._nasHash=h; refreshTeamFilter();
         if(uiBusy()){ window._nasDirty=true; return; }
         nasRepaint();
+        try{ trSync(false); }catch(e){}          // 새로 들어온 문장의 번역도 같이 (10/27)
       }, 10000);
+      // 번역표를 5분마다 다시 받는다 — 나중에 채운 번역이 새로고침 없이 반영되게 (10/27)
+      setInterval(function(){ try{ if(!uiBusy() && !TR.busy) trSync(false); }catch(e){} }, 300000);
     }
   } else {
     if(statusEl){ statusEl.textContent='\ud83d\udd34 NAS'; statusEl.title='NAS failed'; }
