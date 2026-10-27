@@ -105,6 +105,28 @@ tr.drag-over-bot td{border-bottom:2.5px solid var(--blue)!important}
 tr.drag-into td{background:rgba(21,101,192,.06)!important;outline:2px solid var(--blue)}
 tr.dragging{opacity:.35}
 
+/* FEEDBACK (2026-10-27) */
+.fb-btn{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:450;width:52px;height:52px;border-radius:50%;border:none;background:var(--navy);color:var(--gold);font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(13,33,55,.35);display:none;align-items:center;justify-content:center}
+.fb-btn.on{display:flex}
+.fb-btn:hover{transform:translateY(-1px)}
+.fb-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#D32F2F;color:#fff;font-size:11px;font-weight:600;line-height:20px;text-align:center;display:none}
+.fb-badge.on{display:block}
+.fb-ctx{font-size:11px;color:var(--text2);margin:4px 0 8px}
+.fb-filter{display:flex;gap:6px;margin:4px 0 10px}
+.fb-filter button{border:1px solid var(--border);background:var(--bg);color:var(--text2);border-radius:14px;padding:3px 10px;font-size:11px;cursor:pointer}
+.fb-filter button.on{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.fb-card{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--surface)}
+.fb-card.new{border-color:#D32F2F}
+.fb-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--text2);margin-bottom:6px}
+.fb-st{border-radius:10px;padding:1px 8px;font-size:10px;font-weight:600}
+.fb-st.open{background:#FFF3E0;color:#E65100}.fb-st.doing{background:#E3F2FD;color:#1565C0}.fb-st.done{background:#E8F5E9;color:#2E7D32}
+.fb-text{font-size:12.5px;line-height:1.55;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+.fb-orig{font-size:11px;color:var(--text2);margin-top:4px;white-space:pre-wrap}
+.fb-rep{margin-top:8px;padding:8px 10px;border-left:3px solid var(--gold);background:var(--bg);border-radius:0 6px 6px 0}
+.fb-rep .fb-meta{margin-bottom:3px}
+.fb-rbox{display:flex;gap:6px;margin-top:8px}
+.fb-rbox input{flex:1;min-width:0}
+
 /* PANEL */
 .overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(13,33,55,.4);z-index:500;backdrop-filter:blur(2px)}
 .overlay.open{display:block}
@@ -652,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-5";</script>
 </head>
 <body>
 
@@ -849,6 +871,12 @@ tr.dragging{opacity:.35}
   </div>
 </div>
 
+<button class="fb-btn" id="fbBtn" onclick="fbOpen()" title="Feedback"><span aria-hidden="true">💬</span><span class="fb-badge" id="fbBadge"></span></button>
+<div class="overlay" id="fbOverlay" onclick="fbClose()"></div>
+<div class="panel" id="fbPanel">
+  <div class="panel-hdr"><h3 id="fbTitle">Feedback</h3><button class="panel-close" onclick="fbClose()">×</button></div>
+  <div class="panel-body" id="fbBody"></div>
+</div>
 <div class="overlay" id="overlay" onclick="closePanel()"></div>
 <div class="panel" id="editPanel">
   <div class="panel-hdr"><h3 id="panelTitle">Edit OKR</h3><button class="panel-close" onclick="closePanel()">×</button></div>
@@ -5215,6 +5243,101 @@ document.addEventListener('keydown', function(e){
   e.preventDefault();
   doUndo();
 });
+
+/* ── 불편사항 (2026-10-27 실장님 B안) ─────────────────────────────── */
+var FBT = {
+  ko:{title:'불편사항 · 개선 요청', ph:'불편한 점, 안 되는 것, 바라는 것을 뭐든 적어 주세요. 한국어·영어·베트남어 모두 됩니다.', send:'보내기', ctx:'함께 보내는 정보', all:'전체', mine:'내 글', none:'아직 적힌 글이 없습니다.', open:'접수', doing:'처리 중', done:'해결', reply:'덧붙이기', rph:'덧붙일 말', sent:'보냈습니다. 확인하고 답을 달겠습니다.', orig:'원문', err:'보내지 못했습니다 — 잠시 뒤 다시 해 주세요.'},
+  en:{title:'Feedback & requests', ph:'Write anything that is inconvenient, broken, or that you wish it did. Korean, English or Vietnamese is fine.', send:'Send', ctx:'Sent along', all:'All', mine:'Mine', none:'Nothing written yet.', open:'Received', doing:'In progress', done:'Resolved', reply:'Add', rph:'Add a comment', sent:'Sent. We will check it and reply here.', orig:'Original', err:'Could not send — please try again shortly.'},
+  vi:{title:'Góp ý · Yêu cầu cải tiến', ph:'Hãy ghi bất cứ điều gì bất tiện, không hoạt động, hoặc bạn mong muốn. Tiếng Hàn, Anh hay Việt đều được.', send:'Gửi', ctx:'Thông tin gửi kèm', all:'Tất cả', mine:'Của tôi', none:'Chưa có góp ý nào.', open:'Đã nhận', doing:'Đang xử lý', done:'Đã giải quyết', reply:'Bổ sung', rph:'Ghi thêm', sent:'Đã gửi. Chúng tôi sẽ kiểm tra và trả lời tại đây.', orig:'Bản gốc', err:'Chưa gửi được — vui lòng thử lại sau.'}
+};
+var FB = {items:[], now:'', mineOnly:false};
+function fbT(k){ return (FBT[currentLang] || FBT.en)[k]; }
+function fbMe(){ return (typeof AUTH !== 'undefined' && AUTH && AUTH.user) ? AUTH.user : null; }
+function fbPriv(){ var u = fbMe(); return !!u && (u.role === 'admin' || u.role === 'bod'); }
+function fbSeenKey(){ var u = fbMe(); return 'okr_fb_seen_' + (u ? u.username : ''); }
+function fbSeen(){ try{ return localStorage.getItem(fbSeenKey()) || ''; }catch(e){ return ''; } }
+function fbTab(){
+  var a = document.querySelector('.nav-item.active');
+  return a ? (a.textContent || '').trim() : '';
+}
+function fbTr(o){ return (o && o.tr && o.tr[currentLang]) || ''; }
+/* 새 것 = 직원: 내 글에 남이 단 답글 / 관리자: 남이 쓴 새 글·덧붙임 */
+function fbNewOf(it, seen){
+  var u = fbMe(); if(!u) return false;
+  if(fbPriv()){
+    if(it.by !== u.username && it.at > seen) return true;
+    return (it.replies || []).some(function(r){ return r.by !== u.username && r.at > seen && !r.tr; });
+  }
+  if(it.by !== u.username) return false;
+  return (it.replies || []).some(function(r){ return r.by !== u.username && r.at > seen; });
+}
+function fbBadge(){
+  var seen = fbSeen(), n = FB.items.filter(function(it){ return fbNewOf(it, seen); }).length;
+  var b = document.getElementById('fbBadge'); if(!b) return;
+  b.textContent = n > 9 ? '9+' : String(n); b.classList.toggle('on', n > 0);
+}
+async function fbLoad(){
+  if(!(typeof nasMode !== 'undefined' && nasMode) || !fbMe()) return;
+  try{ var r = await okrApi('fb_read', {}); if(r && r.ok){ FB.items = r.items || []; FB.now = r.now || ''; fbBadge(); } }catch(e){}
+}
+function fbRender(){
+  var u = fbMe(), seen = fbSeen();
+  document.getElementById('fbTitle').textContent = fbT('title');
+  var list = FB.items.slice().reverse().filter(function(it){ return !FB.mineOnly || (u && it.by === u.username); });
+  var h = '<textarea class="field-ta" id="fbText" rows="4" placeholder="' + aiEsc(fbT('ph')) + '"></textarea>'
+    + '<div class="fb-ctx">' + fbT('ctx') + ': ' + aiEsc(fbTab()) + ' · v' + aiEsc(APP_VERSION) + ' · ' + aiEsc(u ? u.username : '') + '</div>'
+    + '<button class="btn primary" style="width:100%" onclick="fbSend()">' + fbT('send') + '</button>'
+    + '<div class="fb-filter" style="margin-top:16px"><button class="' + (FB.mineOnly ? '' : 'on') + '" onclick="FB.mineOnly=false;fbRender()">' + fbT('all') + ' ' + FB.items.length + '</button>'
+    + '<button class="' + (FB.mineOnly ? 'on' : '') + '" onclick="FB.mineOnly=true;fbRender()">' + fbT('mine') + '</button></div>';
+  if(!list.length) h += '<div class="fb-ctx">' + fbT('none') + '</div>';
+  list.forEach(function(it){
+    var st = it.status || 'open', tr = fbTr(it);
+    h += '<div class="fb-card' + (fbNewOf(it, seen) ? ' new' : '') + '">'
+      + '<div class="fb-meta"><span class="fb-st ' + st + '">' + fbT(st) + '</span><b>' + aiEsc(it.by) + '</b><span>' + aiEsc((it.at || '').slice(5, 16)) + '</span><span>' + aiEsc(it.tab || '') + '</span>';
+    if(fbPriv()) h += '<select class="field-sel" style="width:auto;padding:2px 6px;font-size:11px;margin-left:auto" onchange="fbStatus(\'' + it.id + '\',this.value)">'
+      + ['open','doing','done'].map(function(x){ return '<option value="' + x + '"' + (x === st ? ' selected' : '') + '>' + fbT(x) + '</option>'; }).join('') + '</select>';
+    h += '</div><div class="fb-text">' + aiEsc(tr || it.text) + '</div>'
+      + (tr && tr !== it.text ? '<div class="fb-orig">' + fbT('orig') + ': ' + aiEsc(it.text) + '</div>' : '');
+    (it.replies || []).forEach(function(r){
+      var rt = fbTr(r);
+      h += '<div class="fb-rep"><div class="fb-meta"><b>' + aiEsc(r.by) + '</b><span>' + aiEsc((r.at || '').slice(5, 16)) + '</span></div><div class="fb-text">' + aiEsc(rt || r.text) + '</div></div>';
+    });
+    if(u && (fbPriv() || it.by === u.username))
+      h += '<div class="fb-rbox"><input class="field-input" id="fbr_' + it.id + '" placeholder="' + aiEsc(fbT('rph')) + '" onkeydown="if(event.key===\'Enter\')fbReply(\'' + it.id + '\')"><button class="btn" onclick="fbReply(\'' + it.id + '\')">' + fbT('reply') + '</button></div>';
+    h += '</div>';
+  });
+  document.getElementById('fbBody').innerHTML = h;
+}
+async function fbOpen(){
+  document.getElementById('fbPanel').classList.add('open');
+  document.getElementById('fbOverlay').classList.add('open');
+  fbRender(); await fbLoad(); fbRender();
+  try{ if(FB.now) localStorage.setItem(fbSeenKey(), FB.now); }catch(e){}
+  fbBadge();
+}
+function fbClose(){
+  document.getElementById('fbPanel').classList.remove('open');
+  document.getElementById('fbOverlay').classList.remove('open');
+}
+async function fbDo(action, payload){
+  try{ var r = await okrApi(action, payload); if(r && r.ok){ await fbLoad(); try{ if(FB.now) localStorage.setItem(fbSeenKey(), FB.now); }catch(e){} fbRender(); fbBadge(); return true; } }catch(e){}
+  toast(fbT('err'), 'error'); return false;
+}
+async function fbSend(){
+  var el = document.getElementById('fbText'), v = (el.value || '').trim(); if(!v) return;
+  if(await fbDo('fb_add', {text:v, tab:fbTab(), ver:APP_VERSION, lang:currentLang})) toast(fbT('sent'));
+}
+async function fbReply(id){
+  var el = document.getElementById('fbr_' + id), v = el ? (el.value || '').trim() : ''; if(!v) return;
+  await fbDo('fb_reply', {id:id, text:v});
+}
+async function fbStatus(id, st){ await fbDo('fb_status', {id:id, status:st}); }
+/* 로그인하고 NAS 모드일 때만 버튼을 보인다. 1분마다 새 답글을 본다 */
+setInterval(function(){
+  var on = (typeof nasMode !== 'undefined' && nasMode) && !!fbMe();
+  var b = document.getElementById('fbBtn'); if(b) b.classList.toggle('on', on);
+}, 1500);
+setTimeout(fbLoad, 4000); setInterval(fbLoad, 60000);
 
 function toast(msg,type='success'){const e=document.getElementById('toast');e.textContent=msg;e.className=`toast ${type} show`;setTimeout(()=>e.classList.remove('show'),2500);}
 
