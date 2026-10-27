@@ -652,7 +652,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.16-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-1";</script>
 </head>
 <body>
 
@@ -2299,16 +2299,23 @@ function picAliases(uname){
   });
   return out;
 }
+/* f=담당자 표기, u=계정·별명. 표기가 계정 안에 들어가는 쪽은 4자 이상만, 계정이 표기 안에 들어가는 쪽은 3자 이상만 (10/27) */
+function nmPart(f, u){
+  if(f === u) return true;
+  if(f.length >= 4 && u.indexOf(f) >= 0) return true;
+  if(u.length >= 3 && f.indexOf(u) >= 0) return true;
+  return false;
+}
 function nameMatch(field, uname){
   if(!field||!uname) return false;
   var f=String(field).toLowerCase().trim(), u=String(uname).toLowerCase().trim();
   if(!f||!u) return false;
-  if(f===u || f.indexOf(u)>=0 || u.indexOf(f)>=0) return true;
+  if(nmPart(f, u)) return true;
   /* 별명으로도 대 본다. 'ThuyMi' 계정과 'Ms.Mi' 표기를 잇는 자리다. */
   var al = picAliases(uname);
   for(var i=0;i<al.length;i++){
     var a = String(al[i]).toLowerCase().trim();
-    if(a && (f===a || f.indexOf(a)>=0 || a.indexOf(f)>=0)) return true;
+    if(a && nmPart(f, a)) return true;
   }
   return false;
 }
@@ -4056,6 +4063,11 @@ function renderMatrix(){
     DATA.filter(d=>d.lv==='TD'&&d.pic)
       .flatMap(d=>d.pic.split(/[,+&\/]/).map(p=>p.trim()).filter(Boolean))
   )].sort();
+  // 새로 가입해 아직 할 일이 없는 사람도 목록에 자기 이름을 넣는다 — 없으면 보드·「+ 프로젝트」가 안 떠서 시작을 못 한다 (10/27)
+  if(AUTH.user){
+    var _mine = myPicName();
+    if(_mine && !pics.some(function(p){ return nameMatch(p, AUTH.user.username) || p === _mine; })){ pics.push(_mine); pics.sort(); }
+  }
   const sel = document.getElementById('matrixPic');
   const cur = sel.value;
   sel.innerHTML = '<option value="">-- Select --</option>' + pics.map(p=>`<option${p===cur?' selected':''}>${p}</option>`).join('');
@@ -4065,7 +4077,7 @@ function renderMatrix(){
 
   // 로그인한 사람으로 자동 선택 — 56개 이름 중에서 고르게 하지 않는다(Asana)
   if(!pic && AUTH.user){
-    var me = pics.filter(function(p){ return nameMatch(p, AUTH.user.username); })[0];
+    var me = pics.filter(function(p){ return nameMatch(p, AUTH.user.username); })[0] || (pics.indexOf(myPicName()) >= 0 ? myPicName() : '');
     if(me){ sel.value = me; pic = me; }
   }
 
@@ -4786,6 +4798,7 @@ async function saveEdit(){
   saveData();
   window._nasHash = JSON.stringify(DATA); // 내 변경이 동기화에 덮어쓰이는 거 방지
   closePanel();
+  try{ if(document.getElementById('matrixView').style.display !== 'none') renderMatrix(); }catch(e){}
   if(!nasMode){ toast(t('toastSaved'),'success'); return; }
   // 신규/수정 모두 항목단위 Save(서버 권한·충돌 검사). 「저장됨」은 서버가 받은 뒤에만 띄운다
   const _ok = await nasUpdateItem(d, _wasNew);
