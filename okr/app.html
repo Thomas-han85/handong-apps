@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-10";</script>
 </head>
 <body>
 
@@ -1949,6 +1949,7 @@ async function mtQuad(id, n){
   }else{
     d.importance = (n === 1 || n === 2) ? 'Important' : '덜중요';
     d.urgency    = (n === 1 || n === 3) ? 'Urgent'    : '덜긴급';
+    quadReviewer(d);
   }
   saveData(); renderMatrix(); renderTable();
   var ok = await nasUpdateItem(d);
@@ -2003,6 +2004,7 @@ async function mtMove(id, action){
       d.urgency = (d.urgency==='Urgent') ? '덜긴급' : 'Urgent';
       break;
   }
+  if(action === 'toggleImp' || action === 'toggleUrg') quadReviewer(d);
   saveData();
   renderTable();   // Refresh OKR List
   renderMatrix();  // Re-render My Tasks
@@ -2055,6 +2057,15 @@ function cycleStatus(id){
 }
 /* 중요도·긴급도 값이 두 벌로 갈려 있다 — 'Important' 와 '중요', '덜중요' 와 '덜Important'.
    읽을 때 눕혀서 비교하고 저장은 영문 한 벌로 한다. 기존 데이터는 안 건드린다. */
+/* 분면을 정한 사람 → 검토자 (10/27). 담당·검토자면 그대로 */
+function quadReviewer(d){
+  try{
+    var me = AUTH && AUTH.user && AUTH.user.username; if(!me || !d) return;
+    if(!flagNorm(d.importance) && !flagNorm(d.urgency)) return;
+    if(pbHas(d.pic, me) || pbHas(d.reviewer, me)) return;
+    d.reviewer = String(d.reviewer || '').trim() ? (String(d.reviewer).trim() + ', ' + me) : me;
+  }catch(e){}
+}
 function flagNorm(v){
   var x = String(v || '').trim().toLowerCase();
   if(x === 'important' || x === '중요')       return 'Important';
@@ -2063,8 +2074,8 @@ function flagNorm(v){
   if(x === '덜긴급'    || x === '덜urgent')   return 'Less';
   return '';
 }
-function cycleImp(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Important','덜중요'];const i=order.indexOf(flagNorm(d.importance)==='Important'?'Important':(flagNorm(d.importance)==='Less'?'덜중요':''));d.importance=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
-function cycleUrg(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Urgent','덜긴급'];const i=order.indexOf(flagNorm(d.urgency)==='Urgent'?'Urgent':(flagNorm(d.urgency)==='Less'?'덜긴급':''));d.urgency=order[(i+1)%order.length];saveData();nasUpdateItem(d);renderTable();}
+function cycleImp(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Important','덜중요'];const i=order.indexOf(flagNorm(d.importance)==='Important'?'Important':(flagNorm(d.importance)==='Less'?'덜중요':''));d.importance=order[(i+1)%order.length];quadReviewer(d);saveData();nasUpdateItem(d);renderTable();}
+function cycleUrg(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=['','Urgent','덜긴급'];const i=order.indexOf(flagNorm(d.urgency)==='Urgent'?'Urgent':(flagNorm(d.urgency)==='Less'?'덜긴급':''));d.urgency=order[(i+1)%order.length];quadReviewer(d);saveData();nasUpdateItem(d);renderTable();}
 /* 달성률.
    지금까지는 실적/목표 하나뿐이라 '사고 10건 → 2건' 목표에 3건이 나면 150% 로 보였다.
    못한 것이 잘한 것으로 표시된 것이다.
@@ -3312,7 +3323,7 @@ async function tdBulk(kind){
     else if(kind === 'today') d.period = todayPeriod();
     else if(/^q[1-4]$/.test(kind)){ var qn = +kind.slice(1);          // 여러 개를 한 번에 1~4 (10/27)
       d.importance = (qn === 1 || qn === 2) ? 'Important' : '덜중요';
-      d.urgency    = (qn === 1 || qn === 3) ? 'Urgent'    : '덜긴급'; }
+      d.urgency    = (qn === 1 || qn === 3) ? 'Urgent'    : '덜긴급'; quadReviewer(d); }
     else d.period = todoPeriodFor(due);
     var r = await nasUpdateItem(d);
     if(r){ ok++; delete _tdSel[d.id]; } else { restoreItem(d, snap); fail++; }
@@ -3766,6 +3777,7 @@ function projBoardHtml(pic){
             return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + '">'
               + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : mtCk(x))
               + '<span class="pb-lab" onclick="openEdit(' + x.id + ')">' + TL(x.label) + '</span>'
+              + (x.status !== 'Done' ? quadBtns(x) : '')
               + '<span class="pb-per">' + bfEsc(x.pic || '') + ' · ' + bfEsc(String(x.period || '').split('~').pop()) + '</span>'
               + (x.status !== 'Done' ? '<span class="pb-rdrop" title="' + bfEsc(L3('Drop this to-do', '이 할 일 중단', 'Dừng việc này')) + '" onclick="event.stopPropagation();pbDropTodo(' + x.id + ')">⊘</span>' : '<span class="pb-rdrop off"></span>')
               + '</div>';
@@ -4894,8 +4906,10 @@ async function saveEdit(){
   const dirEl=document.getElementById('f-dir');   if(dirEl)  d.dir=dirEl.value;
   const baseEl=document.getElementById('f-base'); if(baseEl) d.base=parseNumVal(baseEl.value.trim());
   const confEl=document.getElementById('f-conf'); if(confEl) d.conf=confEl.value;
+  const _iu0 = (d.importance||'') + '|' + (d.urgency||'');
   if(document.getElementById('f-imp')) d.importance=document.getElementById('f-imp').value;
   if(document.getElementById('f-urg')) d.urgency=document.getElementById('f-urg').value;
+  if(((d.importance||'') + '|' + (d.urgency||'')) !== _iu0) quadReviewer(d);
   const fb=document.getElementById('f-fb');
   if(fb&&fb.value.trim()){
     if(!d.feedbacks)d.feedbacks=[];
