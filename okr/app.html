@@ -652,7 +652,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-3";</script>
 </head>
 <body>
 
@@ -2277,16 +2277,17 @@ function picHint(){
    계정 쪽에 별명을 달아 잇는다. 표기가 새로 생기면 여기에 한 줄 더한다.
    괄호 안은 2026-08-05 스냅샷에서 그 표기가 붙어 있던 행 수. */
 var PIC_ALIAS = {
-  'ThuyMi':     ['Ms.Mi', 'Ms. Mi'],                    // 49행
-  'Kieunguyen': ['Ms. Kieu', 'Ms Kiều', 'Ms.Kieu'],     // 54행
-  'XuyenVu':    ['Ms. Xuyen', 'Ms.Xuyen'],              // 38행
-  'TramHuynh':  ['Ms. Trâm', 'Ms. Tram', 'Ms.Tram'],    // 26행
-  'nam.mai':    ['Mr.Nam', 'Mr. Nam'],                  //  4행
-  'Phat':       ['Ms.Phat', 'Mr.Phat'],                 //  1행
-  'khang.tran': ['Khang', 'Mr.Khang'],                  //  1행
-  'Thomas':     ['Thomas', 'Tom'],                      // 43행
-  'nguyenthiep': ['Mr. Thiep', 'Mr.Thiep', 'Thiep'],      // 2026-10-02 추가
-  'Thien.tr':   ['Mr. Thien', 'Mr.Thien', 'Thien']      // 2026-10-02 추가
+  // 2026-10-27 데이터의 표기를 계정 아이디로 통일했다(Mr./Ms. 제거). 아래는 남은 옛 표기·옛 계정을 잇는 줄
+  'ThuyMi2':      ['Ms.Mi', 'Ms. Mi', 'ThuyMi', 'ThuyMiCC', 'Hoangthuymi'],
+  'Kieunguyen':   ['Ms. Kieu', 'Ms Kiều', 'Ms.Kieu', 'kie'],
+  'Xuyen.Vu':     ['Ms. Xuyen', 'Ms.Xuyen', 'XuyenVu', 'XuyenVu.', 'XuyenVu..'],
+  'TramHuynh107': ['Ms. Trâm', 'Ms. Tram', 'Ms.Tram', 'TramHuynh'],
+  'nam.mai':      ['Mr.Nam', 'Mr. Nam'],
+  'Phat':         ['Ms.Phat', 'Mr.Phat'],
+  'khang.tran':   ['Khang', 'Mr.Khang'],
+  'Thomas':       ['Thomas', 'Tom'],
+  'nguyenthiep':  ['Mr. Thiep', 'Mr.Thiep', 'Thiep'],
+  'Thien.tr':     ['Mr. Thien', 'Mr.Thien', 'Thien', 'Thientran']
 };
 /* 계정 아이디로 그 사람의 별명 목록을 준다(자기 아이디 포함) */
 function picAliases(uname){
@@ -3067,11 +3068,7 @@ function renderGantt(){
 function myPicName(){
   var u = (AUTH.user && AUTH.user.username) || '';
   if(!u) return '';
-  try{
-    var k = Object.keys(PIC_ALIAS).filter(function(a){ return a.toLowerCase() === u.toLowerCase(); })[0];
-    if(k && PIC_ALIAS[k] && PIC_ALIAS[k].length) return PIC_ALIAS[k][0];
-  }catch(e){}
-  return u;
+  return u;   // 담당자 표기 = 계정 아이디 (10/27 통일)
 }
 /* 적을 때 고를 수 있는 팀.
    팀원은 자기 계정에 등록된 팀에서, 관리자·경영진은 데이터에 있는 팀 전부에서 고른다. */
@@ -4077,7 +4074,7 @@ function renderMatrix(){
 
   // 로그인한 사람으로 자동 선택 — 56개 이름 중에서 고르게 하지 않는다(Asana)
   if(!pic && AUTH.user){
-    var me = pics.filter(function(p){ return nameMatch(p, AUTH.user.username); })[0] || (pics.indexOf(myPicName()) >= 0 ? myPicName() : '');
+    var me = (pics.indexOf(myPicName()) >= 0 ? myPicName() : '') || pics.filter(function(p){ return nameMatch(p, AUTH.user.username); })[0];   // 아이디 그대로가 먼저 (10/27)
     if(me){ sel.value = me; pic = me; }
   }
 
