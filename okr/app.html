@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-4";</script>
 </head>
 <body>
 
@@ -2084,6 +2084,23 @@ function cycleUrg(id){const d=DATA.find(x=>x.id===id);if(!d)return;const order=[
      감소형  (시작값 − 실적) / (시작값 − 목표)
    시작값이 없으면 예전 방식 그대로다 — 기존 데이터는 그대로 보인다.
    4DX 가 지목한 그대로다: 시작선(X)이 없는 것이 감소형이 깨지는 진짜 원인이다. */
+/* 단위 (10/28) — 비어 있으면 bil */
+var UNITS = ['bil', 'mil', '%', 'day', 'ea', 'ppl', 'm2'];
+function unitOf(d){ return (d && d.unit) || 'bil'; }
+function unitName(u){
+  return ({ bil:'bil', mil:'mil', '%':'%', day:L3('days','일','ngày'), ea:L3('ea','건','việc'), ppl:L3('ppl','명','người'), m2:'m²' })[u] || u;
+}
+function unitSel(d){
+  var u = unitOf(d);
+  return '<div class="field-group" style="max-width:96px"><div class="field-lbl">' + L3('Unit', '단위', 'Đơn vị') + '</div><select class="field-sel" id="f-unit">'
+    + UNITS.map(function(x){ return '<option value="' + x + '"' + (x === u ? ' selected' : '') + '>' + unitName(x) + '</option>'; }).join('') + '</select></div>';
+}
+function tvHtml(d){
+  var t = parseFloat(d.target), a = parseFloat(d.actual);
+  if((isNaN(t) || !t) && (isNaN(a) || !a)) return '';
+  var f = function(v){ return isNaN(v) ? '—' : (Math.round(v * 100) / 100).toLocaleString('en-US'); };
+  return '<span title="' + bfEsc(L3('Actual / Target', '실적 / 목표', 'Thực tế / Chỉ tiêu')) + '" style="font-size:10px;color:var(--text2);white-space:nowrap;flex-shrink:0;font-family:\'IBM Plex Mono\',monospace">' + f(a) + '/' + f(t) + ' ' + bfEsc(unitName(unitOf(d))) + '</span>';
+}
 function calcPct(d){
   if(d.target===''||d.target===null) return null;
   const T = parseFloat(d.target);
@@ -3780,6 +3797,7 @@ function projBoardHtml(pic){
             return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + '">'
               + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : mtCk(x))
               + '<span class="pb-lab" onclick="openEdit(' + x.id + ')">' + TL(x.label) + '</span>'
+              + tvHtml(x)
               + (x.status !== 'Done' ? quadBtns(x) : '')
               + '<span class="pb-per">' + bfEsc(x.pic || '') + ' · ' + bfEsc(String(x.period || '').split('~').pop()) + '</span>'
               + (x.status !== 'Done' ? '<span class="pb-rdrop" title="' + bfEsc(L3('Drop this to-do', '이 할 일 중단', 'Dừng việc này')) + '" onclick="event.stopPropagation();pbDropTodo(' + x.id + ')">⊘</span>' : '<span class="pb-rdrop off"></span>')
@@ -4344,6 +4362,7 @@ function renderMatrix(){
         <div onclick="openEdit(${d.id})" style="cursor:pointer;flex:1;min-width:0;font-size:11px;font-weight:500;color:${ds?'#B91C1C':'var(--text)'};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${TL(d.label)}${dueTag}</div>
         <span style="font-size:10px;color:var(--text2);white-space:nowrap;flex-shrink:0">${mtTeamHtml(d)} · ${bfEsc(_end)}</span>
         <div class="mt-actions" style="display:none;gap:4px;flex-shrink:0">${btnReview}${btnDone}</div>
+        ${tvHtml(d)}
         <span style="flex-shrink:0">${quadBtns(d)}</span>
         ${pct!==null?`<span style="font-size:10px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:${ac(pct)};flex-shrink:0">${pct}%</span>`:''}
         <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500;white-space:nowrap;flex-shrink:0">${stLabel}</span>
@@ -4644,6 +4663,7 @@ function openEdit(id){
           ${(d.lv==='KR'||d.lv==='TK'||d.lv==='IN'||d.lv==='TO')?`<button type="button" onclick="sumChildren(${d.id})" style="padding:1px 7px;border-radius:4px;border:1px solid #C4B5FD;background:#EDE9FE;color:#6D28D9;font-size:10px;cursor:pointer;font-weight:600">Σ</button>`:''}</div>
         <input class="field-input" type="text" inputmode="decimal" id="f-actual" value="${d.actual}">
       </div>
+      ${unitSel(d)}
     </div>
       ${(d.lv==='IN'||d.lv==='TK') ? `<div class="field-group">
         <div class="field-lbl">${t('thConf')}</div>
@@ -4738,7 +4758,7 @@ function openNew(){
       <div id="new-target-sec">
         <div class="field-row">
           <div class="field-group"><div class="field-lbl">${t('fldTarget')}</div><input class="field-input" type="text" inputmode="decimal" id="f-target" value="0" placeholder="0"></div>
-          <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>
+          <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>${unitSel({})}
         </div>
       </div>
       ${(d.lv==='IN'||d.lv==='TK') ? `<div class="field-group" style="margin-top:10px">
@@ -4853,12 +4873,12 @@ function _buildTargetSec(lv){
     </div>
     <div class="field-row">
       <div class="field-group"><div class="field-lbl">${t('fldTarget')}</div><input class="field-input" type="text" inputmode="decimal" id="f-target" value="0" placeholder="0"></div>
-      <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>
+      <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>${unitSel({})}
     </div>`;
   } else {
     return `<div class="field-row">
       <div class="field-group"><div class="field-lbl">${t('fldTarget')}</div><input class="field-input" type="text" inputmode="decimal" id="f-target" value="0" placeholder="0"></div>
-      <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>
+      <div class="field-group"><div class="field-lbl">${t('fldActual')}</div><input class="field-input" type="text" inputmode="decimal" id="f-actual" value="0"></div>${unitSel({})}
     </div>`;
   }
 }
@@ -4954,6 +4974,7 @@ async function saveEdit(){
 
   const tgtEl=document.getElementById('f-target'); if(tgtEl) d.target=parseNumVal(tgtEl.value);
   const actEl=document.getElementById('f-actual'); if(actEl) d.actual=parseNumVal(actEl.value);
+  const unEl=document.getElementById('f-unit'); if(unEl){ if(unEl.value && unEl.value !== 'bil') d.unit = unEl.value; else delete d.unit; }   // 단위 (10/28)
   const stEl=document.getElementById('f-status');  if(stEl)  d.status=stEl.value;
   const pbEl=document.getElementById('f-pb');
   if(pbEl && (d.lv==='IN'||d.lv==='TK')){ if(pbEl.checked) d.pb=true; else delete d.pb; }
@@ -5170,7 +5191,7 @@ function onDragEnd(e){
 // 하위 항목 Actual 합계 → 해당 항목 Actual에 자동 입력
 function sumChildren(id){
   const d = DATA.find(x=>x.id===id); if(!d) return;
-  const children = DATA.filter(x=>x.pid===id);
+  const children = DATA.filter(x=>x.pid===id && unitOf(x)===unitOf(d));   // 같은 단위만 (10/28)
   if(!children.length){ toast('No sub-items','error'); return; }
   const sum = children.reduce((acc,c)=>{
     const v = parseFloat(c.actual);
@@ -5193,7 +5214,7 @@ function sumBoth(e, id){
 }
 function sumChildrenTarget(id){
   const d = DATA.find(x=>x.id===id); if(!d) return;
-  const children = DATA.filter(x=>x.pid===id);
+  const children = DATA.filter(x=>x.pid===id && unitOf(x)===unitOf(d));   // 같은 단위만 (10/28)
   if(!children.length){ toast('No sub-items','error'); return; }
   const sum = children.reduce((acc,c)=>{
     const v = parseFloat(c.target);
