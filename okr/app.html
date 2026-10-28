@@ -675,7 +675,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-8";</script>
 </head>
 <body>
 
@@ -4057,7 +4057,9 @@ function pbTimelineHtml(){
   });
   var DAY = 86400000;
   // 창은 지난 2주 ~ 앞으로 한 달 — 이만하면 지금 움직이는 것이 거의 다 보인다 (10/13 실장님)
-  var lo = t0.getTime() - 14 * DAY - DAY / 2, hi = t0.getTime() + 30 * DAY + DAY / 2;
+  // 10/28 실장님: 지난 일은 그 날짜까지 왼쪽으로, 앞으로 일은 오른쪽으로 늘린다 (최소 지난 2주 ~ 앞으로 한 달)
+  var lo = Math.min(t0.getTime() - 14 * DAY, Math.min.apply(null, dates)) - DAY / 2,
+      hi = Math.max(t0.getTime() + 30 * DAY, Math.max.apply(null, dates)) + DAY / 2;
   // 창 밖의 점은 양끝 「◂ 이전 n」·「이후 n ▸」 하나로
   L.forEach(function(l){
     l.early = l.pts.filter(function(o){ return o.t < lo; });
@@ -4067,10 +4069,13 @@ function pbTimelineHtml(){
   var X = function(t){ return ((t - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   // 눈금 — 매월 1일, 기간이 짧으면 15일도
   // 눈금 — 날마다 가는 선, 월요일은 굵게 날짜를, 매월 1일도 날짜를
-  var ticks = '', d = new Date(t0.getTime() - 14 * DAY);
+  var ticks = '', d = new Date(lo + DAY / 2);
   var WD = L3('SMTWTFS', '일월화수목금토', 'CN T2 T3 T4 T5 T6 T7');
-  for(var i = 0; i <= 44; i++, d = new Date(d.getTime() + DAY)){
+  var nDays = Math.round((hi - lo) / DAY), wide = nDays > 70;     // 길면 날마다 선은 빼고 월요일 선 + 매월 1일 날짜만
+  for(var i = 0; i <= nDays; i++, d = new Date(d.getTime() + DAY)){
     var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), mon = d.getDay() === 1, first = d.getDate() === 1;
+    if(wide && !mon && !first) continue;
+    if(wide){ ticks += '<div class="tl-tick' + (first ? ' m' : ' dd') + '" style="left:' + X(t) + '">' + (first ? '<span>' + (d.getMonth() + 1) + '/1</span>' : '') + '</div>'; continue; }
     ticks += '<div class="tl-tick' + (mon ? ' m' : ' dd') + (d.getDay() === 0 || d.getDay() === 6 ? ' we' : '') + '" style="left:' + X(t) + '">'
       + ((mon || first) ? '<span>' + (d.getMonth() + 1) + '/' + d.getDate() + '</span>' : '') + '</div>';
   }
@@ -6212,12 +6217,16 @@ function trCollect(){
 async function trSync(fill){
   if(TR.busy) return;
   var lang = currentLang, texts = trCollect();
+  // 이미 받은 번역은 다시 묻지 않는다 — 동기화마다 1,300문장을 보내 느려졌다 (10/28)
+  var delta = !fill && TR.lang === lang && Object.keys(TR.map).length > 0;
+  if(delta){ texts = texts.filter(function(x){ return !TR.map[x]; }); if(!texts.length) return; }
   if(!texts.length){ TR.lang = lang; TR.map = {}; return; }
+  var _trBefore = Object.keys(TR.map).length;
   TR.busy = true; TR.err = ''; trChip();
   try{
     var got = await okrApi('tr_get', {lang: lang, texts: texts});
     TR.lang = lang;
-    TR.map  = got.map || {};
+    TR.map  = delta ? Object.assign(TR.map, got.map || {}) : (got.map || {});
 
     var missing = texts.filter(function(x){ return !TR.map[x]; });
     TR.missing = missing.length;
@@ -6257,6 +6266,7 @@ async function trSync(fill){
     }
   }
   TR.busy = false;
+  if(delta && Object.keys(TR.map).length === _trBefore){ trChip(); return; }   // 새로 받은 번역이 없으면 다시 그리지 않는다
   trChip();
   trApply();
 }
