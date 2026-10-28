@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-3";</script>
 </head>
 <body>
 
@@ -3609,6 +3609,7 @@ function mtTeamEdit(id, el){
    팀이 아니라 사람 기준이다 — 내가 담당인 이니셔티브·팀KR, 그리고 내 할 일이 하나라도 든 이니셔티브.
    카드: 진행(완료/전체 할 일) · 기한 D-day · 기한 지난 할 일 · 다음 할 일 3개 · 마지막 움직임.
    펼치면 할 일 목록이 나오고, 그 자리에서 이 이니셔티브 밑에 할 일을 넣는다. */
+var _pbShowDrop = false;   // 중단 포함 (10/28)
 var _pbOpen = {}, _pbShowDone = false, _pbShut = false, _pbFold = {}, _pbShowFold = false;
 try{ _pbShut = localStorage.getItem('okr_pb_shut') === '1'; }catch(e){}
 try{ _pbFold = JSON.parse(localStorage.getItem('okr_pb_fold') || '{}') || {}; }catch(e){ _pbFold = {}; }
@@ -3723,7 +3724,7 @@ function projBoardHtml(pic){
   if(!pic) return '';
   pbFoldMerge();
   var all = pbCards(pic);
-  var vis = all.filter(function(c){ return _pbShowDone || !c.doneCard; });
+  var vis = all.filter(function(c){ if(c.d.status === 'Dropped') return _pbShowDrop; return _pbShowDone || !c.doneCard; });
   var cards = vis.filter(function(c){ return !_pbFold[c.d.id]; });
   var folded = vis.filter(function(c){ return _pbFold[c.d.id]; });
   var nOver = all.filter(function(c){ return c.tone === 'red'; }).length;
@@ -3739,7 +3740,9 @@ function projBoardHtml(pic){
     + pbSelBar()
     + '<span class="pb-sp"></span>'
     + '<label class="pb-opt" onclick="event.stopPropagation()"><input type="checkbox" ' + (_pbShowDone ? 'checked' : '') + ' onchange="_pbShowDone=this.checked;renderMatrix()"> '
-    + L3('Show done', '완료 포함', 'Gồm đã xong') + '</label></div>';
+    + L3('Show done', '완료 포함', 'Gồm đã xong') + '</label>'
+    + '<label class="pb-opt" onclick="event.stopPropagation()"><input type="checkbox" ' + (_pbShowDrop ? 'checked' : '') + ' onchange="_pbShowDrop=this.checked;renderMatrix()"> '
+    + L3('Show dropped', '중단 포함', 'Gồm đã dừng') + '</label></div>';
   if(_pbShut) return '<div class="pb-wrap">' + head + '</div>';
   if(!cards.length && !folded.length) return '<div class="pb-wrap">' + head + '<div class="pb-empty">'
     + L3('No initiatives assigned to you yet. Set yourself as the PIC of an initiative to see it here.',
@@ -3792,6 +3795,7 @@ function projBoardHtml(pic){
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
       + (d.status !== 'Done' && d.status !== 'Dropped' ? '<button class="pb-fold pb-done" title="' + bfEsc(L3('Done — this initiative and all its open to-dos', '완료 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Xong — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDone([' + d.id + '])">✓</button>' : '')
       + (d.status !== 'Dropped' ? '<button class="pb-fold pb-drop" title="' + bfEsc(L3('Drop — this initiative and all its open to-dos', '중단 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Dừng — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDrop([' + d.id + '])">⊘</button>' : '')
+      + '<span class="pb-fold" title="' + bfEsc(L3('My group — put this card in a group you name', '내 묶음 — 이 카드를 내가 정한 묶음으로', 'Nhóm của tôi — đưa thẻ vào nhóm tự đặt tên')) + '" onclick="event.stopPropagation();pbTag(' + d.id + ')" style="cursor:pointer">🏷' + (pbGM()[d.id] ? '<small style="font-size:9px;margin-left:2px">' + bfEsc(pbGM()[d.id]) + '</small>' : '') + '</span>'
       + '<label class="pb-pick" title="' + bfEsc(L3('Select for timeline', '타임라인에 넣기', 'Chọn để xem dòng thời gian')) + '" onclick="event.stopPropagation()">'
       + '<input type="checkbox"' + (_pbSel[d.id] ? ' checked' : '') + ' onchange="pbPick(' + d.id + ',this.checked)"></label>'
       + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
@@ -3874,7 +3878,40 @@ function pbDP(ev, k, lvl){
   }catch(e){}
   renderMatrix();
 }
+function pbGM(){ try{ var m = AUTH.user.prefs && AUTH.user.prefs.pb_grpmap; return (m && typeof m === 'object' && !Array.isArray(m)) ? m : {}; }catch(e){ return {}; } }
+function pbTag(id){
+  var m = JSON.parse(JSON.stringify(pbGM())), cur = m[id] || '';
+  var names = Object.keys(m).map(function(k){ return m[k]; }).filter(function(v, i, a){ return v && a.indexOf(v) === i; });
+  var v = prompt(L3('Group name for this card (blank = back to automatic).', '이 카드의 묶음 이름 (비우면 자동 묶음으로 돌아갑니다).', 'Tên nhóm cho thẻ này (để trống = về nhóm tự động).')
+    + (names.length ? '\n' + L3('Existing: ', '지금 있는 묶음: ', 'Đang có: ') + names.join(' / ') : ''), cur);
+  if(v === null) return;
+  v = v.trim(); if(v) m[id] = v; else delete m[id];
+  try{
+    if(!AUTH.user.prefs || Array.isArray(AUTH.user.prefs)) AUTH.user.prefs = {};
+    AUTH.user.prefs.pb_grpmap = m;
+    okrApi('set_pref', { key: 'pb_grpmap', value: m }).catch(function(){});
+  }catch(e){}
+  renderMatrix();
+}
 function pbGroupsHtml(cards, cardH){
+  var GM = pbGM(), mine = cards.filter(function(c){ return GM[c.d.id]; }), rest = cards.filter(function(c){ return !GM[c.d.id]; });
+  if(!mine.length) return pbGroupsAuto(cards, cardH);
+  var m = {}, ord = [];
+  mine.forEach(function(c){ var k = GM[c.d.id]; if(!m[k]){ m[k] = []; ord.push(k); } m[k].push(c); });
+  var groups = pbOrdSort(ord.map(function(k){ return { key: 'C:' + k, k: k, cards: m[k] }; }));
+  var h = groups.map(function(g){
+    var shut = !!_pbGrpShut[g.key], qk = bfEsc(g.key).replace(/'/g, '&#39;');
+    var red = g.cards.filter(function(c){ return c.tone === 'red'; }).length;
+    return '<div class="pb-grp"><div class="pb-gh" data-pbk="' + bfEsc(g.key) + '" data-pbl="g" onclick="pbGrp(\'' + qk + '\')"'
+      + ' ondragover="pbDO(event)" ondragleave="pbDL(event)" ondrop="pbDP(event,\'' + qk + '\',\'g\')">'
+      + '<span draggable="true" ondragstart="pbDS(event,\'' + qk + '\')" onclick="event.stopPropagation()" style="cursor:grab;color:var(--text3);padding:0 2px;font-size:13px">⠿</span>'
+      + '<span class="pb-car">' + (shut ? '▸' : '▾') + '</span><b>🏷 ' + bfEsc(g.k) + '</b><span class="pb-gn">' + g.cards.length + '</span>'
+      + (red ? '<span class="pb-chip red">⏰ ' + red + '</span>' : '') + '</div>'
+      + (shut ? '' : '<div class="pb-grid">' + g.cards.map(cardH).join('') + '</div>') + '</div>';
+  }).join('');
+  return h + (rest.length ? pbGroupsAuto(rest, cardH) : '');
+}
+function pbGroupsAuto(cards, cardH){
   var teamOf = function(c){ return bfTeamsOf(c.d.team)[0] || L3('(no team)', '(팀 없음)', '(không nhóm)'); };
   var krOf = function(c){ var k = pbTopKR(c.d); return k ? TL(k.label).replace(/<[^>]+>/g, '') : L3('(no company KR)', '(회사KR 없음)', '(không có KR công ty)'); };
   var teams = {}; cards.forEach(function(c){ teams[teamOf(c)] = 1; });
