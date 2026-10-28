@@ -509,6 +509,7 @@ tr.dragging{opacity:.35}
 .pb-lv.pb-rev{background:#EDE9FE;color:#6D28D9}
 .pb-newbtn{color:#1565C0;border-color:#93C5FD;font-weight:700}
 .pb-donesel{color:#15803D;border-color:#86EFAC}
+.pb-fold.pb-tag{right:90px}
 .pb-fold.pb-drop{right:34px;color:#94A3B8}.pb-fold.pb-drop:hover{color:#B91C1C;border-color:#FCA5A5}
 .pb-dropsel{color:#B91C1C;border-color:#FCA5A5}
 .pb-rdrop{width:18px;text-align:center;color:#CBD5E1;cursor:pointer;font-size:12px;flex-shrink:0}.pb-rdrop:hover{color:#B91C1C}.pb-rdrop.off{cursor:default}.pb-fold:hover{color:var(--text);border-color:var(--text3)}
@@ -674,7 +675,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-7";</script>
 </head>
 <body>
 
@@ -3826,7 +3827,7 @@ function projBoardHtml(pic){
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
       + (d.status !== 'Done' && d.status !== 'Dropped' ? '<button class="pb-fold pb-done" title="' + bfEsc(L3('Done — this initiative and all its open to-dos', '완료 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Xong — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDone([' + d.id + '])">✓</button>' : '')
       + (d.status !== 'Dropped' ? '<button class="pb-fold pb-drop" title="' + bfEsc(L3('Drop — this initiative and all its open to-dos', '중단 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Dừng — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDrop([' + d.id + '])">⊘</button>' : '')
-      + '<span class="pb-fold" title="' + bfEsc(L3('My group — put this card in a group you name', '내 묶음 — 이 카드를 내가 정한 묶음으로', 'Nhóm của tôi — đưa thẻ vào nhóm tự đặt tên')) + '" onclick="event.stopPropagation();pbTag(' + d.id + ')" style="cursor:pointer">🏷' + (pbGM()[d.id] ? '<small style="font-size:9px;margin-left:2px">' + bfEsc(pbGM()[d.id]) + '</small>' : '') + '</span>'
+      + '<span class="pb-fold pb-tag" title="' + bfEsc(L3('My group — put this card in a group you name', '내 묶음 — 이 카드를 내가 정한 묶음으로', 'Nhóm của tôi — đưa thẻ vào nhóm tự đặt tên')) + '" onclick="event.stopPropagation();pbTag(' + d.id + ')" style="cursor:pointer">🏷' + (pbGM()[d.id] ? '<small style="font-size:9px;margin-left:2px">' + bfEsc(pbGM()[d.id]) + '</small>' : '') + '</span>'
       + '<label class="pb-pick" title="' + bfEsc(L3('Select for timeline', '타임라인에 넣기', 'Chọn để xem dòng thời gian')) + '" onclick="event.stopPropagation()">'
       + '<input type="checkbox"' + (_pbSel[d.id] ? ' checked' : '') + ' onchange="pbPick(' + d.id + ',this.checked)"></label>'
       + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
