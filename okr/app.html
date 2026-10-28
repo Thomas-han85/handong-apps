@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-2";</script>
 </head>
 <body>
 
@@ -3848,6 +3848,32 @@ function pbTopKR(d){
   while(cur && n++ < 6){ if(cur.lv === 'KR') return cur; cur = DATA.find(function(x){ return x.id === cur.pid; }); }
   return null;
 }
+/* 묶음 줄 순서 (10/28) — 계정에 저장. 처음 보는 줄은 원래 순서대로 뒤에 */
+function pbOrd(){ try{ var o = AUTH.user.prefs && AUTH.user.prefs.pb_order; return Array.isArray(o) ? o : []; }catch(e){ return []; } }
+function pbOrdSort(list){
+  var o = pbOrd();
+  return list.map(function(g, i){ return { g: g, i: i, r: o.indexOf(g.key) }; })
+    .sort(function(a, b){ var ra = a.r < 0 ? 1e6 + a.i : a.r, rb = b.r < 0 ? 1e6 + b.i : b.r; return ra - rb; })
+    .map(function(x){ return x.g; });
+}
+var _pbDrag = null;
+function pbDS(ev, k){ _pbDrag = k; try{ ev.dataTransfer.setData('text/plain', k); ev.dataTransfer.effectAllowed = 'move'; }catch(e){} ev.stopPropagation(); }
+function pbDO(ev){ if(_pbDrag){ ev.preventDefault(); ev.currentTarget.style.outline = '2px dashed #1565C0'; } }
+function pbDL(ev){ ev.currentTarget.style.outline = ''; }
+function pbDP(ev, k, lvl){
+  ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.style.outline = '';
+  var src = _pbDrag; _pbDrag = null; if(!src || src === k) return;
+  var keys = [].slice.call(document.querySelectorAll('[data-pbk][data-pbl="' + lvl + '"]')).map(function(e){ return e.getAttribute('data-pbk'); });
+  if(keys.indexOf(src) < 0) return;                      // 다른 단계끼리는 안 옮긴다
+  keys.splice(keys.indexOf(src), 1); keys.splice(keys.indexOf(k), 0, src);
+  var o = pbOrd().filter(function(x){ return keys.indexOf(x) < 0; }).concat(keys);
+  try{
+    if(!AUTH.user.prefs || Array.isArray(AUTH.user.prefs)) AUTH.user.prefs = {};
+    AUTH.user.prefs.pb_order = o;
+    okrApi('set_pref', { key: 'pb_order', value: o }).catch(function(){});
+  }catch(e){}
+  renderMatrix();
+}
 function pbGroupsHtml(cards, cardH){
   var teamOf = function(c){ return bfTeamsOf(c.d.team)[0] || L3('(no team)', '(팀 없음)', '(không nhóm)'); };
   var krOf = function(c){ var k = pbTopKR(c.d); return k ? TL(k.label).replace(/<[^>]+>/g, '') : L3('(no company KR)', '(회사KR 없음)', '(không có KR công ty)'); };
@@ -3862,13 +3888,16 @@ function pbGroupsHtml(cards, cardH){
   }
   function head(cls, key, name, g){
     var shut = !!_pbGrpShut[key];
-    return '<div class="' + cls + '" onclick="pbGrp(\'' + bfEsc(key).replace(/'/g, '&#39;') + '\')">'
+    var qk = bfEsc(key).replace(/'/g, '&#39;'), lvl = cls === 'pb-gh' ? 'g' : 's';
+    return '<div class="' + cls + '" data-pbk="' + bfEsc(key) + '" data-pbl="' + lvl + '" onclick="pbGrp(\'' + qk + '\')"'
+      + ' ondragover="pbDO(event)" ondragleave="pbDL(event)" ondrop="pbDP(event,\'' + qk + '\',\'' + lvl + '\')">'
+      + '<span draggable="true" ondragstart="pbDS(event,\'' + qk + '\')" onclick="event.stopPropagation()" title="' + bfEsc(L3('Drag to reorder rows', '끌어서 줄 순서 바꾸기', 'Kéo để đổi thứ tự')) + '" style="cursor:grab;color:var(--text3);padding:0 2px;font-size:13px">⠿</span>'
       + '<span class="pb-car">' + (shut ? '▸' : '▾') + '</span><b>' + bfEsc(name) + '</b>'
       + '<span class="pb-gn">' + g.cards.length + '</span>'
       + (g.red ? '<span class="pb-chip red">⏰ ' + g.red + '</span>' : '') + '</div>';
   }
   function krRows(list, prefix){
-    return bucket(list, krOf).map(function(g){
+    return pbOrdSort(bucket(list, krOf).map(function(g){ g.key = prefix + 'KR:' + g.k; return g; })).map(function(g){
       var key = prefix + 'KR:' + g.k;
       return '<div class="pb-sub">' + head('pb-sh', key, g.k, g)
         + (_pbGrpShut[key] ? '' : '<div class="pb-grid">' + g.cards.map(cardH).join('') + '</div>') + '</div>';
@@ -3881,7 +3910,7 @@ function pbGroupsHtml(cards, cardH){
   window._pbFlat = true;
   var SP = pbSplitMap();
   var krIdOf = function(c){ var k = pbTopKR(c.d); return k ? String(k.id) : '0'; };
-  return bucket(cards, teamOf).map(function(g){
+  return pbOrdSort(bucket(cards, teamOf).map(function(g){ g.key = 'T:' + g.k; return g; })).map(function(g){
     var key = 'T:' + g.k;
     var kb = bucket(g.cards, krOf);
     var kro = kb.map(function(x){ return x.k; });
@@ -3898,7 +3927,7 @@ function pbGroupsHtml(cards, cardH){
     var body = '';
     if(!_pbGrpShut[key]){
       if(rest.length) body += '<div class="pb-grid">' + rest.map(cardH).join('') + '</div>';
-      kb.forEach(function(x){
+      pbOrdSort(kb.map(function(x){ x.key = key + '|KR:' + x.k; return x; })).forEach(function(x){
         if(!isSplit(x.cards[0])) return;
         var sk = key + '|KR:' + x.k;
         body += '<div class="pb-sub">' + head('pb-sh', sk, x.k, x)
