@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-5";</script>
 </head>
 <body>
 
@@ -3705,8 +3705,8 @@ function pbCards(pic){
   });
   return Object.keys(ids).map(function(k){
     var d = DATA.find(function(x){ return String(x.id) === k; });
-    var kids = DATA.filter(function(x){ return x.pid === d.id && x.lv === 'TD' && x.status !== 'Dropped'; });   // 중단은 세지 않는다
-    var open = kids.filter(function(x){ return x.status !== 'Done'; });
+    var kids = DATA.filter(function(x){ return x.pid === d.id && x.lv === 'TD' && (x.status !== 'Dropped' || d.status === 'Dropped'); });   // 중단은 세지 않는다 — 단 중단 카드면 보여 준다 (10/28)
+    var open = kids.filter(function(x){ return x.status !== 'Done' && x.status !== 'Dropped'; });
     var over = open.filter(function(x){ return dueStatus(x) === 'overdue'; });
     var wk = open.filter(function(x){ var g = pbDays(pbEnd(x)); return g !== null && g >= 0 && g <= 7; });
     var last = Math.max(+(d._uat || 0), Math.max.apply(null, kids.map(function(x){ return +(x._uat || 0); }).concat([0])));
@@ -3746,7 +3746,7 @@ function projBoardHtml(pic){
   var folded = vis.filter(function(c){ return _pbFold[c.d.id]; });
   var nOver = all.filter(function(c){ return c.tone === 'red'; }).length;
   var nStale = all.filter(function(c){ return c.tone === 'amber'; }).length;
-  var C = { red: ['#DC2626', '#FEF2F2'], amber: ['#D97706', '#FFFBEB'], blue: ['#1565C0', '#fff'], green: ['#16A34A', '#F0FDF4'], drop: ['#94A3B8', '#F8FAFC'] };
+  var C = { red: ['#DC2626', '#FEF2F2'], amber: ['#D97706', '#FFFBEB'], blue: ['#1565C0', '#fff'], green: ['#16A34A', '#F0FDF4'], drop: ['#475569', '#E2E8F0'] };   // 중단 — 진한 회색 (10/28)
   var head = '<div class="pb-head" onclick="pbToggleAll()">'
     + '<span class="pb-car">' + (_pbShut ? '▸' : '▾') + '</span>'
     + '<b>' + L3('Projects', '프로젝트', 'Dự án') + '</b>'
@@ -3790,12 +3790,12 @@ function projBoardHtml(pic){
       var _o = c.open.slice(); var _sq = function(x){ var m = String(x.label).match(/^\[[^\]]*?(\d+)\s*\/\s*\d+\]/); return m ? +m[1] : null; };
       _o.sort(function(a, b){ var sa = _sq(a), sb = _sq(b); if(sa !== null && sb !== null && sa !== sb) return sa - sb;
         var ea = pbEnd(a), eb = pbEnd(b); return ((ea ? ea.getTime() : 9e15) - (eb ? eb.getTime() : 9e15)) || (a.id - b.id); });
-      var rows = _o.concat(c.kids.filter(function(x){ return x.status === 'Done'; }));
+      var rows = _o.concat(c.kids.filter(function(x){ return x.status === 'Done' || x.status === 'Dropped'; }));
       list = '<div class="pb-list" onclick="event.stopPropagation()">'
         + rows.map(function(x){
             var od = dueStatus(x) === 'overdue';
             return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + '">'
-              + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : mtCk(x))
+              + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : x.status === 'Dropped' ? '<span class="pb-ok" style="color:#64748B">⊘</span>' : mtCk(x))
               + '<span class="pb-lab" onclick="openEdit(' + x.id + ')">' + TL(x.label) + '</span>'
               + tvHtml(x)
               + (x.status !== 'Done' ? quadBtns(x) : '')
@@ -3809,7 +3809,7 @@ function projBoardHtml(pic){
         + '<input type="date" id="pbDue' + d.id + '" value="' + todayISO() + '">'
         + '<button onclick="pbAdd(' + d.id + ')">' + L3('Add', '추가', 'Thêm') + '</button></div></div>';
     }
-    return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + '" onclick="pbToggle(' + d.id + ')">'
+    return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + (c.tone === 'drop' ? ';opacity:.7' : '') + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
       + (d.status !== 'Done' && d.status !== 'Dropped' ? '<button class="pb-fold pb-done" title="' + bfEsc(L3('Done — this initiative and all its open to-dos', '완료 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Xong — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDone([' + d.id + '])">✓</button>' : '')
       + (d.status !== 'Dropped' ? '<button class="pb-fold pb-drop" title="' + bfEsc(L3('Drop — this initiative and all its open to-dos', '중단 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Dừng — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDrop([' + d.id + '])">⊘</button>' : '')
