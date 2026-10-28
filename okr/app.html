@@ -674,7 +674,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.27-11";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-1";</script>
 </head>
 <body>
 
@@ -4175,7 +4175,7 @@ function mtQvHtml(){
 function renderMatrix(){
   // Assignee 목록 갱신
   const pics = [...new Set(
-    DATA.filter(d=>d.lv==='TD'&&(d.pic||d.reviewer))
+    DATA.filter(d=>(d.lv==='TD'||d.lv==='IN'||d.lv==='TK')&&d.status!=='Dropped'&&(d.pic||d.reviewer))
       .flatMap(d=>((d.pic||'')+'/'+(d.reviewer||'')).split(/[,+&\/]/).map(p=>p.trim()).filter(Boolean))   // 검토자만 맡은 사람도 (10/27)
   )].sort();
   // 새로 가입해 아직 할 일이 없는 사람도 목록에 자기 이름을 넣는다 — 없으면 보드·「+ 프로젝트」가 안 떠서 시작을 못 한다 (10/27)
