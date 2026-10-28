@@ -583,6 +583,8 @@ tr.dragging{opacity:.35}
 .tl-bub.od{background:#FEF2F2;border:1px solid #FCA5A5;color:#B91C1C}
 .tl-bub.cur{background:#FFFBEB;border:1px solid #FCD34D;color:#92400E;font-weight:600}
 .tl-bub:hover{z-index:5;max-width:none !important;overflow:visible}
+.tl-bub.past{margin-left:9px;transform:translateX(-100%)}
+.tl-bub.past::before{left:auto;right:5px}
 .tl-end{position:absolute;top:2px;bottom:2px;border-left:2px solid #7C3AED;opacity:.55}
 .tl-dot{position:absolute;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);cursor:pointer;border:2px solid #94A3B8;background:#fff;z-index:2;box-sizing:border-box}
 .tl-dot.done{background:#16A34A;border-color:#16A34A}.tl-dot.ip{background:#1565C0;border-color:#1565C0}
@@ -675,7 +677,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-9";</script>
 </head>
 <body>
 
@@ -4057,9 +4059,7 @@ function pbTimelineHtml(){
   });
   var DAY = 86400000;
   // 창은 지난 2주 ~ 앞으로 한 달 — 이만하면 지금 움직이는 것이 거의 다 보인다 (10/13 실장님)
-  // 10/28 실장님: 지난 일은 그 날짜까지 왼쪽으로, 앞으로 일은 오른쪽으로 늘린다 (최소 지난 2주 ~ 앞으로 한 달)
-  var lo = Math.min(t0.getTime() - 14 * DAY, Math.min.apply(null, dates)) - DAY / 2,
-      hi = Math.max(t0.getTime() + 30 * DAY, Math.max.apply(null, dates)) + DAY / 2;
+  var lo = t0.getTime() - 14 * DAY - DAY / 2, hi = t0.getTime() + 30 * DAY + DAY / 2;
   // 창 밖의 점은 양끝 「◂ 이전 n」·「이후 n ▸」 하나로
   L.forEach(function(l){
     l.early = l.pts.filter(function(o){ return o.t < lo; });
@@ -4069,13 +4069,10 @@ function pbTimelineHtml(){
   var X = function(t){ return ((t - lo) / (hi - lo) * 100).toFixed(2) + '%'; };
   // 눈금 — 매월 1일, 기간이 짧으면 15일도
   // 눈금 — 날마다 가는 선, 월요일은 굵게 날짜를, 매월 1일도 날짜를
-  var ticks = '', d = new Date(lo + DAY / 2);
+  var ticks = '', d = new Date(t0.getTime() - 14 * DAY);
   var WD = L3('SMTWTFS', '일월화수목금토', 'CN T2 T3 T4 T5 T6 T7');
-  var nDays = Math.round((hi - lo) / DAY), wide = nDays > 70;     // 길면 날마다 선은 빼고 월요일 선 + 매월 1일 날짜만
-  for(var i = 0; i <= nDays; i++, d = new Date(d.getTime() + DAY)){
+  for(var i = 0; i <= 44; i++, d = new Date(d.getTime() + DAY)){
     var t = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(), mon = d.getDay() === 1, first = d.getDate() === 1;
-    if(wide && !mon && !first) continue;
-    if(wide){ ticks += '<div class="tl-tick' + (first ? ' m' : ' dd') + '" style="left:' + X(t) + '">' + (first ? '<span>' + (d.getMonth() + 1) + '/1</span>' : '') + '</div>'; continue; }
     ticks += '<div class="tl-tick' + (mon ? ' m' : ' dd') + (d.getDay() === 0 || d.getDay() === 6 ? ' we' : '') + '" style="left:' + X(t) + '">'
       + ((mon || first) ? '<span>' + (d.getMonth() + 1) + '/' + d.getDate() + '</span>' : '') + '</div>';
   }
@@ -4102,27 +4099,38 @@ function pbTimelineHtml(){
           var isC = l.cur && o.x.id === l.cur.id;
           bubbles.push({ xp: xp, txt: (o.approx ? '≈ ' : '') + TL(o.x.label), cls: isC ? 'cur' : stOf(o.x), id: o.x.id, tip: tipOf(o) });
         });
-        if(gs.length > 6) bubbles.push({ xp: xp, txt: '+' + (gs.length - 6), cls: 'wait', id: gs[6].x.id, tip: gs.slice(6, 26).map(function(o){ return '· ' + tipOf(o); }).join('\n') });
+        if(gs.length > 6) bubbles.push({ xp: xp, past: t < t0.getTime(), txt: '+' + (gs.length - 6), cls: 'wait', id: gs[6].x.id, tip: gs.slice(6, 26).map(function(o){ return '· ' + tipOf(o); }).join('\n') });
       } else {
         g.forEach(function(o, k){
           var x = o.x, isCur = l.cur && x.id === l.cur.id;
           dots += '<div class="tl-dot ' + stOf(x) + (isCur ? ' cur' : '') + '" style="left:calc(' + X(t) + ' + ' + (k * 13 - (g.length - 1) * 6.5) + 'px);top:6px" title="' + bfEsc(tipOf(o)) + '" onclick="openEdit(' + x.id + ')"></div>';
-          bubbles.push({ xp: xp, txt: (o.approx ? '≈ ' : '') + TL(x.label), cls: isCur ? 'cur' : stOf(x), id: x.id, tip: tipOf(o) });
+          bubbles.push({ xp: xp, past: t < t0.getTime(), txt: (o.approx ? '≈ ' : '') + TL(x.label), cls: isCur ? 'cur' : stOf(x), id: x.id, tip: tipOf(o) });
         });
       }
       // 날짜 — 바로 앞 날짜와 너무 붙으면(줄 폭의 3% 안) 생략
       if(xp - lastLab > 3){ var dt = new Date(t); dlab += '<div class="tl-dl" style="left:' + X(t) + '">' + (dt.getMonth() + 1) + '/' + dt.getDate() + '</div>'; lastLab = xp; }
     });
     // 말풍선 층 나누기 — 왼쪽부터 넣으며 앞 말풍선 끝과 겹치면 아래 층으로
-    var lv = [], bH = '';
-    bubbles.forEach(function(b){
+    // 오늘 이후는 왼쪽부터 오른쪽으로 펼치고, 지난 일은 오늘 쪽부터 왼쪽으로 펼친다 (10/28 실장님)
+    var lv = [], lvP = [], bH = '';
+    var wOf = function(b){
       var plain = String(b.txt).replace(/<[^>]+>/g, '');
       var wide = (plain.match(/[ᄀ-ᇿ㄰-㆏가-힯一-鿿]/g) || []).length;   // 한글은 폭이 넓다
-      var wpx = Math.min(260, (plain.length - wide) * 6.4 + wide * 11 + 18), w = wpx / tw * 100;
+      return Math.min(260, (plain.length - wide) * 6.4 + wide * 11 + 18);
+    };
+    bubbles.filter(function(b){ return !b.past; }).forEach(function(b){
+      var wpx = wOf(b), w = wpx / tw * 100;
       var k = 0; while(lv[k] !== undefined && lv[k] > b.xp - 0.4) k++;
       lv[k] = b.xp + w + 0.6;
       bH += '<div class="tl-bub ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
     });
+    bubbles.filter(function(b){ return b.past; }).sort(function(a, b){ return b.xp - a.xp; }).forEach(function(b){
+      var wpx = wOf(b), w = wpx / tw * 100;
+      var k = 0; while(lvP[k] !== undefined && lvP[k] < b.xp + 0.4) k++;
+      lvP[k] = b.xp - w - 0.6;
+      bH += '<div class="tl-bub past ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
+    });
+    if(lvP.length > lv.length) lv.length = lvP.length;
     if(l.late.length){
       dots += '<div class="tl-late" title="' + bfEsc(l.late.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">'
         + L3('later ', '이후 ', 'sau ') + l.late.length + ' ▸</div>';
