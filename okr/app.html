@@ -585,6 +585,7 @@ tr.dragging{opacity:.35}
 .tl-bub:hover{z-index:5;max-width:none !important;overflow:visible}
 .tl-bub.past{margin-left:9px;transform:translateX(-100%)}
 .tl-bub.past::before{left:auto;right:5px}
+.tl-bub.pastclip{margin-left:0}.tl-bub.pastclip::before{display:none}
 .tl-end{position:absolute;top:2px;bottom:2px;border-left:2px solid #7C3AED;opacity:.55}
 .tl-dot{position:absolute;width:11px;height:11px;border-radius:50%;transform:translateX(-50%);cursor:pointer;border:2px solid #94A3B8;background:#fff;z-index:2;box-sizing:border-box}
 .tl-dot.done{background:#16A34A;border-color:#16A34A}.tl-dot.ip{background:#1565C0;border-color:#1565C0}
@@ -677,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-10";</script>
 </head>
 <body>
 
@@ -4112,25 +4113,26 @@ function pbTimelineHtml(){
     });
     // 말풍선 층 나누기 — 왼쪽부터 넣으며 앞 말풍선 끝과 겹치면 아래 층으로
     // 오늘 이후는 왼쪽부터 오른쪽으로 펼치고, 지난 일은 오늘 쪽부터 왼쪽으로 펼친다 (10/28 실장님)
-    var lv = [], lvP = [], bH = '';
+    var lv = [], bH = '';
     var wOf = function(b){
       var plain = String(b.txt).replace(/<[^>]+>/g, '');
       var wide = (plain.match(/[ᄀ-ᇿ㄰-㆏가-힯一-鿿]/g) || []).length;   // 한글은 폭이 넓다
       return Math.min(260, (plain.length - wide) * 6.4 + wide * 11 + 18);
     };
-    bubbles.filter(function(b){ return !b.past; }).forEach(function(b){
-      var wpx = wOf(b), w = wpx / tw * 100;
-      var k = 0; while(lv[k] !== undefined && lv[k] > b.xp - 0.4) k++;
-      lv[k] = b.xp + w + 0.6;
-      bH += '<div class="tl-bub ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
+    // 말풍선마다 [시작, 끝] 을 잡고, 어느 줄이든 겹치지 않는 첫 줄에 넣는다 (10/28)
+    var order = bubbles.filter(function(b){ return !b.past; }).concat(bubbles.filter(function(b){ return b.past; }).sort(function(a, b){ return b.xp - a.xp; }));
+    order.forEach(function(b){
+      var wpx = wOf(b), w = wpx / tw * 100, x0, x1, cls = b.cls, left = b.xp;
+      if(b.past){
+        x1 = b.xp; x0 = b.xp - w;
+        if(x0 < 8){ x0 = Math.min(8, b.xp); x1 = x0 + w; left = x0; cls += ' pastclip'; }   // 왼쪽 끝 — 「이전」 표시 오른쪽에서
+        else cls += ' past';
+      } else { x0 = b.xp; x1 = b.xp + w; }
+      var k = 0;
+      while((lv[k] || []).some(function(iv){ return x0 < iv[1] + 0.4 && iv[0] < x1 + 0.4; })) k++;
+      (lv[k] = lv[k] || []).push([x0, x1]);
+      bH += '<div class="tl-bub ' + cls + '" style="left:' + left.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
     });
-    bubbles.filter(function(b){ return b.past; }).sort(function(a, b){ return b.xp - a.xp; }).forEach(function(b){
-      var wpx = wOf(b), w = wpx / tw * 100;
-      var k = 0; while(lvP[k] !== undefined && lvP[k] < b.xp + 0.4) k++;
-      lvP[k] = b.xp - w - 0.6;
-      bH += '<div class="tl-bub past ' + b.cls + '" style="left:' + b.xp.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
-    });
-    if(lvP.length > lv.length) lv.length = lvP.length;
     if(l.late.length){
       dots += '<div class="tl-late" title="' + bfEsc(l.late.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">'
         + L3('later ', '이후 ', 'sau ') + l.late.length + ' ▸</div>';
