@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-9";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-10";</script>
 </head>
 <body>
 
@@ -4559,7 +4559,7 @@ function renderMatrix(){
           </div>
           <span style="background:#16A34A;color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px">${doneItems.length}</span>
         </div>
-        ${mtFolded('done')?'':`<div style="display:flex;flex-direction:column;gap:5px">${cards}</div>`}
+        ${mtFolded('done')?'':`<div style="display:flex;flex-direction:column;gap:5px;max-height:46vh;overflow-y:auto;overflow-x:hidden;padding-right:2px">${cards}</div>`}
       </div>`;
     })()}`;
 }
