@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-8";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-9";</script>
 </head>
 <body>
 
@@ -4422,7 +4422,7 @@ function renderMatrix(){
         <span style="font-size:10px;padding:1px 7px;border-radius:8px;background:${stC}20;color:${stC};font-weight:500;white-space:nowrap;flex-shrink:0">${stLabel}</span>
       </div>`;
     }).join('');
-    return `<div style="background:${bgColor};border:1.5px solid ${borderColor};border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:200px">
+    return `<div style="background:${bgColor};border:1.5px solid ${borderColor};border-radius:12px;padding:14px;display:flex;flex-direction:column;min-height:200px;min-width:0">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px">
         <div>
           <div style="font-size:13px;font-weight:700;color:${borderColor};margin-bottom:2px">${title}</div>
@@ -4430,7 +4430,7 @@ function renderMatrix(){
         </div>
         <span style="background:${borderColor};color:#fff;font-size:11px;font-weight:600;padding:2px 9px;border-radius:10px;flex-shrink:0">${items.length}</span>
       </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0;max-height:46vh;overflow-y:auto;overflow-x:hidden">
         ${items.length?cards:`<div style="font-size:11px;color:var(--text3);text-align:center;padding:20px 0">${emptyMsg}</div>`}
       </div>
     </div>`;
@@ -4461,7 +4461,7 @@ function renderMatrix(){
           <div style="text-align:center;font-size:11px;font-weight:600;color:#1565C0">${t('urgAxisLow')}</div>
         </div>
         <!-- 4사분면 그리드 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
           ${quadCard(Q.imp_urg,      t('q1Title'), t('q1Sub'), '#FFF5F5','#DC2626','#DC2626', t('q1Empty'))}
           ${quadCard(Q.imp_noturg,   t('q2Title'), t('q2Sub'), '#EFF6FF','#1565C0','#1565C0', t('qEmpty'))}
           ${quadCard(Q.notimp_urg,   t('q3Title'), t('q3Sub'), '#FFF8F0','#EA580C','#EA580C', t('qEmpty'))}
