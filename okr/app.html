@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-2";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-3";</script>
 </head>
 <body>
 
@@ -5456,14 +5456,20 @@ var FB = {items:[], now:'', mineOnly:false, pend:{}, imgc:{}};
 function fbShrink(file, cb){
   var r = new FileReader();
   r.onload = function(){
-    var im = new Image();
+    var src = r.result, im = new Image();
     im.onload = function(){
-      var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
-      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      var W = im.naturalWidth || im.width, H = im.naturalHeight || im.height;
+      if(!W || !H || W < 8 || H < 8){ toast(L3('Could not read the picture — attach it as a file with 📎.', '사진을 읽지 못했습니다 — 📎 로 파일을 골라 주세요.', 'Không đọc được ảnh — hãy chọn tệp bằng 📎.'), 'error'); return; }
+      var k = Math.min(1, 1600 / Math.max(W, H));
+      if(k === 1 && src.length < 3000000){ cb(src); return; }          // 줄일 필요 없으면 원본 그대로
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(W * k)); c.height = Math.max(1, Math.round(H * k));
       c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
-      cb(c.toDataURL('image/jpeg', 0.85));
+      var out = c.toDataURL('image/jpeg', 0.85);
+      cb(c.height < 8 || c.width < 8 ? src : out);
     };
-    im.src = r.result;
+    im.onerror = function(){ toast(L3('Could not read the picture.', '사진을 읽지 못했습니다.', 'Không đọc được ảnh.'), 'error'); };
+    im.src = src;
   };
   r.readAsDataURL(file);
 }
