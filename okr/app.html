@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-7";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-8";</script>
 </head>
 <body>
 
@@ -2377,8 +2377,16 @@ function picListHtml(){
 
 /* 아는 계정 — 별명표(PIC_ALIAS)만 보면 그 뒤에 생긴 계정(nguyenthiep 등)을 「새 이름」으로 잘못 알린다 (2026-10-02).
    팀원은 사용자 목록을 못 받으므로, 로그인한 나와 항목을 저장한 적 있는 계정(_uby)을 더한다. */
+var _userNames = [], _userNamesAt = 0;   // 서버 아이디 목록 (10/29)
+function loadUserNames(){
+  if(Date.now() - _userNamesAt < 300000) return;
+  _userNamesAt = Date.now();
+  try{ okrApi('user_names', {}).then(function(r){ if(r && r.ok && Array.isArray(r.names)) _userNames = r.names; }).catch(function(){}); }catch(e){}
+}
 function knownAccounts(){
   var set = {};
+  loadUserNames();
+  _userNames.forEach(function(n){ if(n) set[n] = 1; });
   Object.keys(PIC_ALIAS).forEach(function(a){ set[a] = 1; });
   try{ if(AUTH && AUTH.user && AUTH.user.username) set[AUTH.user.username] = 1; }catch(e){}
   (DATA || []).forEach(function(d){ if(d && d._uby) set[d._uby] = 1; });
