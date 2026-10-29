@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-6";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-7";</script>
 </head>
 <body>
 
@@ -4725,13 +4725,13 @@ function openEdit(id){
       ${(d.lv==='TD')?`<div class="field-row">
         <div class="field-group"><div class="field-lbl">${t('fldImp')}</div><select class="field-sel" id="f-imp">
           <option value="">${t('fldUnset')}</option>
-          <option value="Important"${(d.importance||'')==='Important'?' selected':''} >${t('imp')}</option>
-          <option value="덜Important"${(d.importance||'')==='덜중요'?' selected':''} >${t('lessImp')}</option>
+          <option value="Important"${flagNorm(d.importance)==='Important'?' selected':''} >${t('imp')}</option>
+          <option value="덜Important"${flagNorm(d.importance)==='Less'?' selected':''} >${t('lessImp')}</option>
         </select></div>
         <div class="field-group"><div class="field-lbl">${t('fldUrg')}</div><select class="field-sel" id="f-urg">
           <option value="">${t('fldUnset')}</option>
-          <option value="Urgent"${(d.urgency||'')==='Urgent'?' selected':''} >${t('urg')}</option>
-          <option value="덜Urgent"${(d.urgency||'')==='덜긴급'?' selected':''} >${t('lessUrg')}</option>
+          <option value="Urgent"${flagNorm(d.urgency)==='Urgent'?' selected':''} >${t('urg')}</option>
+          <option value="덜Urgent"${flagNorm(d.urgency)==='Less'?' selected':''} >${t('lessUrg')}</option>
         </select></div>
       </div>`:''}
     </div>
