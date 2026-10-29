@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-11";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-12";</script>
 </head>
 <body>
 
@@ -3834,7 +3834,7 @@ function projBoardHtml(pic){
         + '<input type="date" id="pbDue' + d.id + '" value="' + todayISO() + '">'
         + '<button onclick="pbAdd(' + d.id + ')">' + L3('Add', '추가', 'Thêm') + '</button></div></div>';
     }
-    return '<div class="pb-card' + (open ? ' open' : '') + '" style="border-color:' + col[0] + '55;background:' + col[1] + (c.tone === 'drop' ? ';opacity:.7' : '') + '" onclick="pbToggle(' + d.id + ')">'
+    return '<div class="pb-card' + (open ? ' open' : '') + '" data-pbc="' + d.id + '" draggable="true" ondragstart="pbCDS(event,' + d.id + ')" ondragover="pbCDO(event)" ondragleave="pbDL(event)" ondrop="pbCDP(event,' + d.id + ')" style=""border-color:' + col[0] + '55;background:' + col[1] + (c.tone === 'drop' ? ';opacity:.7' : '') + '" onclick="pbToggle(' + d.id + ')">'
       + '<button class="pb-fold" title="' + bfEsc(L3('Fold away — moves to the folded row below', '접어두기 — 아래 「접어둔 것」 줄로 내립니다', 'Thu gọn — chuyển xuống hàng đã thu gọn')) + '" onclick="event.stopPropagation();pbFold(' + d.id + ',1)">▁</button>'
       + (d.status !== 'Done' && d.status !== 'Dropped' ? '<button class="pb-fold pb-done" title="' + bfEsc(L3('Done — this initiative and all its open to-dos', '완료 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Xong — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDone([' + d.id + '])">✓</button>' : '')
       + (d.status !== 'Dropped' ? '<button class="pb-fold pb-drop" title="' + bfEsc(L3('Drop — this initiative and all its open to-dos', '중단 — 이 이니셔티브와 밑의 안 끝난 할 일 전부', 'Dừng — sáng kiến này và mọi việc chưa xong bên dưới')) + '" onclick="event.stopPropagation();pbDrop([' + d.id + '])">⊘</button>' : '')
@@ -3936,7 +3936,33 @@ function pbTag(id){
   }catch(e){}
   renderMatrix();
 }
+/* 카드 순서 (10/29) — 끌어서 다른 카드 위에 놓으면 그 앞으로. 계정에 저장 */
+function pbCOrd(){ try{ var o = AUTH.user.prefs && AUTH.user.prefs.pb_corder; return Array.isArray(o) ? o : []; }catch(e){ return []; } }
+function pbCardSort(list){
+  var o = pbCOrd(); if(!o.length) return list;
+  return list.map(function(c, i){ return { c: c, i: i, r: o.indexOf(c.d.id) }; })
+    .sort(function(a, b){ var ra = a.r < 0 ? 1e6 + a.i : a.r, rb = b.r < 0 ? 1e6 + b.i : b.r; return ra - rb; }).map(function(x){ return x.c; });
+}
+var _pbCDrag = null;
+function pbCDS(ev, id){ if(ev.target && ev.target.closest && ev.target.closest('input,select,textarea,button')) { ev.preventDefault(); return; } _pbCDrag = id; try{ ev.dataTransfer.setData('text/plain', String(id)); ev.dataTransfer.effectAllowed = 'move'; }catch(e){} }
+function pbCDO(ev){ if(_pbCDrag){ ev.preventDefault(); ev.currentTarget.style.outline = '2px dashed #1565C0'; } }
+function pbCDP(ev, id){
+  ev.preventDefault(); ev.stopPropagation(); ev.currentTarget.style.outline = '';
+  var src = _pbCDrag; _pbCDrag = null; if(!src || src === id) return;
+  var ids = [].slice.call(document.querySelectorAll('[data-pbc]')).map(function(e){ return +e.getAttribute('data-pbc'); });
+  ids = ids.filter(function(x, i){ return ids.indexOf(x) === i; });
+  if(ids.indexOf(src) < 0) return;
+  ids.splice(ids.indexOf(src), 1); ids.splice(ids.indexOf(id), 0, src);
+  var o = pbCOrd().filter(function(x){ return ids.indexOf(x) < 0; }).concat(ids);
+  try{
+    if(!AUTH.user.prefs || Array.isArray(AUTH.user.prefs)) AUTH.user.prefs = {};
+    AUTH.user.prefs.pb_corder = o;
+    okrApi('set_pref', { key: 'pb_corder', value: o }).catch(function(){});
+  }catch(e){}
+  renderMatrix();
+}
 function pbGroupsHtml(cards, cardH){
+  cards = pbCardSort(cards);
   var GM = pbGM(), mine = cards.filter(function(c){ return GM[c.d.id]; }), rest = cards.filter(function(c){ return !GM[c.d.id]; });
   if(!mine.length) return pbGroupsAuto(cards, cardH);
   var m = {}, ord = [];
@@ -4453,7 +4479,7 @@ function renderMatrix(){
         <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:600;color:var(--text2);letter-spacing:1px">${t('impAxis')}</div>
         <div style="writing-mode:vertical-rl;transform:rotate(180deg);font-size:10px;color:var(--text3)">↑</div>
       </div>
-      <div style="flex:1">
+      <div style="flex:1;min-width:0">
         ${mtQvHtml()}
         <!-- 상단 축 레이블 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;padding:0 2px">
