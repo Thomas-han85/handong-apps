@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.28-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-1";</script>
 </head>
 <body>
 
@@ -5451,7 +5451,60 @@ var FBT = {
   en:{title:'Feedback & requests', ph:'Write anything that is inconvenient, broken, or that you wish it did. Korean, English or Vietnamese is fine.', send:'Send', ctx:'Sent along', all:'All', mine:'Mine', none:'Nothing written yet.', open:'Received', doing:'In progress', done:'Resolved', reply:'Add', rph:'Add a comment', sent:'Sent. We will check it and reply here.', orig:'Original', err:'Could not send — please try again shortly.'},
   vi:{title:'Góp ý · Yêu cầu cải tiến', ph:'Hãy ghi bất cứ điều gì bất tiện, không hoạt động, hoặc bạn mong muốn. Tiếng Hàn, Anh hay Việt đều được.', send:'Gửi', ctx:'Thông tin gửi kèm', all:'Tất cả', mine:'Của tôi', none:'Chưa có góp ý nào.', open:'Đã nhận', doing:'Đang xử lý', done:'Đã giải quyết', reply:'Bổ sung', rph:'Ghi thêm', sent:'Đã gửi. Chúng tôi sẽ kiểm tra và trả lời tại đây.', orig:'Bản gốc', err:'Chưa gửi được — vui lòng thử lại sau.'}
 };
-var FB = {items:[], now:'', mineOnly:false};
+var FB = {items:[], now:'', mineOnly:false, pend:{}, imgc:{}};
+/* 사진 (10/29) — 붙이기·고르기 → 줄여서 대기열 FB.pend[대상] */
+function fbShrink(file, cb){
+  var r = new FileReader();
+  r.onload = function(){
+    var im = new Image();
+    im.onload = function(){
+      var k = Math.min(1, 1600 / Math.max(im.width, im.height)), c = document.createElement('canvas');
+      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      cb(c.toDataURL('image/jpeg', 0.85));
+    };
+    im.src = r.result;
+  };
+  r.readAsDataURL(file);
+}
+function fbAddFiles(key, files){
+  [].slice.call(files || []).filter(function(f){ return /^image\//.test(f.type); }).forEach(function(f){
+    fbShrink(f, function(d){ var a = FB.pend[key] = FB.pend[key] || []; if(a.length < 4){ a.push(d); fbPendDraw(key); } });
+  });
+}
+function fbPaste(ev, key){
+  var it = (ev.clipboardData && ev.clipboardData.items) || [], fs = [];
+  for(var i = 0; i < it.length; i++) if(it[i].kind === 'file') fs.push(it[i].getAsFile());
+  if(fs.length){ ev.preventDefault(); fbAddFiles(key, fs); }
+}
+function fbPendDraw(key){
+  var el = document.getElementById('fbp_' + key); if(!el) return;
+  el.innerHTML = (FB.pend[key] || []).map(function(d, i){
+    return '<span style="position:relative;display:inline-block;margin:4px 6px 0 0"><img src="' + d + '" style="height:54px;border:1px solid var(--border);border-radius:4px">'
+      + '<b onclick="FB.pend[\'' + key + '\'].splice(' + i + ',1);fbPendDraw(\'' + key + '\')" style="position:absolute;top:-6px;right:-6px;background:#D32F2F;color:#fff;border-radius:50%;width:16px;height:16px;font-size:11px;line-height:16px;text-align:center;cursor:pointer">×</b></span>';
+  }).join('');
+}
+function fbClip(key){
+  return '<label title="' + aiEsc(L3('Attach a picture (or paste with Ctrl+V)', '사진 붙이기 (Ctrl+V 로 붙여넣어도 됩니다)', 'Đính kèm ảnh (hoặc dán bằng Ctrl+V)')) + '" style="cursor:pointer;font-size:16px;padding:0 4px">📎<input type="file" accept="image/*" multiple style="display:none" onchange="fbAddFiles(\'' + key + '\',this.files);this.value=\'\'"></label>';
+}
+function fbImgs(list){
+  if(!list || !list.length) return '';
+  return '<div style="margin-top:6px">' + list.map(function(nm){
+    return '<img data-fbimg="' + aiEsc(nm) + '" src="' + (FB.imgc[nm] || '') + '" onclick="fbBig(\'' + aiEsc(nm) + '\')" style="max-height:120px;max-width:100%;margin:0 6px 6px 0;border:1px solid var(--border);border-radius:4px;cursor:zoom-in;background:var(--bg);min-width:60px;min-height:40px">';
+  }).join('') + '</div>';
+}
+async function fbImgLoad(){
+  var els = [].slice.call(document.querySelectorAll('#fbBody img[data-fbimg]'));
+  for(var i = 0; i < els.length; i++){
+    var nm = els[i].getAttribute('data-fbimg');
+    if(!FB.imgc[nm]){ try{ var r = await okrApi('fb_img', {name: nm}); if(r && r.ok) FB.imgc[nm] = r.data; }catch(e){} }
+    if(FB.imgc[nm]) els[i].src = FB.imgc[nm];
+  }
+}
+function fbBig(nm){
+  var d = FB.imgc[nm]; if(!d) return;
+  var w = window.open(''); if(w){ w.document.write('<title>' + nm + '</title><body style="margin:0;background:#222"><img src="' + d + '" style="max-width:100%;display:block;margin:auto">'); }
+}
 function fbT(k){ return (FBT[currentLang] || FBT.en)[k]; }
 function fbMe(){ return (typeof AUTH !== 'undefined' && AUTH && AUTH.user) ? AUTH.user : null; }
 function fbPriv(){ var u = fbMe(); return !!u && (u.role === 'admin' || u.role === 'bod'); }
@@ -5485,7 +5538,8 @@ function fbRender(){
   var u = fbMe(), seen = fbSeen();
   document.getElementById('fbTitle').textContent = fbT('title');
   var list = FB.items.slice().reverse().filter(function(it){ return !FB.mineOnly || (u && it.by === u.username); });
-  var h = '<textarea class="field-ta" id="fbText" rows="4" placeholder="' + aiEsc(fbT('ph')) + '"></textarea>'
+  var h = '<textarea class="field-ta" id="fbText" rows="4" placeholder="' + aiEsc(fbT('ph')) + '" onpaste="fbPaste(event,\'new\')"></textarea>'
+    + '<div style="display:flex;align-items:flex-start;gap:4px">' + fbClip('new') + '<div id="fbp_new"></div></div>'
     + '<div class="fb-ctx">' + fbT('ctx') + ': ' + aiEsc(fbTab()) + ' · v' + aiEsc(APP_VERSION) + ' · ' + aiEsc(u ? u.username : '') + '</div>'
     + '<button class="btn primary" style="width:100%" onclick="fbSend()">' + fbT('send') + '</button>'
     + '<div class="fb-filter" style="margin-top:16px"><button class="' + (FB.mineOnly ? '' : 'on') + '" onclick="FB.mineOnly=false;fbRender()">' + fbT('all') + ' ' + FB.items.length + '</button>'
@@ -5498,16 +5552,18 @@ function fbRender(){
     if(fbPriv()) h += '<select class="field-sel" style="width:auto;padding:2px 6px;font-size:11px;margin-left:auto" onchange="fbStatus(\'' + it.id + '\',this.value)">'
       + ['open','doing','done'].map(function(x){ return '<option value="' + x + '"' + (x === st ? ' selected' : '') + '>' + fbT(x) + '</option>'; }).join('') + '</select>';
     h += '</div><div class="fb-text">' + aiEsc(tr || it.text) + '</div>'
-      + (tr && tr !== it.text ? '<div class="fb-orig">' + fbT('orig') + ': ' + aiEsc(it.text) + '</div>' : '');
+      + (tr && tr !== it.text ? '<div class="fb-orig">' + fbT('orig') + ': ' + aiEsc(it.text) + '</div>' : '')
+      + fbImgs(it.imgs);
     (it.replies || []).forEach(function(r){
       var rt = fbTr(r);
-      h += '<div class="fb-rep"><div class="fb-meta"><b>' + aiEsc(r.by) + '</b><span>' + aiEsc((r.at || '').slice(5, 16)) + '</span></div><div class="fb-text">' + aiEsc(rt || r.text) + '</div></div>';
+      h += '<div class="fb-rep"><div class="fb-meta"><b>' + aiEsc(r.by) + '</b><span>' + aiEsc((r.at || '').slice(5, 16)) + '</span></div><div class="fb-text">' + aiEsc(rt || r.text) + '</div>' + fbImgs(r.imgs) + '</div>';
     });
     if(u && (fbPriv() || it.by === u.username))
-      h += '<div class="fb-rbox"><input class="field-input" id="fbr_' + it.id + '" placeholder="' + aiEsc(fbT('rph')) + '" onkeydown="if(event.key===\'Enter\')fbReply(\'' + it.id + '\')"><button class="btn" onclick="fbReply(\'' + it.id + '\')">' + fbT('reply') + '</button></div>';
+      h += '<div class="fb-rbox"><input class="field-input" id="fbr_' + it.id + '" placeholder="' + aiEsc(fbT('rph')) + '" onpaste="fbPaste(event,\'' + it.id + '\')" onkeydown="if(event.key===\'Enter\')fbReply(\'' + it.id + '\')">' + fbClip(it.id) + '<button class="btn" onclick="fbReply(\'' + it.id + '\')">' + fbT('reply') + '</button></div><div id="fbp_' + it.id + '"></div>';
     h += '</div>';
   });
   document.getElementById('fbBody').innerHTML = h;
+  Object.keys(FB.pend).forEach(fbPendDraw); fbImgLoad();
 }
 async function fbOpen(){
   document.getElementById('fbPanel').classList.add('open');
@@ -5525,12 +5581,12 @@ async function fbDo(action, payload){
   toast(fbT('err'), 'error'); return false;
 }
 async function fbSend(){
-  var el = document.getElementById('fbText'), v = (el.value || '').trim(); if(!v) return;
-  if(await fbDo('fb_add', {text:v, tab:fbTab(), ver:APP_VERSION, lang:currentLang})) toast(fbT('sent'));
+  var el = document.getElementById('fbText'), v = (el.value || '').trim(), im = FB.pend['new'] || []; if(!v && !im.length) return;
+  if(await fbDo('fb_add', {text:v, imgs:im, tab:fbTab(), ver:APP_VERSION, lang:currentLang})){ FB.pend['new'] = []; fbPendDraw('new'); toast(fbT('sent')); }
 }
 async function fbReply(id){
-  var el = document.getElementById('fbr_' + id), v = el ? (el.value || '').trim() : ''; if(!v) return;
-  await fbDo('fb_reply', {id:id, text:v});
+  var el = document.getElementById('fbr_' + id), v = el ? (el.value || '').trim() : '', im = FB.pend[id] || []; if(!v && !im.length) return;
+  if(await fbDo('fb_reply', {id:id, text:v, imgs:im})){ FB.pend[id] = []; fbPendDraw(id); }
 }
 async function fbStatus(id, st){ await fbDo('fb_status', {id:id, status:st}); }
 /* 로그인하고 NAS 모드일 때만 버튼을 보인다. 1분마다 새 답글을 본다 */
