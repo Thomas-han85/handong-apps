@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-5";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-6";</script>
 </head>
 <body>
 
@@ -2452,7 +2452,7 @@ function nameMatch(field, uname){
   var al = picAliases(uname);
   for(var i=0;i<al.length;i++){
     var a = String(al[i]).toLowerCase().trim();
-    if(a && nmPart(f, a)) return true;
+    if(a && a === f) return true;   // 별명은 글자 일부가 아니라 통째로 같을 때만 (10/29)
   }
   return false;
 }
