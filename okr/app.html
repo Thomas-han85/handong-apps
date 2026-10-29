@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-2";</script>
 </head>
 <body>
 
@@ -4098,7 +4098,7 @@ function pbTimelineHtml(){
           var ca = l.cur && a.x.id === l.cur.id ? 0 : 1, cb = l.cur && b.x.id === l.cur.id ? 0 : 1; return ca - cb; });
         gs.slice(0, 6).forEach(function(o){
           var isC = l.cur && o.x.id === l.cur.id;
-          bubbles.push({ xp: xp, txt: (o.approx ? '≈ ' : '') + TL(o.x.label), cls: isC ? 'cur' : stOf(o.x), id: o.x.id, tip: tipOf(o) });
+          bubbles.push({ xp: xp, past: t < t0.getTime(), txt: (o.approx ? '≈ ' : '') + TL(o.x.label), cls: isC ? 'cur' : stOf(o.x), id: o.x.id, tip: tipOf(o) });
         });
         if(gs.length > 6) bubbles.push({ xp: xp, past: t < t0.getTime(), txt: '+' + (gs.length - 6), cls: 'wait', id: gs[6].x.id, tip: gs.slice(6, 26).map(function(o){ return '· ' + tipOf(o); }).join('\n') });
       } else {
