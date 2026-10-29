@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-3";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-4";</script>
 </head>
 <body>
 
@@ -4025,6 +4025,13 @@ function pbSelBar(){
     + '<button class="pb-tlclr pb-dropsel" onclick="pbDrop(Object.keys(_pbSel).map(Number))">⊘ ' + L3('Drop', '중단', 'Dừng') + '</button>'
     + '<button class="pb-tlclr" onclick="_pbSel={};_pbTL=false;renderMatrix()">' + L3('Clear', '선택 해제', 'Bỏ chọn') + '</button></span>';
 }
+/* 타임라인 말풍선 ✓ — 안 끝난 할 일만 (10/29) */
+function tlCk(b){
+  if(String(b.txt).charAt(0) === '+') return '';
+  var x = DATA.find(function(z){ return z.id === b.id; });
+  if(!x || x.lv !== 'TD' || x.status === 'Done' || x.status === 'Dropped') return '';
+  return '<span title="' + bfEsc(L3('Mark done', '완료 표시', 'Đánh dấu xong')) + '" onclick="event.stopPropagation();mtMove(' + b.id + ',\'done\')" style="display:inline-block;width:13px;height:13px;line-height:11px;text-align:center;border:1px solid currentColor;border-radius:3px;margin-right:4px;font-size:9px;cursor:pointer;opacity:.75">✓</span>';
+}
 function pbTimelineHtml(){
   var ids = Object.keys(_pbSel).map(Number);
   var lanes = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(Boolean);
@@ -4119,6 +4126,12 @@ function pbTimelineHtml(){
       var wide = (plain.match(/[ᄀ-ᇿ㄰-㆏가-힯一-鿿]/g) || []).length;   // 한글은 폭이 넓다
       return Math.min(260, (plain.length - wide) * 6.4 + wide * 11 + 18);
     };
+    // 창 밖 — 지난 것은 왼쪽 끝, 뒤 것은 오른쪽 끝에 날짜 단 말풍선으로 (10/29)
+    var md = function(t){ var d0 = new Date(t); return (d0.getMonth() + 1) + '/' + d0.getDate() + ' '; };
+    l.early.slice().sort(function(a, b){ return b.t - a.t; }).slice(0, 6).forEach(function(o){
+      bubbles.push({ xp: 8, past: true, txt: md(o.t) + TL(o.x.label), cls: stOf(o.x), id: o.x.id, tip: tipOf(o) }); });
+    l.late.slice().sort(function(a, b){ return a.t - b.t; }).slice(0, 6).forEach(function(o){
+      bubbles.push({ xp: 92, past: true, txt: md(o.t) + TL(o.x.label), cls: stOf(o.x), id: o.x.id, tip: tipOf(o) }); });
     // 말풍선마다 [시작, 끝] 을 잡고, 어느 줄이든 겹치지 않는 첫 줄에 넣는다 (10/28)
     var order = bubbles.filter(function(b){ return !b.past; }).concat(bubbles.filter(function(b){ return b.past; }).sort(function(a, b){ return b.xp - a.xp; }));
     order.forEach(function(b){
@@ -4131,7 +4144,7 @@ function pbTimelineHtml(){
       var k = 0;
       while((lv[k] || []).some(function(iv){ return x0 < iv[1] + 0.4 && iv[0] < x1 + 0.4; })) k++;
       (lv[k] = lv[k] || []).push([x0, x1]);
-      bH += '<div class="tl-bub ' + cls + '" style="left:' + left.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
+      bH += '<div class="tl-bub ' + cls + '" style="left:' + left.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + tlCk(b) + b.txt + '</div>';
     });
     if(l.late.length){
       dots += '<div class="tl-late" title="' + bfEsc(l.late.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">'
