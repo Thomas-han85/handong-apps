@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-10";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-11";</script>
 </head>
 <body>
 
@@ -4620,7 +4620,7 @@ function parentOptions(lv, currentPid, team){
   cands.sort((a,b)=>_rk(a)-_rk(b));
   const opt = d=>{
     const sel = d.id===currentPid ? ' selected':'';
-    const label = (d.kr?d.kr+' ':'')+TL(d.label).replace(/<[^>]+>/g,'').slice(0,60) + (d.status==='Done' ? ' ✓' : d.status==='Dropped' ? ' ⊘' : '');
+    const label = (d.kr?d.kr+' ':'')+TL(d.label).replace(/<[^>]+>/g,'').slice(0,60) + (d.team ? '  [' + d.team + ']' : '') + (d.status==='Done' ? ' ✓' : d.status==='Dropped' ? ' ⊘' : '');   // 팀 이름 (10/29)
     return `<option value="${d.id}"${sel}>${bfEsc(label)}</option>`;
   };
   let opts;
