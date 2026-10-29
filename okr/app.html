@@ -678,7 +678,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-4";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-5";</script>
 </head>
 <body>
 
@@ -4032,6 +4032,8 @@ function tlCk(b){
   if(!x || x.lv !== 'TD' || x.status === 'Done' || x.status === 'Dropped') return '';
   return '<span title="' + bfEsc(L3('Mark done', '완료 표시', 'Đánh dấu xong')) + '" onclick="event.stopPropagation();mtMove(' + b.id + ',\'done\')" style="display:inline-block;width:13px;height:13px;line-height:11px;text-align:center;border:1px solid currentColor;border-radius:3px;margin-right:4px;font-size:9px;cursor:pointer;opacity:.75">✓</span>';
 }
+var _tlDone = (function(){ try{ return localStorage.getItem('okr_tl_done') !== '0'; }catch(e){ return true; } })();   // 타임라인 완료 포함 (10/29)
+function tlDoneSet(v){ _tlDone = v; try{ localStorage.setItem('okr_tl_done', v ? '1' : '0'); }catch(e){} renderMatrix(); }
 function pbTimelineHtml(){
   var ids = Object.keys(_pbSel).map(Number);
   var lanes = ids.map(function(id){ return DATA.find(function(x){ return x.id === id; }); }).filter(Boolean);
@@ -4041,7 +4043,8 @@ function pbTimelineHtml(){
   var L = lanes.map(function(p){
     var kids = DATA.filter(function(x){ return x.pid === p.id && x.lv === 'TD' && x.status !== 'Dropped'; });
     var pts = [];
-    kids.forEach(function(x){
+    var kidsV = _tlDone ? kids : kids.filter(function(x){ return x.status !== 'Done'; });   // 「완료 포함」을 끄면 안 끝난 것만
+    kidsV.forEach(function(x){
       var t = null, approx = false;
       if(x.status === 'Done'){
         var m = String(x.doneAt || '').match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
@@ -4144,7 +4147,7 @@ function pbTimelineHtml(){
       var k = 0;
       while((lv[k] || []).some(function(iv){ return x0 < iv[1] + 0.4 && iv[0] < x1 + 0.4; })) k++;
       (lv[k] = lv[k] || []).push([x0, x1]);
-      bH += '<div class="tl-bub ' + cls + '" style="left:' + left.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + tlCk(b) + b.txt + '</div>';
+      bH += '<div class="tl-bub ' + cls + '" style="left:' + left.toFixed(2) + '%;top:' + (40 + k * 21) + 'px;max-width:' + wpx + 'px" title="' + bfEsc(b.tip) + '" onclick="openEdit(' + b.id + ')">' + b.txt + '</div>';
     });
     if(l.late.length){
       dots += '<div class="tl-late" title="' + bfEsc(l.late.slice(0, 20).map(function(o){ return '· ' + tipOf(o); }).join('\n')) + '" onclick="_pbOpen[' + l.p.id + ']=true;renderMatrix()">'
@@ -4162,7 +4165,8 @@ function pbTimelineHtml(){
       + TL(l.p.label) + '<span>' + l.dn + '/' + l.tot + '</span></div>'
       + '<div class="tl-track" style="height:' + h + 'px">' + endMark + dots + '</div></div>';
   }).join('');
-  var leg = '<span class="tl-lg"><i class="tl-dot done"></i>' + L3('done', '끝남', 'xong') + '</span>'
+  var leg = '<label class="tl-lg" style="cursor:pointer;font-weight:600"><input type="checkbox"' + (_tlDone ? ' checked' : '') + ' onchange="tlDoneSet(this.checked)" style="margin:0 4px 0 0;vertical-align:-2px">' + L3('Show done', '완료 포함', 'Gồm đã xong') + '</label>'
+    + '<span class="tl-lg"><i class="tl-dot done"></i>' + L3('done', '끝남', 'xong') + '</span>'
     + '<span class="tl-lg"><i class="tl-dot ip"></i>' + L3('in progress', '진행 중', 'đang làm') + '</span>'
     + '<span class="tl-lg"><i class="tl-dot od"></i>' + L3('overdue', '기한 지남', 'quá hạn') + '</span>'
     + '<span class="tl-lg"><i class="tl-dot wait"></i>' + L3('waiting', '대기', 'chờ') + '</span>'
