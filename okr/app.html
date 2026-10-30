@@ -510,6 +510,7 @@ tr.dragging{opacity:.35}
 .pb-newbtn{color:#1565C0;border-color:#93C5FD;font-weight:700}
 .pb-donesel{color:#15803D;border-color:#86EFAC}
 .pb-fold.pb-tag{right:90px}
+.pb-edit{margin-left:6px;color:var(--text3);cursor:pointer;font-size:12px;padding:0 4px}.pb-edit:hover{color:var(--blue)}
 .pb-fold.pb-drop{right:34px;color:#94A3B8}.pb-fold.pb-drop:hover{color:#B91C1C;border-color:#FCA5A5}
 .pb-dropsel{color:#B91C1C;border-color:#FCA5A5}
 .pb-rdrop{width:18px;text-align:center;color:#CBD5E1;cursor:pointer;font-size:12px;flex-shrink:0}.pb-rdrop:hover{color:#B91C1C}.pb-rdrop.off{cursor:default}.pb-fold:hover{color:var(--text);border-color:var(--text3)}
@@ -678,7 +679,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.29-12";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.30-1";</script>
 </head>
 <body>
 
@@ -3805,7 +3806,7 @@ function projBoardHtml(pic){
     var curH = '';
     if(c.cur){
       var x0 = c.cur, od0 = dueStatus(x0) === 'overdue';
-      curH = '<div class="pb-cur' + (od0 ? ' od' : '') + '" onclick="event.stopPropagation();openEdit(' + x0.id + ')">'
+      curH = '<div class="pb-cur' + (od0 ? ' od' : '') + '" onclick="event.stopPropagation();if(okrTouch()){pbToggle(' + d.id + ')}else{openEdit(' + x0.id + ')}">'
         + '<div class="pb-cur-h"><span class="pb-cur-k">' + (c.curIp ? L3('NOW', '지금', 'ĐANG') : L3('NEXT', '다음', 'TIẾP')) + ' ' + c.curNo + '/' + c.kids.length + '</span>'
         + '<span class="pb-cur-d">' + bfEsc(String(x0.period || '').split('~').pop()) + (x0.pic ? ' · ' + bfEsc(x0.pic) : '') + '</span></div>'
         + '<div class="pb-cur-t">' + TL(x0.label) + '</div></div>';
@@ -3844,7 +3845,8 @@ function projBoardHtml(pic){
       + '<div class="pb-path">' + bfEsc(pbPath(d, !window._pbFlat)) + '</div>'
       + '<div class="pb-tt"><span class="pb-lv">' + d.lv + '</span>'
       + (!pbHas(d.pic, myPicName()) && pbHas(d.reviewer, myPicName()) ? '<span class="pb-lv pb-rev">' + L3('Review', '검토', 'Xem xét') + '</span>' : '')
-      + '<span onclick="event.stopPropagation();openEdit(' + d.id + ')">' + TL(d.label) + '</span></div>'
+      + '<span onclick="event.stopPropagation();pbTitleTap(' + d.id + ')">' + TL(d.label) + '</span>'
+      + '<span class="pb-edit" title="' + bfEsc(L3('Edit', '수정', 'Sửa')) + '" onclick="event.stopPropagation();openEdit(' + d.id + ')">✎</span></div>'
       + (relOf(d).length ? '<div class="pb-path" style="color:#1565C0">🔗 ' + bfEsc(L3('Related: ', '관련: ', 'Liên quan: ') + relOf(d).map(relName).join(' / ')) + '</div>' : '')
       + '<div class="pb-bar"><i style="width:' + pct + '%;background:' + col[0] + '"></i></div>'
       + '<div class="pb-meta"><span class="pb-cnt">' + dn + '/' + tot + '</span>' + (tot ? '' : '<span class="pb-idle" style="margin-left:0">' + L3('no to-dos', '할 일 없음', 'chưa có việc') + '</span>') + meta + '</div>'
@@ -4305,6 +4307,27 @@ async function pbDropTodo(id){
   saveData(); renderTable(); renderMatrix();
 }
 function pbToggle(id){ _pbOpen[id] = !_pbOpen[id]; renderMatrix(); }
+/* 휴대폰(터치) — 손가락이 제목에 걸려 수정 창이 뜨던 것 (10/30). 터치면 펼치기, 마우스면 수정 */
+function okrTouch(){ try{ return window.matchMedia('(pointer:coarse)').matches || window.innerWidth < 760; }catch(e){ return false; } }
+function pbTitleTap(id){ if(okrTouch()) pbToggle(id); else openEdit(id); }
+/* 뒤로 가기 (10/30) — 열린 것부터 닫고, 닫을 게 없으면 한 번 알리고 두 번째에 나간다 */
+(function(){
+  try{
+    history.replaceState({okr: 'base'}, ''); history.pushState({okr: 'guard'}, '');
+    var warned = 0;
+    window.addEventListener('popstate', function(){
+      var ep = document.getElementById('editPanel'), fp = document.getElementById('fbPanel');
+      var handled = false;
+      if(ep && ep.classList.contains('open')){ closePanel(); handled = true; }
+      else if(fp && fp.classList.contains('open')){ fbClose(); handled = true; }
+      else if(Object.keys(_pbOpen).some(function(k){ return _pbOpen[k]; })){ _pbOpen = {}; renderMatrix(); handled = true; }
+      if(handled){ warned = 0; history.pushState({okr: 'guard'}, ''); return; }
+      if(Date.now() - warned < 2500){ history.back(); return; }      // 두 번째 — 정말 나간다
+      warned = Date.now(); history.pushState({okr: 'guard'}, '');
+      try{ toast(L3('Press back again to exit', '한 번 더 누르면 나갑니다', 'Bấm quay lại lần nữa để thoát')); }catch(e){}
+    });
+  }catch(e){}
+})();
 function pbToggleAll(){ _pbShut = !_pbShut; try{ localStorage.setItem('okr_pb_shut', _pbShut ? '1' : '0'); }catch(e){} renderMatrix(); }
 async function pbAdd(pid){
   var inp = document.getElementById('pbIn' + pid); if(!inp) return;
