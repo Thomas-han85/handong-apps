@@ -679,7 +679,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.30-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.10.31-1";</script>
 </head>
 <body>
 
@@ -5026,6 +5026,23 @@ function onTeamFilterChange(){
   }
 }
 
+/* 다른 팀 Initiative 밑에 할 일을 넣으려 하면 한 번 묻는다 (10/31 khang.tran) — 같은 현장 이름의 칸이 팀마다 있어 잘못 고르기 쉽다 */
+function parentTeamOk(cur, team){
+  var pe = document.getElementById('f-pid'), le = document.getElementById('f-lv');
+  var lv = le ? le.value : (cur ? cur.lv : (_pendingNew ? _pendingNew.lv : ''));
+  var pid = pe ? (parseInt(pe.value) || 0) : 0;
+  if(lv !== 'TD' || !pid || (cur && cur.pid === pid)) return true;           // 부모가 그대로면 묻지 않는다
+  var par = DATA.find(function(x){ return x.id === pid; });
+  var low = function(a){ return a.map(function(x){ return String(x).trim().toLowerCase(); }).filter(Boolean); };
+  var pt = low(String(par && par.team || '').split(','));
+  var mine = low(String(team || '').split(','));
+  if(!mine.length) mine = low((AUTH && AUTH.user && AUTH.user.teams) || []);
+  if(!pt.length || !mine.length || pt.some(function(x){ return mine.indexOf(x) >= 0; })) return true;
+  var tn = par.team, nm = TL(par.label).replace(/<[^>]+>/g, '');
+  return confirm(L3('This initiative belongs to team ' + tn + ':\n' + nm + '\n\nAdd the to-do here anyway?',
+                    '이 Initiative 는 ' + tn + ' 팀 것입니다:\n' + nm + '\n\n그래도 여기에 넣을까요?',
+                    'Initiative này thuộc nhóm ' + tn + ':\n' + nm + '\n\nVẫn thêm TODO vào đây?'));
+}
 async function saveEdit(){
   // 권한 먼저 — 지금 팀과 바꾸려는 팀 둘 다 내 팀이어야 서버가 받는다
   var _teamEl0 = document.getElementById('f-team');
@@ -5033,6 +5050,7 @@ async function saveEdit(){
   var _newTeam0 = _teamEl0 ? _teamEl0.value : (_cur0 ? _cur0.team : '');
   if(_cur0 && !(await canEditTeamFresh(_cur0.team))){ toast(denyTeamMsg(_cur0.team), 'error'); return; }
   if(!(await canEditTeamFresh(_newTeam0))){ toast(denyTeamMsg(_newTeam0), 'error'); return; }
+  if(!parentTeamOk(_cur0, _newTeam0)) return;
   var _snap0 = _cur0 ? snapItem(_cur0) : null;
   // If this is a new item (pending), add it to DATA first
   var _wasNew = false;                 // 서버에 '새로 만드는 것' 이라고 알려 줘야 한다
