@@ -543,7 +543,9 @@ tr.dragging{opacity:.35}
 .pb-row.cur{background:#EEF4FF;border-radius:5px}.pb-row.cur .pb-lab{font-weight:700}
 .pb-row.cur .pb-lab::before{content:'▶ ';color:#1565C0}
 .pb-list{margin-top:10px;border-top:1px solid var(--border-light);padding-top:8px;cursor:default}
-.pb-row{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:12px;border-bottom:1px dashed var(--border-light)}
+.pb-row{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:12px;border-bottom:1px dashed var(--border-light);max-width:1100px}
+.pb-row:nth-child(even):not(.cur){background:#F8FAFC}.pb-row:hover{background:#FFF7D6}
+.pb-row.pick,.pb-row.pick:hover{background:#FDE68A;box-shadow:inset 3px 0 0 #D97706}
 .pb-row.done .pb-lab{color:var(--text3);text-decoration:line-through}.pb-row.od .pb-lab{color:#B91C1C}
 .pb-lab{flex:1;cursor:pointer}.pb-lab:hover{text-decoration:underline}
 .pb-per{font-size:10px;color:var(--text3);white-space:nowrap}
@@ -679,7 +681,7 @@ tr.dragging{opacity:.35}
   .mt-actions,.mt-rev-actions,.mt-done-actions{display:flex!important}
 }
 </style>
-<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.11.09-1";</script>
+<script>/* HANDONG_OKR_APP */ var APP_VERSION = "2026.11.11-1";</script>
 </head>
 <body>
 
@@ -3714,6 +3716,13 @@ function pbNewProject(){
     var l = document.getElementById('f-label'); if(l) l.focus();
   }, 0);
 }
+/* 할 일 줄 누르면 그 줄 강조(11-11 ThuyMi) — 다시 그려도 유지 */
+var _pbRowPick = null;
+function pbRowPick(el, id){
+  _pbRowPick = (_pbRowPick === id) ? null : id;
+  document.querySelectorAll('.pb-row.pick').forEach(function(r){ r.classList.remove('pick'); });
+  if(_pbRowPick !== null && el) el.classList.add('pick');
+}
 function pbCards(pic){
   var ids = {};
   DATA.forEach(function(d){
@@ -3820,7 +3829,7 @@ function projBoardHtml(pic){
       list = '<div class="pb-list" onclick="event.stopPropagation()">'
         + rows.map(function(x){
             var od = dueStatus(x) === 'overdue';
-            return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + '">'
+            return '<div class="pb-row' + (x.status === 'Done' ? ' done' : '') + (od ? ' od' : '') + (x === c.cur ? ' cur' : '') + (_pbRowPick === x.id ? ' pick' : '') + '" onclick="pbRowPick(this,' + x.id + ')">'
               + (x.status === 'Done' ? '<span class="pb-ok">✓</span>' : x.status === 'Dropped' ? '<span class="pb-ok" style="color:#64748B">⊘</span>' : mtCk(x))
               + '<span class="pb-lab" onclick="openEdit(' + x.id + ')">' + TL(x.label) + '</span>'
               + tvHtml(x)
